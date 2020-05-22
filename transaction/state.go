@@ -77,20 +77,8 @@ func (tx *Transaction) SetStateSignResult(currentBatch *badger.Txn) error {
 
 	nebulaAddress := args[:32]
 	height := args[32:40]
-	signBytes := args[40:72]
-	resultHash := args[72:]
+	signBytes := args[72:]
 
-	key := state.FormResultKey(nebulaAddress, binary.BigEndian.Uint64(height))
-	_, err = currentBatch.Get([]byte(key))
-
-	if err == badger.ErrKeyNotFound {
-		err := currentBatch.Set([]byte(key), resultHash)
-		if err != nil {
-			return err
-		}
-	} else if err != nil {
-		return err
-	}
 	sender, err := hex.DecodeString(tx.SenderPubKey)
 	if err != nil {
 		return err

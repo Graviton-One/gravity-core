@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"gravity-hub/state"
+	"strconv"
 	"strings"
 
 	"github.com/wavesplatform/gowaves/pkg/crypto"
@@ -65,7 +66,7 @@ func (tx *Transaction) IsValid(db *badger.DB) error {
 
 	switch TxFunc(tx.Func) {
 	case Commit:
-		return tx.isValidCommit()
+		return tx.isValidCommit(db)
 	case Reveal:
 		return tx.isValidReveal(db)
 	case AddValidator:
@@ -121,17 +122,34 @@ func (tx *Transaction) isValidAddValidator(db *badger.DB) error {
 	return err
 }
 
-func (tx *Transaction) isValidCommit() error {
+func (tx *Transaction) isValidCommit(db *badger.DB) error {
 	if len(tx.Args) == 72 {
 		return errors.New("invalid commit size")
 	}
+	args, err := hex.DecodeString(tx.Args)
+	if err != nil {
+		return err
+	}
+	nebula := args[0:32]
+	height := args[32:40]
+	sender, err := hex.DecodeString(tx.SenderPubKey)
+	if err != nil {
+		return err
+	}
+
+	key := state.FormCommitKey(nebula, binary.BigEndian.Uint64(height), sender)
+	err = db.View(func(txn *badger.Txn) error {
+		_, err := txn.Get([]byte(key))
+		if err == badger.ErrKeyNotFound {
+			return nil
+		}
+
+		return errors.New("commit is exist")
+	})
 	return nil
 }
 
 func (tx *Transaction) isValidReveal(db *badger.DB) error {
-	if len(tx.Args) == 32 {
-		return errors.New("invalid reveal size")
-	}
 	args, err := hex.DecodeString(tx.Args)
 	if err != nil {
 		return err
@@ -141,49 +159,49 @@ func (tx *Transaction) isValidReveal(db *badger.DB) error {
 	nebula := args[32:64]
 	height := args[64:72]
 	reveal := args[72:]
-	key := state.FormRevealKey(nebula, binary.BigEndian.Uint64(height), commit)
-	sha256.Sum256(reveal)
+	revealKey := state.FormRevealKey(nebula, binary.BigEndian.Uint64(height), commit)
 
-	var commitTxBytes []byte
-	var commitTx Transaction
 	err = db.View(func(txn *badger.Txn) error {
-		commitTxItem, err := txn.Get([]byte(key))
-		if err != nil {
-			return err
+		_, err := txn.Get([]byte(revealKey))
+		if err == badger.ErrKeyNotFound {
+			return nil
 		}
-		commitTxBytes, err = commitTxItem.ValueCopy(nil)
-		if err != nil {
-			return err
-		}
-		return nil
+
+		return errors.New("reveal is exist")
 	})
 
+	sender, err := hex.DecodeString(tx.SenderPubKey)
 	if err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(commitTxBytes, &commitTx)
-	if err != nil {
-		return err
-	}
-
-	argsCommitTx, err := hex.DecodeString(commitTx.Args)
+	var commitBytes []byte
+	keyCommit := state.FormCommitKey(nebula, binary.BigEndian.Uint64(height), sender)
+	err = db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get([]byte(keyCommit))
+		if err == badger.ErrKeyNotFound {
+			return errors.New("commit is not exist")
+		}
+		if err != nil {
+			return err
+		}
+		return item.Value(func(value []byte) error {
+			commitBytes = value
+			return nil
+		})
+	})
 	if err != nil {
 		return err
 	}
 
 	expectedHash := sha256.Sum256(reveal)
-	if !bytes.Equal(argsCommitTx[0:32], expectedHash[:]) {
+	if !bytes.Equal(commitBytes, expectedHash[:]) {
 		return errors.New("invalid reveal")
 	}
 	return nil
 }
 
 func (tx *Transaction) isValidSignResult(db *badger.DB) error {
-	if len(tx.Args) == 136 {
-		return errors.New("invalid args size")
-	}
-
 	args, err := hex.DecodeString(tx.Args)
 	if err != nil {
 		return err
@@ -191,8 +209,8 @@ func (tx *Transaction) isValidSignResult(db *badger.DB) error {
 
 	nebulaAddress := args[:32]
 	heightBytes := args[32:40]
-	signBytes := args[40:72]
-	resultHash := args[72:]
+	resultHash := args[40:72]
+	signBytes := args[72:]
 
 	sign := crypto.Signature{}
 	copy(sign[:], signBytes)
@@ -200,25 +218,35 @@ func (tx *Transaction) isValidSignResult(db *badger.DB) error {
 	height := binary.BigEndian.Uint64(heightBytes)
 	prefix := strings.Join([]string{string(state.RevealKey), hex.EncodeToString(nebulaAddress), fmt.Sprintf("%d", height)}, "_")
 
-	var realResultHash []byte
-	err = db.View(func(txn *badger.Txn) error {
-		iterator := txn.NewIterator(badger.IteratorOptions{Prefix: []byte(prefix)})
-		hash := sha256.New()
-		for iterator.Valid() {
+	var reveals []float64
+	db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
 
-			iterator.Next()
-			reveal, err := iterator.Item().ValueCopy(nil)
-			if err != nil {
-				return err
-			}
-			hash.Write(reveal)
+		for it.Seek([]byte(prefix)); it.ValidForPrefix([]byte(prefix)); it.Next() {
+			item := it.Item()
+			item.Value(func(v []byte) error {
+				value, err := strconv.ParseFloat(string(v), 64)
+				if err != nil {
+					return nil
+				}
+
+				reveals = append(reveals, value)
+				return nil
+			})
 		}
-		realResultHash = hash.Sum(nil)
-
-		return errors.New("validator is exist")
+		return nil
 	})
 
-	if bytes.Compare(resultHash, realResultHash) != 0 {
+	var average float64
+	for _, v := range reveals {
+		average += v
+	}
+	average = average / float64(len(reveals))
+
+	result := fmt.Sprintf("%.2f", average)
+	currentResultHash := sha256.Sum256([]byte(result))
+	if bytes.Compare(resultHash, currentResultHash[:]) != 0 {
 		return errors.New("invalid result hash")
 	}
 	senderPubKeyBytes, err := hex.DecodeString(tx.SenderPubKey)

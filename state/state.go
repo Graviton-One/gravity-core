@@ -13,7 +13,6 @@ const (
 	CommitKey     Key = "commit"
 	RevealKey     Key = "reveal"
 	SignResultKey Key = "signResult"
-	ResultKey     Key = "result"
 )
 
 func FormValidatorKey(nebulaAddress []byte, validatorAddress []byte) string {
@@ -30,8 +29,4 @@ func FormRevealKey(nebulaAddress []byte, block uint64, commitHash []byte) string
 
 func FormSignResultKey(nebulaAddress []byte, block uint64, validatorAddress []byte) string {
 	return strings.Join([]string{string(SignResultKey), hex.EncodeToString(nebulaAddress), fmt.Sprintf("%d", block), hex.EncodeToString(validatorAddress)}, "_")
-}
-
-func FormResultKey(nebulaAddress []byte, block uint64) string {
-	return strings.Join([]string{string(ResultKey), hex.EncodeToString(nebulaAddress), fmt.Sprintf("%d", block)}, "_")
 }
