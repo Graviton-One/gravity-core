@@ -1,0 +1,7 @@
+{
+  "GHNodeURL": "http://localhost:26657",
+  "Timeout": 0,
+  "NebulaId": "0000000000000000000000000000000000000000000000000000000000000000",
+  "WavesNodeUrl": "https://testnode1.wavesnodes.com",
+  "NebulaContract": "3N62hLsDfSP7n5ZxFvPZa6HadQb7zv9BQpc"
+}

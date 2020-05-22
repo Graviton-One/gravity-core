@@ -14,8 +14,10 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-data
-db
-gravity-hub
-gravity-hub.exe
+*/data
+*/db
+*/gravity-hub
+*/gravity-hub.exe
+*/.idea
+*/gh-node
 .idea
