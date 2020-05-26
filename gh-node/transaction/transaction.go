@@ -1,11 +1,11 @@
 package transaction
 
 import (
-	"crypto/sha256"
+	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
 
-	"github.com/wavesplatform/gowaves/pkg/crypto"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 type TxFunc string
@@ -25,14 +25,14 @@ type Transaction struct {
 	Args         string //Args
 }
 
-func New(pubKey []byte, funcName TxFunc, secret crypto.SecretKey, args []byte) (*Transaction, error) {
+func New(pubKey []byte, funcName TxFunc, privKey *ecdsa.PrivateKey, args []byte) (*Transaction, error) {
 	tx := &Transaction{
 		SenderPubKey: hex.EncodeToString(pubKey),
 		Args:         hex.EncodeToString(args),
 		Func:         funcName,
 	}
 	tx.Hash()
-	err := tx.Sign(secret)
+	err := tx.Sign(privKey)
 	if err != nil {
 		panic(err)
 	}
@@ -60,16 +60,16 @@ func UnmarshalJson(data []byte) (*Transaction, error) {
 }
 
 func (tx *Transaction) Hash() {
-	hash := sha256.Sum256(tx.MarshalBytesWithoutSig())
+	hash := crypto.Keccak256(tx.MarshalBytesWithoutSig())
 	tx.Id = hex.EncodeToString(hash[:])
 }
 
-func (tx *Transaction) Sign(key crypto.SecretKey) error {
-	sig, err := crypto.Sign(key, tx.MarshalBytesWithoutSig())
+func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) error {
+	sig, err := crypto.Sign(tx.MarshalBytesWithoutSig(), privKey)
 	if err != nil {
 		return err
 	}
-	tx.Signature = hex.EncodeToString(sig.Bytes())
+	tx.Signature = hex.EncodeToString(sig)
 
 	return nil
 }

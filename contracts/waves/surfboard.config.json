@@ -1,0 +1,34 @@
+{
+    "ride_directory": "script",
+    "test_directory": "test",
+    "envs": {
+        "custom": {
+            "API_BASE": "http://localhost:6869/",
+            "CHAIN_ID": "R",
+            "SEED": "waves private node seed with waves tokens",
+            "timeout": 60000
+        },
+        "testnet": {
+            "API_BASE": "https://testnode1.wavesnodes.com",
+            "CHAIN_ID": "T",
+            "timeout": 60000,
+            "SEED": "X"
+        },
+        "mainnet": {
+            "API_BASE": "https://nodes.wavesnodes.com",
+            "CHAIN_ID": "W",
+            "timeout": 60000,
+            "SEED": "X"
+        },
+        "stagenet": {
+            "API_BASE": "https://nodes-stagenet.wavesnodes.com",
+            "CHAIN_ID": "S",
+            "timeout": 60000,
+            "SEED": "X"
+        }
+    },
+    "defaultEnv": "custom",
+    "mocha": {
+        "timeout": 60000
+    }
+}

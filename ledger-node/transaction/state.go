@@ -11,7 +11,7 @@ import (
 )
 
 func (tx *Transaction) SetState(currentBatch *badger.Txn) error {
-	switch TxFunc(tx.Func) {
+	switch tx.Func {
 	case Commit:
 		return tx.SetStateCommit(currentBatch)
 	case Reveal:

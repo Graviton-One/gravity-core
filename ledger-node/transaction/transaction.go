@@ -2,7 +2,6 @@ package transaction
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -12,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/wavesplatform/gowaves/pkg/crypto"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/dgraph-io/badger"
 )
@@ -83,17 +82,13 @@ func (tx *Transaction) isValidSigns() bool {
 	if err != nil {
 		return false
 	}
-	pubKey := crypto.PublicKey{}
-	copy(pubKey[:], pubKeyBytes)
 
 	sigBytes, err := hex.DecodeString(tx.Signature)
 	if err != nil {
 		return false
 	}
-	sig := crypto.Signature{}
-	copy(sig[:], sigBytes)
 
-	return crypto.Verify(pubKey, sig, tx.MarshalBytesWithoutSig())
+	return crypto.VerifySignature(pubKeyBytes, tx.MarshalBytesWithoutSig(), sigBytes)
 }
 
 func (tx *Transaction) isValidAddValidator(db *badger.DB) error {
@@ -194,7 +189,7 @@ func (tx *Transaction) isValidReveal(db *badger.DB) error {
 		return err
 	}
 
-	expectedHash := sha256.Sum256(reveal)
+	expectedHash := crypto.Keccak256(reveal)
 	if !bytes.Equal(commitBytes, expectedHash[:]) {
 		return errors.New("invalid reveal")
 	}
@@ -211,9 +206,6 @@ func (tx *Transaction) isValidSignResult(db *badger.DB) error {
 	heightBytes := args[32:40]
 	resultHash := args[40:72]
 	signBytes := args[72:]
-
-	sign := crypto.Signature{}
-	copy(sign[:], signBytes)
 
 	height := binary.BigEndian.Uint64(heightBytes)
 	prefix := strings.Join([]string{string(state.RevealKey), hex.EncodeToString(nebulaAddress), fmt.Sprintf("%d", height)}, "_")
@@ -245,7 +237,7 @@ func (tx *Transaction) isValidSignResult(db *badger.DB) error {
 	average = average / float64(len(reveals))
 
 	result := fmt.Sprintf("%.2f", average)
-	currentResultHash := sha256.Sum256([]byte(result))
+	currentResultHash := crypto.Keccak256([]byte(result))
 	if bytes.Compare(resultHash, currentResultHash[:]) != 0 {
 		return errors.New("invalid result hash")
 	}
@@ -253,9 +245,7 @@ func (tx *Transaction) isValidSignResult(db *badger.DB) error {
 	if err != nil {
 		return err
 	}
-	var senderPubKey [32]byte
-	copy(senderPubKey[:], senderPubKeyBytes)
-	if !crypto.Verify(senderPubKey, sign, resultHash) {
+	if !crypto.VerifySignature(senderPubKeyBytes, signBytes, resultHash) {
 		return errors.New("invalid result hash sign")
 	}
 

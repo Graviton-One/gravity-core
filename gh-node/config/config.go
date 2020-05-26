@@ -6,7 +6,7 @@ import (
 )
 
 type Config struct {
-	WavesNodeUrl   string
+	EthNodeUrl     string
 	GHNodeURL      string
 	Timeout        int
 	NebulaId       string

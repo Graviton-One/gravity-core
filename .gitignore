@@ -19,5 +19,7 @@
 */gravity-hub
 */gravity-hub.exe
 */.idea
+*/build
+*/*/build
 */gh-node
-.idea
+.idea/
