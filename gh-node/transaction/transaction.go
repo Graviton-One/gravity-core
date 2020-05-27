@@ -18,11 +18,11 @@ const (
 )
 
 type Transaction struct {
-	Id           string //[HashKeySize]byte
-	SenderPubKey string // [PublicKeySize]byte
-	Signature    string // [SignatureSize]byte
-	Func         TxFunc //[]byte
-	Args         string //Args
+	Id           string
+	SenderPubKey string
+	Signature    string
+	Func         TxFunc
+	Args         string
 }
 
 func New(pubKey []byte, funcName TxFunc, privKey *ecdsa.PrivateKey, args []byte) (*Transaction, error) {
@@ -60,12 +60,15 @@ func UnmarshalJson(data []byte) (*Transaction, error) {
 }
 
 func (tx *Transaction) Hash() {
-	hash := crypto.Keccak256(tx.MarshalBytesWithoutSig())
-	tx.Id = hex.EncodeToString(hash[:])
+	tx.Id = hex.EncodeToString(crypto.Keccak256(tx.MarshalBytesWithoutSig()))
 }
 
 func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) error {
-	sig, err := crypto.Sign(tx.MarshalBytesWithoutSig(), privKey)
+	txBytes, err := hex.DecodeString(tx.Id)
+	if err != nil {
+		return err
+	}
+	sig, err := crypto.Sign(txBytes, privKey)
 	if err != nil {
 		return err
 	}

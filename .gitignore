@@ -13,7 +13,10 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
-
+data/
+.idea/
+db/
+ledger-node/data/*
 */data
 */db
 */gravity-hub
@@ -22,4 +25,3 @@
 */build
 */*/build
 */gh-node
-.idea/

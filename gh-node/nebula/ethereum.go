@@ -1,18 +1,18 @@
-package nebula
-
 // Code generated - DO NOT EDIT.
 // This file is a generated binding and any manual changes will be lost.
 
+package nebula
+
 import (
 	"math/big"
-"strings"
+	"strings"
 
-ethereum "github.com/ethereum/go-ethereum"
-"github.com/ethereum/go-ethereum/accounts/abi"
-"github.com/ethereum/go-ethereum/accounts/abi/bind"
-"github.com/ethereum/go-ethereum/common"
-"github.com/ethereum/go-ethereum/core/types"
-"github.com/ethereum/go-ethereum/event"
+	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -27,7 +27,7 @@ var (
 )
 
 // NebulaABI is the input ABI used to generate the binding from.
-const NebulaABI = "[{\"inputs\":[{\"internalType\":\"string\",\"name\":\"newName\",\"type\":\"string\"},{\"internalType\":\"address[]\",\"name\":\"newOracle\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"constant\":true,\"inputs\":[],\"name\":\"currentEpoch\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"currentOracleId\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"endEpochHeight\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"isPublseSubSent\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"oracleInfo\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isOnline\",\"type\":\"bool\"},{\"internalType\":\"bytes32\",\"name\":\"idInQueue\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"oracleQueue\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"first\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"last\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"oracles\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"oraclesCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"pulseQueue\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"first\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"last\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"pulses\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"dataHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"confirmationCount\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"subscriptions\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"contractAddress\",\"type\":\"address\"},{\"internalType\":\"uint8\",\"name\":\"minConfirmations\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"subscriptionsQueue\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"first\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"last\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"dataHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint8[]\",\"name\":\"v\",\"type\":\"uint8[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"r\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"s\",\"type\":\"bytes32[]\"}],\"name\":\"confirmData\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"subscriptionId\",\"type\":\"bytes32\"}],\"name\":\"sendData\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"contractAddress\",\"type\":\"address\"},{\"internalType\":\"uint8\",\"name\":\"minConfirmations\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"}],\"name\":\"subscribe\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"id\",\"type\":\"bytes32\"}],\"name\":\"unsubscribe\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const NebulaABI = "[{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"newOracle\",\"type\":\"address[]\"},{\"internalType\":\"uint256\",\"name\":\"newBftValue\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"constant\":true,\"inputs\":[],\"name\":\"bftValue\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"isPublseSubSent\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"oracleQueue\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"first\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"last\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"oracles\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"pulseQueue\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"first\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"last\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"pulses\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"dataHash\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"subscriptions\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"contractAddress\",\"type\":\"address\"},{\"internalType\":\"uint8\",\"name\":\"minConfirmations\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"subscriptionsQueue\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"first\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"last\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getOracles\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"dataHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint8[]\",\"name\":\"v\",\"type\":\"uint8[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"r\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"s\",\"type\":\"bytes32[]\"}],\"name\":\"confirmData\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"subscriptionId\",\"type\":\"bytes32\"}],\"name\":\"sendData\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"contractAddress\",\"type\":\"address\"},{\"internalType\":\"uint8\",\"name\":\"minConfirmations\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"}],\"name\":\"subscribe\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"id\",\"type\":\"bytes32\"}],\"name\":\"unsubscribe\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // Nebula is an auto generated Go binding around an Ethereum contract.
 type Nebula struct {
@@ -171,82 +171,56 @@ func (_Nebula *NebulaTransactorRaw) Transact(opts *bind.TransactOpts, method str
 	return _Nebula.Contract.contract.Transact(opts, method, params...)
 }
 
-// CurrentEpoch is a free data retrieval call binding the contract method 0x76671808.
+// BftValue is a free data retrieval call binding the contract method 0x3cec1bdd.
 //
-// Solidity: function currentEpoch() view returns(uint256)
-func (_Nebula *NebulaCaller) CurrentEpoch(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function bftValue() view returns(uint256)
+func (_Nebula *NebulaCaller) BftValue(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
 	)
 	out := ret0
-	err := _Nebula.contract.Call(opts, out, "currentEpoch")
+	err := _Nebula.contract.Call(opts, out, "bftValue")
 	return *ret0, err
 }
 
-// CurrentEpoch is a free data retrieval call binding the contract method 0x76671808.
+// BftValue is a free data retrieval call binding the contract method 0x3cec1bdd.
 //
-// Solidity: function currentEpoch() view returns(uint256)
-func (_Nebula *NebulaSession) CurrentEpoch() (*big.Int, error) {
-	return _Nebula.Contract.CurrentEpoch(&_Nebula.CallOpts)
+// Solidity: function bftValue() view returns(uint256)
+func (_Nebula *NebulaSession) BftValue() (*big.Int, error) {
+	return _Nebula.Contract.BftValue(&_Nebula.CallOpts)
 }
 
-// CurrentEpoch is a free data retrieval call binding the contract method 0x76671808.
+// BftValue is a free data retrieval call binding the contract method 0x3cec1bdd.
 //
-// Solidity: function currentEpoch() view returns(uint256)
-func (_Nebula *NebulaCallerSession) CurrentEpoch() (*big.Int, error) {
-	return _Nebula.Contract.CurrentEpoch(&_Nebula.CallOpts)
+// Solidity: function bftValue() view returns(uint256)
+func (_Nebula *NebulaCallerSession) BftValue() (*big.Int, error) {
+	return _Nebula.Contract.BftValue(&_Nebula.CallOpts)
 }
 
-// CurrentOracleId is a free data retrieval call binding the contract method 0x524ce31f.
+// GetOracles is a free data retrieval call binding the contract method 0x40884c52.
 //
-// Solidity: function currentOracleId() view returns(bytes32)
-func (_Nebula *NebulaCaller) CurrentOracleId(opts *bind.CallOpts) ([32]byte, error) {
+// Solidity: function getOracles() view returns(address[])
+func (_Nebula *NebulaCaller) GetOracles(opts *bind.CallOpts) ([]common.Address, error) {
 	var (
-		ret0 = new([32]byte)
+		ret0 = new([]common.Address)
 	)
 	out := ret0
-	err := _Nebula.contract.Call(opts, out, "currentOracleId")
+	err := _Nebula.contract.Call(opts, out, "getOracles")
 	return *ret0, err
 }
 
-// CurrentOracleId is a free data retrieval call binding the contract method 0x524ce31f.
+// GetOracles is a free data retrieval call binding the contract method 0x40884c52.
 //
-// Solidity: function currentOracleId() view returns(bytes32)
-func (_Nebula *NebulaSession) CurrentOracleId() ([32]byte, error) {
-	return _Nebula.Contract.CurrentOracleId(&_Nebula.CallOpts)
+// Solidity: function getOracles() view returns(address[])
+func (_Nebula *NebulaSession) GetOracles() ([]common.Address, error) {
+	return _Nebula.Contract.GetOracles(&_Nebula.CallOpts)
 }
 
-// CurrentOracleId is a free data retrieval call binding the contract method 0x524ce31f.
+// GetOracles is a free data retrieval call binding the contract method 0x40884c52.
 //
-// Solidity: function currentOracleId() view returns(bytes32)
-func (_Nebula *NebulaCallerSession) CurrentOracleId() ([32]byte, error) {
-	return _Nebula.Contract.CurrentOracleId(&_Nebula.CallOpts)
-}
-
-// EndEpochHeight is a free data retrieval call binding the contract method 0x996211a5.
-//
-// Solidity: function endEpochHeight() view returns(uint256)
-func (_Nebula *NebulaCaller) EndEpochHeight(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Nebula.contract.Call(opts, out, "endEpochHeight")
-	return *ret0, err
-}
-
-// EndEpochHeight is a free data retrieval call binding the contract method 0x996211a5.
-//
-// Solidity: function endEpochHeight() view returns(uint256)
-func (_Nebula *NebulaSession) EndEpochHeight() (*big.Int, error) {
-	return _Nebula.Contract.EndEpochHeight(&_Nebula.CallOpts)
-}
-
-// EndEpochHeight is a free data retrieval call binding the contract method 0x996211a5.
-//
-// Solidity: function endEpochHeight() view returns(uint256)
-func (_Nebula *NebulaCallerSession) EndEpochHeight() (*big.Int, error) {
-	return _Nebula.Contract.EndEpochHeight(&_Nebula.CallOpts)
+// Solidity: function getOracles() view returns(address[])
+func (_Nebula *NebulaCallerSession) GetOracles() ([]common.Address, error) {
+	return _Nebula.Contract.GetOracles(&_Nebula.CallOpts)
 }
 
 // IsPublseSubSent is a free data retrieval call binding the contract method 0x6148d3f3.
@@ -273,72 +247,6 @@ func (_Nebula *NebulaSession) IsPublseSubSent(arg0 *big.Int, arg1 [32]byte) (boo
 // Solidity: function isPublseSubSent(uint256 , bytes32 ) view returns(bool)
 func (_Nebula *NebulaCallerSession) IsPublseSubSent(arg0 *big.Int, arg1 [32]byte) (bool, error) {
 	return _Nebula.Contract.IsPublseSubSent(&_Nebula.CallOpts, arg0, arg1)
-}
-
-// Name is a free data retrieval call binding the contract method 0x06fdde03.
-//
-// Solidity: function name() view returns(string)
-func (_Nebula *NebulaCaller) Name(opts *bind.CallOpts) (string, error) {
-	var (
-		ret0 = new(string)
-	)
-	out := ret0
-	err := _Nebula.contract.Call(opts, out, "name")
-	return *ret0, err
-}
-
-// Name is a free data retrieval call binding the contract method 0x06fdde03.
-//
-// Solidity: function name() view returns(string)
-func (_Nebula *NebulaSession) Name() (string, error) {
-	return _Nebula.Contract.Name(&_Nebula.CallOpts)
-}
-
-// Name is a free data retrieval call binding the contract method 0x06fdde03.
-//
-// Solidity: function name() view returns(string)
-func (_Nebula *NebulaCallerSession) Name() (string, error) {
-	return _Nebula.Contract.Name(&_Nebula.CallOpts)
-}
-
-// OracleInfo is a free data retrieval call binding the contract method 0xbc623feb.
-//
-// Solidity: function oracleInfo(address ) view returns(address owner, bool isOnline, bytes32 idInQueue)
-func (_Nebula *NebulaCaller) OracleInfo(opts *bind.CallOpts, arg0 common.Address) (struct {
-	Owner     common.Address
-	IsOnline  bool
-	IdInQueue [32]byte
-}, error) {
-	ret := new(struct {
-		Owner     common.Address
-		IsOnline  bool
-		IdInQueue [32]byte
-	})
-	out := ret
-	err := _Nebula.contract.Call(opts, out, "oracleInfo", arg0)
-	return *ret, err
-}
-
-// OracleInfo is a free data retrieval call binding the contract method 0xbc623feb.
-//
-// Solidity: function oracleInfo(address ) view returns(address owner, bool isOnline, bytes32 idInQueue)
-func (_Nebula *NebulaSession) OracleInfo(arg0 common.Address) (struct {
-	Owner     common.Address
-	IsOnline  bool
-	IdInQueue [32]byte
-}, error) {
-	return _Nebula.Contract.OracleInfo(&_Nebula.CallOpts, arg0)
-}
-
-// OracleInfo is a free data retrieval call binding the contract method 0xbc623feb.
-//
-// Solidity: function oracleInfo(address ) view returns(address owner, bool isOnline, bytes32 idInQueue)
-func (_Nebula *NebulaCallerSession) OracleInfo(arg0 common.Address) (struct {
-	Owner     common.Address
-	IsOnline  bool
-	IdInQueue [32]byte
-}, error) {
-	return _Nebula.Contract.OracleInfo(&_Nebula.CallOpts, arg0)
 }
 
 // OracleQueue is a free data retrieval call binding the contract method 0x69a4246d.
@@ -377,10 +285,10 @@ func (_Nebula *NebulaCallerSession) OracleQueue() (struct {
 	return _Nebula.Contract.OracleQueue(&_Nebula.CallOpts)
 }
 
-// Oracles is a free data retrieval call binding the contract method 0xa81a2677.
+// Oracles is a free data retrieval call binding the contract method 0x5b69a7d8.
 //
-// Solidity: function oracles(bytes32 ) view returns(address)
-func (_Nebula *NebulaCaller) Oracles(opts *bind.CallOpts, arg0 [32]byte) (common.Address, error) {
+// Solidity: function oracles(uint256 ) view returns(address)
+func (_Nebula *NebulaCaller) Oracles(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
 	)
@@ -389,44 +297,18 @@ func (_Nebula *NebulaCaller) Oracles(opts *bind.CallOpts, arg0 [32]byte) (common
 	return *ret0, err
 }
 
-// Oracles is a free data retrieval call binding the contract method 0xa81a2677.
+// Oracles is a free data retrieval call binding the contract method 0x5b69a7d8.
 //
-// Solidity: function oracles(bytes32 ) view returns(address)
-func (_Nebula *NebulaSession) Oracles(arg0 [32]byte) (common.Address, error) {
+// Solidity: function oracles(uint256 ) view returns(address)
+func (_Nebula *NebulaSession) Oracles(arg0 *big.Int) (common.Address, error) {
 	return _Nebula.Contract.Oracles(&_Nebula.CallOpts, arg0)
 }
 
-// Oracles is a free data retrieval call binding the contract method 0xa81a2677.
+// Oracles is a free data retrieval call binding the contract method 0x5b69a7d8.
 //
-// Solidity: function oracles(bytes32 ) view returns(address)
-func (_Nebula *NebulaCallerSession) Oracles(arg0 [32]byte) (common.Address, error) {
+// Solidity: function oracles(uint256 ) view returns(address)
+func (_Nebula *NebulaCallerSession) Oracles(arg0 *big.Int) (common.Address, error) {
 	return _Nebula.Contract.Oracles(&_Nebula.CallOpts, arg0)
-}
-
-// OraclesCount is a free data retrieval call binding the contract method 0x76f70900.
-//
-// Solidity: function oraclesCount() view returns(uint256)
-func (_Nebula *NebulaCaller) OraclesCount(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _Nebula.contract.Call(opts, out, "oraclesCount")
-	return *ret0, err
-}
-
-// OraclesCount is a free data retrieval call binding the contract method 0x76f70900.
-//
-// Solidity: function oraclesCount() view returns(uint256)
-func (_Nebula *NebulaSession) OraclesCount() (*big.Int, error) {
-	return _Nebula.Contract.OraclesCount(&_Nebula.CallOpts)
-}
-
-// OraclesCount is a free data retrieval call binding the contract method 0x76f70900.
-//
-// Solidity: function oraclesCount() view returns(uint256)
-func (_Nebula *NebulaCallerSession) OraclesCount() (*big.Int, error) {
-	return _Nebula.Contract.OraclesCount(&_Nebula.CallOpts)
 }
 
 // PulseQueue is a free data retrieval call binding the contract method 0x1d11f944.
@@ -467,37 +349,27 @@ func (_Nebula *NebulaCallerSession) PulseQueue() (struct {
 
 // Pulses is a free data retrieval call binding the contract method 0x0694fbb3.
 //
-// Solidity: function pulses(uint256 ) view returns(bytes32 dataHash, uint256 confirmationCount)
-func (_Nebula *NebulaCaller) Pulses(opts *bind.CallOpts, arg0 *big.Int) (struct {
-	DataHash          [32]byte
-	ConfirmationCount *big.Int
-}, error) {
-	ret := new(struct {
-		DataHash          [32]byte
-		ConfirmationCount *big.Int
-	})
-	out := ret
+// Solidity: function pulses(uint256 ) view returns(bytes32 dataHash)
+func (_Nebula *NebulaCaller) Pulses(opts *bind.CallOpts, arg0 *big.Int) ([32]byte, error) {
+	var (
+		ret0 = new([32]byte)
+	)
+	out := ret0
 	err := _Nebula.contract.Call(opts, out, "pulses", arg0)
-	return *ret, err
+	return *ret0, err
 }
 
 // Pulses is a free data retrieval call binding the contract method 0x0694fbb3.
 //
-// Solidity: function pulses(uint256 ) view returns(bytes32 dataHash, uint256 confirmationCount)
-func (_Nebula *NebulaSession) Pulses(arg0 *big.Int) (struct {
-	DataHash          [32]byte
-	ConfirmationCount *big.Int
-}, error) {
+// Solidity: function pulses(uint256 ) view returns(bytes32 dataHash)
+func (_Nebula *NebulaSession) Pulses(arg0 *big.Int) ([32]byte, error) {
 	return _Nebula.Contract.Pulses(&_Nebula.CallOpts, arg0)
 }
 
 // Pulses is a free data retrieval call binding the contract method 0x0694fbb3.
 //
-// Solidity: function pulses(uint256 ) view returns(bytes32 dataHash, uint256 confirmationCount)
-func (_Nebula *NebulaCallerSession) Pulses(arg0 *big.Int) (struct {
-	DataHash          [32]byte
-	ConfirmationCount *big.Int
-}, error) {
+// Solidity: function pulses(uint256 ) view returns(bytes32 dataHash)
+func (_Nebula *NebulaCallerSession) Pulses(arg0 *big.Int) ([32]byte, error) {
 	return _Nebula.Contract.Pulses(&_Nebula.CallOpts, arg0)
 }
 

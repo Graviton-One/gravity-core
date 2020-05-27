@@ -12,8 +12,6 @@ library Models {
 
     struct Pulse {
         bytes32 dataHash;
-        address[oracleCountInEpoch] oracles;
-        uint256 confirmationCount;
     }
 
     struct Oracle {

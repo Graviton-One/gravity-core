@@ -4,12 +4,12 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"gh-node/api/gravity"
-	"gh-node/config"
-	"gh-node/extractors"
-	"gh-node/signer"
+	"gravity-hub/gh-node/api/gravity"
+	"gravity-hub/gh-node/config"
+	"gravity-hub/gh-node/extractors"
+	"gravity-hub/gh-node/signer"
+	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"golang.org/x/net/context"
@@ -44,7 +44,7 @@ func main() {
 		panic(err)
 	}
 
-	privBytes, err := hexutil.Decode(privKeyString)
+	privBytes, err := hex.DecodeString(privKeyString)
 	if err != nil {
 		panic(err)
 	}
@@ -62,7 +62,9 @@ func main() {
 	for {
 		err = client.Start(ctx)
 		if err != nil {
-			fmt.Printf("Error:%s\n", err.Error())
+			fmt.Printf("Error:%s\n\n", err)
 		}
+
+		time.Sleep(time.Duration(cfg.Timeout) * time.Second)
 	}
 }

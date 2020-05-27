@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"gravity-hub/state"
+	"gravity-hub/ledger-node/state"
 
 	"github.com/dgraph-io/badger"
 )

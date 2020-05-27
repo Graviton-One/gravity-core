@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"gravity-hub/app"
+	"gravity-hub/ledger-node/app"
 	"os"
 	"os/signal"
 	"path/filepath"

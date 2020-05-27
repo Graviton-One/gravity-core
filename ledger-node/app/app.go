@@ -3,7 +3,7 @@ package app
 import (
 	"encoding/json"
 	"errors"
-	"gravity-hub/transaction"
+	"gravity-hub/ledger-node/transaction"
 
 	"github.com/dgraph-io/badger"
 	abcitypes "github.com/tendermint/tendermint/abci/types"

@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gravity-hub/state"
+	"gravity-hub/ledger-node/state"
 	"strconv"
 	"strings"
 
@@ -25,18 +25,12 @@ const (
 	SignResult   TxFunc = "signResult"
 )
 
-const (
-	HashKeySize   = 32
-	PublicKeySize = 32
-	SignatureSize = 64
-)
-
 type Transaction struct {
-	Id           string //[HashKeySize]byte
-	SenderPubKey string // [PublicKeySize]byte
-	Signature    string // [SignatureSize]byte
-	Func         TxFunc //[]byte
-	Args         string //Args
+	Id           string
+	SenderPubKey string
+	Signature    string
+	Func         TxFunc
+	Args         string
 }
 
 func (tx *Transaction) MarshalBytesWithoutSig() []byte {
@@ -63,7 +57,7 @@ func (tx *Transaction) IsValid(db *badger.DB) error {
 		return errors.New("invalid signature")
 	}
 
-	switch TxFunc(tx.Func) {
+	switch tx.Func {
 	case Commit:
 		return tx.isValidCommit(db)
 	case Reveal:
@@ -88,7 +82,12 @@ func (tx *Transaction) isValidSigns() bool {
 		return false
 	}
 
-	return crypto.VerifySignature(pubKeyBytes, tx.MarshalBytesWithoutSig(), sigBytes)
+	txIdBytes, err := hex.DecodeString(tx.Id)
+	if err != nil {
+		return false
+	}
+
+	return crypto.VerifySignature(pubKeyBytes, txIdBytes, sigBytes[0:64])
 }
 
 func (tx *Transaction) isValidAddValidator(db *badger.DB) error {
@@ -210,7 +209,7 @@ func (tx *Transaction) isValidSignResult(db *badger.DB) error {
 	height := binary.BigEndian.Uint64(heightBytes)
 	prefix := strings.Join([]string{string(state.RevealKey), hex.EncodeToString(nebulaAddress), fmt.Sprintf("%d", height)}, "_")
 
-	var reveals []float64
+	var reveals []uint64
 	db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
@@ -218,26 +217,25 @@ func (tx *Transaction) isValidSignResult(db *badger.DB) error {
 		for it.Seek([]byte(prefix)); it.ValidForPrefix([]byte(prefix)); it.Next() {
 			item := it.Item()
 			item.Value(func(v []byte) error {
-				value, err := strconv.ParseFloat(string(v), 64)
-				if err != nil {
-					return nil
-				}
-
-				reveals = append(reveals, value)
+				reveals = append(reveals, binary.BigEndian.Uint64(v))
 				return nil
 			})
 		}
 		return nil
 	})
 
-	var average float64
+	var average uint64
 	for _, v := range reveals {
 		average += v
 	}
-	average = average / float64(len(reveals))
+	value := uint64(float64(average) / float64(len(reveals)))
 
-	result := fmt.Sprintf("%.2f", average)
-	currentResultHash := crypto.Keccak256([]byte(result))
+	bytesValue := make([]byte, 8)
+	binary.LittleEndian.PutUint64(bytesValue, value)
+	hash := crypto.Keccak256(bytesValue)
+	validationMsg := "\x19Ethereum Signed Message:\n" + strconv.Itoa(len(hash))
+	currentResultHash := crypto.Keccak256(append([]byte(validationMsg), hash...))
+
 	if bytes.Compare(resultHash, currentResultHash[:]) != 0 {
 		return errors.New("invalid result hash")
 	}
@@ -245,7 +243,7 @@ func (tx *Transaction) isValidSignResult(db *badger.DB) error {
 	if err != nil {
 		return err
 	}
-	if !crypto.VerifySignature(senderPubKeyBytes, signBytes, resultHash) {
+	if !crypto.VerifySignature(senderPubKeyBytes, resultHash, signBytes[0:64]) {
 		return errors.New("invalid result hash sign")
 	}
 
