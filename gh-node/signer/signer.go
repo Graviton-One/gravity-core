@@ -329,7 +329,7 @@ func (client *Client) signResult(ethHeight uint64, ctx context.Context) (uint64,
 		return 0, nil, err
 	}
 	fmt.Printf("Sign result txId: %s\n", tx.Id)
-	return value, resultHash, nil
+	return value, hash, nil
 }
 func (client *Client) sendResult(ethHeight uint64, hash []byte, ctx context.Context) error {
 	data, err := client.nebula.Pulses(nil, big.NewInt(int64(ethHeight)))
@@ -355,11 +355,16 @@ func (client *Client) sendResult(ethHeight uint64, hash []byte, ctx context.Cont
 			}
 			validatorAddress := crypto.PubkeyToAddress(*pubKey)
 			position := 0
+			isExist := false
 			for i, address := range oracles {
 				if validatorAddress == address {
 					position = i
+					isExist = true
 					break
 				}
+			}
+			if !isExist {
+				continue
 			}
 
 			sign, err := client.ghClient.GetKey(keys.FormSignResultKey(client.nebulaId, ethHeight, validator), ctx)
