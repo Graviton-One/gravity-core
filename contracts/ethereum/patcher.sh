@@ -20,12 +20,14 @@ update_truffle_config () {
 
     local template='
     module.exports = {
-        external: {
-        host: "%s",     // Localhost (default: none)
-        port: 8545,            // Standard Ethereum port (default: none)
-        network_id: "*",       // Any network (default: none)
-        gas: 0,
-        skipDryRun: false
+        networks: {
+            external: {
+                host: "%s",     // Localhost (default: none)
+                port: 8545,            // Standard Ethereum port (default: none)
+                network_id: "*",       // Any network (default: none)
+                gas: 0,
+                skipDryRun: false
+            }
         }
     }
     '
