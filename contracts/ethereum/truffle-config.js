@@ -42,10 +42,19 @@ module.exports = {
     // tab if you use this network and you must also set the `host`, `port` and `network_id`
     // options below to some value.
     //
+    external: {
+      host: "172.21.0.1",     // Localhost (default: none)
+      port: 8545,            // Standard Ethereum port (default: none)
+      network_id: "*",       // Any network (default: none)
+      gas: 0,
+      skipDryRun: false
+    },
     development: {
       host: "127.0.0.1",     // Localhost (default: none)
-      port: 7545,            // Standard Ethereum port (default: none)
-      network_id: "5777",       // Any network (default: none)
+      port: 8545,            // Standard Ethereum port (default: none)
+      network_id: "*",       // Any network (default: none)
+      gas: 0,
+      skipDryRun: false
     },
     kovan: {
       provider: () => new PrivateKeyProvider("", `https://kovan.infura.io/v3/598efca7168947c6a186e2f85b600be1`),
