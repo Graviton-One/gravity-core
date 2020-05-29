@@ -1,0 +1,7 @@
+{
+    "GHNodeURL":"http://localhost:26657",
+    "Timeout":"1",
+    "NebulaId":"0000000000000000000000000000000000000000000000000000000000000000",
+    "EthNodeUrl":"http://localhost:8545",
+    "NebulaContract":"dfgdsdfsdffg"
+}
