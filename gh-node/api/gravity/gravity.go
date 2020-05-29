@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gravity-hub/common/transactions"
 	"gravity-hub/gh-node/api"
-	"gravity-hub/gh-node/transaction"
 	"net/http"
 	"strings"
 	"time"
@@ -27,16 +27,19 @@ var (
 )
 
 func NewClient(nodeUrl string) *Client {
-	return &Client{nodeUrl: nodeUrl, client: &http.Client{Timeout: time.Second * 3}}
+	return &Client{nodeUrl: nodeUrl, client: &http.Client{Timeout: time.Second * 10}}
 }
 
-func (ghClient *Client) SendTx(transaction *transaction.Transaction, ctx context.Context) error {
+func (ghClient *Client) SendTx(transaction *transactions.Transaction, ctx context.Context) error {
 	txBytes, err := json.Marshal(transaction)
 	if err != nil {
 		return err
 	}
 
 	rs, err := api.Do(ghClient.client, fmt.Sprintf("%s/broadcast_tx_commit?tx=\"%s\"", ghClient.nodeUrl, strings.ReplaceAll(string(txBytes), "\"", "\\\"")), api.POST, nil, ctx)
+	if err != nil {
+		return err
+	}
 	var response ResponseTx
 	err = json.Unmarshal(rs, &response)
 	if err != nil {

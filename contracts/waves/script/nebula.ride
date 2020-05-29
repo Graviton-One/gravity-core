@@ -1,0 +1,64 @@
+{-# STDLIB_VERSION 4 #-}
+{-# CONTENT_TYPE DAPP #-}
+{-# SCRIPT_TYPE ACCOUNT #-}
+
+#-------------------Constants---------------------------
+let WAVES = "WAVES"
+
+#-------------------Base functions----------------------
+func getNumberByKey(key: String) = {
+    valueOrElse(getInteger(this, key), 0)
+}
+func getStringByKey(key: String) = {
+    valueOrElse(getString(this, key), "")
+}
+func getStringByAddressAndKey(contract: Address, key: String) = {
+    valueOrElse(getString(contract, key), "")
+}
+func getNumberByAddressAndKey(contract: Address, key: String) = {
+    valueOrElse(getInteger(contract, key), 0)
+}
+
+
+#-------------------Constructo--------------------------
+let OraclesKey = "oracles"
+let BftCoefficientKey = "bft_coefficient"
+let SubscriberAddressKey = "subscriber_address"
+
+#-------------------Global vars-------------------------
+let oracles = getStringByKey(OraclesKey).split(",")
+let bftCoefficient = getNumberByKey(BftCoefficientKey)
+let subscriberAddress = getStringByKey(SubscriberAddressKey)
+
+func validateSign(hash: String, sign: String, oracle: String) = {
+    if (sign != "nil") then (if sigVerify(fromBase58String(hash), fromBase58String(sign), fromBase58String(oracle)) then 1 else 0) else 0
+}
+#-------------------Callable----------------------------
+@Callable(i)
+func confirmData(hash: String, signs: String) = {
+    let signList = signs.split(",")
+    let count = 
+        validateSign(hash, signList[0], oracles[0]) 
+        + validateSign(hash, signList[1], oracles[1]) 
+        + validateSign(hash, signList[2], oracles[2]) 
+        + validateSign(hash, signList[3], oracles[3]) 
+        + validateSign(hash, signList[4], oracles[4]) 
+
+    [
+        StringEntry(toString(height), hash)
+    ]
+}
+
+@Verifier(i)
+func sendData() = {
+    match (i) {
+        case in:InvokeScriptTransaction => 
+            let v = match (in.args[0]) {
+                case v:Int => toBytes(v)
+                case _ => throw("invalid args[0] type")
+            }
+
+            in.dApp == addressFromStringValue(subscriberAddress) && keccak256(v) == fromBase58String(getStringByKey(toString(height)))
+        case _ => true
+      }
+}

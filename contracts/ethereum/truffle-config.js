@@ -42,6 +42,13 @@ module.exports = {
     // tab if you use this network and you must also set the `host`, `port` and `network_id`
     // options below to some value.
     //
+    develop: {
+      port: 7545,
+      network_id: "5777",
+      accounts: 5,
+      defaultEtherBalance: 500,
+      blockTime: 15
+    },
     development: {
       host: "127.0.0.1",     // Localhost (default: none)
       port: 7545,            // Standard Ethereum port (default: none)

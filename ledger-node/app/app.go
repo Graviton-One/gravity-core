@@ -1,38 +1,48 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"gravity-hub/ledger-node/transaction"
+	"gravity-hub/common/transactions"
+
+	"github.com/wavesplatform/gowaves/pkg/client"
+
+	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/dgraph-io/badger"
 	abcitypes "github.com/tendermint/tendermint/abci/types"
 )
 
 const (
-	Success  uint32 = 0
-	Error    uint32 = 1
-	NotFound uint32 = 404
+	Success uint32 = 0
+	Error   uint32 = 1
 )
 
 type GHApplication struct {
 	db           *badger.DB
 	currentBatch *badger.Txn
+	ethClient    *ethclient.Client
+	wavesClient  *client.Client
+	ctx          context.Context
 }
 
 var _ abcitypes.Application = (*GHApplication)(nil)
 
-func NewGHApplication(db *badger.DB) *GHApplication {
+func NewGHApplication(ethClient *ethclient.Client, wavesClient *client.Client, db *badger.DB, ctx context.Context) *GHApplication {
 	return &GHApplication{
-		db: db,
+		db:          db,
+		ethClient:   ethClient,
+		wavesClient: wavesClient,
+		ctx:         ctx,
 	}
 }
 
-func (GHApplication) Info(req abcitypes.RequestInfo) abcitypes.ResponseInfo {
+func (app *GHApplication) Info(req abcitypes.RequestInfo) abcitypes.ResponseInfo {
 	return abcitypes.ResponseInfo{}
 }
 
-func (GHApplication) SetOption(req abcitypes.RequestSetOption) abcitypes.ResponseSetOption {
+func (app *GHApplication) SetOption(req abcitypes.RequestSetOption) abcitypes.ResponseSetOption {
 	return abcitypes.ResponseSetOption{}
 }
 
@@ -42,23 +52,22 @@ func (app *GHApplication) DeliverTx(req abcitypes.RequestDeliverTx) abcitypes.Re
 		return abcitypes.ResponseDeliverTx{Code: Error}
 	}
 
-	tx, _ := transaction.UnmarshalJson(req.Tx)
+	tx, _ := transactions.UnmarshalJson(req.Tx)
 	err = tx.SetState(app.currentBatch)
 	if err != nil {
-		//TODO
-		panic(err)
+		return abcitypes.ResponseDeliverTx{Code: Error}
 	}
 
 	return abcitypes.ResponseDeliverTx{Code: 0}
 }
 
 func (app *GHApplication) isValid(txBytes []byte) error {
-	tx, err := transaction.UnmarshalJson(txBytes)
+	tx, err := transactions.UnmarshalJson(txBytes)
 	if err != nil {
 		return errors.New("invalid parse tx")
 	}
 
-	err = tx.IsValid(app.db)
+	err = tx.IsValid(app.ethClient, app.wavesClient, app.db, app.ctx)
 	if err != nil {
 		return err
 	}
@@ -70,6 +79,7 @@ func (app *GHApplication) CheckTx(req abcitypes.RequestCheckTx) abcitypes.Respon
 	if err != nil {
 		return abcitypes.ResponseCheckTx{Code: Error, Info: err.Error()}
 	}
+
 	return abcitypes.ResponseCheckTx{Code: Success}
 }
 
@@ -131,12 +141,13 @@ func (app *GHApplication) Query(reqQuery abcitypes.RequestQuery) (resQuery abcit
 	}
 
 	if err != nil {
-		panic(err)
+		resQuery.Info = "invalid request"
+		resQuery.Code = Error
 	}
 	return
 }
 
-func (GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.ResponseInitChain {
+func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.ResponseInitChain {
 	return abcitypes.ResponseInitChain{}
 }
 
@@ -144,7 +155,6 @@ func (app *GHApplication) BeginBlock(req abcitypes.RequestBeginBlock) abcitypes.
 	app.currentBatch = app.db.NewTransaction(true)
 	return abcitypes.ResponseBeginBlock{}
 }
-
-func (GHApplication) EndBlock(req abcitypes.RequestEndBlock) abcitypes.ResponseEndBlock {
+func (app *GHApplication) EndBlock(req abcitypes.RequestEndBlock) abcitypes.ResponseEndBlock {
 	return abcitypes.ResponseEndBlock{}
 }

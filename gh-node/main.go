@@ -4,13 +4,12 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"gravity-hub/common/account"
 	"gravity-hub/gh-node/api/gravity"
 	"gravity-hub/gh-node/config"
 	"gravity-hub/gh-node/extractors"
 	"gravity-hub/gh-node/signer"
 	"time"
-
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"golang.org/x/net/context"
 )
@@ -44,17 +43,12 @@ func main() {
 		panic(err)
 	}
 
-	privBytes, err := hex.DecodeString(privKeyString)
+	chainType, err := account.ParseChainType(cfg.ChainType)
 	if err != nil {
 		panic(err)
 	}
 
-	ethClient, err := ethclient.DialContext(ctx, cfg.EthNodeUrl)
-	if err != nil {
-		panic(err)
-	}
-
-	client, err := signer.New(privBytes, nebulaId, cfg.NebulaContract, ghClient, ethClient, &extractors.BinanceExtractor{}, cfg.Timeout, ctx)
+	client, err := signer.New(privKeyString, nebulaId, chainType, cfg.NebulaContract, cfg.NodeUrl, ghClient, &extractors.BinanceExtractor{}, cfg.Timeout, ctx)
 	if err != nil {
 		panic(err)
 	}

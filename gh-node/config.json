@@ -1,7 +1,8 @@
 {
   "GHNodeURL": "http://localhost:26657",
-  "Timeout": 1,
+  "Timeout": 0,
   "NebulaId": "0000000000000000000000000000000000000000000000000000000000000000",
-  "EthNodeUrl": "http://localhost:7545",
-  "NebulaContract": "7FD38D5C0b7edDB748c4D46D5CB6fe6D8265E71B"
+  "NodeUrl": "http://localhost:7545",
+  "NebulaContract": "8BBd633226f1d15F3FD0C17561a16B1eba5CAF0c",
+  "ChainType": "Ethereum"
 }

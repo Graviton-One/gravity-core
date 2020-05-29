@@ -5,7 +5,7 @@ library Models {
 
     struct Subscription {
         address owner;
-        address contractAddress;
+        address payable contractAddress;
         uint8 minConfirmations;
         uint256 reward;
     }

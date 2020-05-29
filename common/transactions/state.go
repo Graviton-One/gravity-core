@@ -1,11 +1,11 @@
-package transaction
+package transactions
 
 import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"gravity-hub/ledger-node/state"
+	"gravity-hub/common/keys"
 
 	"github.com/dgraph-io/badger"
 )
@@ -20,6 +20,8 @@ func (tx *Transaction) SetState(currentBatch *badger.Txn) error {
 		return tx.SetStateAddValidator(currentBatch)
 	case SignResult:
 		return tx.SetStateSignResult(currentBatch)
+	case NewRound:
+		return tx.SetStatesNewRound(currentBatch)
 	default:
 		return errors.New(fmt.Sprintf("function '%s' is not found", string(tx.Func)))
 	}
@@ -38,7 +40,7 @@ func (tx *Transaction) SetStateCommit(currentBatch *badger.Txn) error {
 		return err
 	}
 
-	key := state.FormCommitKey(nebula, binary.BigEndian.Uint64(height), sender)
+	key := keys.FormCommitKey(nebula, binary.BigEndian.Uint64(height), sender)
 	return currentBatch.Set([]byte(key), commit)
 }
 
@@ -53,7 +55,7 @@ func (tx *Transaction) SetStateReveal(currentBatch *badger.Txn) error {
 	height := args[64:72]
 	reveal := args[72:]
 
-	key := state.FormRevealKey(nebula, binary.BigEndian.Uint64(height), commit)
+	key := keys.FormRevealKey(nebula, binary.BigEndian.Uint64(height), commit)
 	return currentBatch.Set([]byte(key), reveal)
 }
 
@@ -65,7 +67,7 @@ func (tx *Transaction) SetStateAddValidator(currentBatch *badger.Txn) error {
 
 	nebulaAddress := args[:32]
 	pubKey := args[32:]
-	key := state.FormValidatorKey(nebulaAddress, pubKey)
+	key := keys.FormValidatorKey(nebulaAddress, pubKey)
 	return currentBatch.Set([]byte(key), []byte{1})
 }
 
@@ -84,6 +86,20 @@ func (tx *Transaction) SetStateSignResult(currentBatch *badger.Txn) error {
 		return err
 	}
 
-	keySign := state.FormSignResultKey(nebulaAddress, binary.BigEndian.Uint64(height), sender)
+	keySign := keys.FormSignResultKey(nebulaAddress, binary.BigEndian.Uint64(height), sender)
 	return currentBatch.Set([]byte(keySign), signBytes)
+}
+
+func (tx *Transaction) SetStatesNewRound(currentBatch *badger.Txn) error {
+	var key string
+	args, err := hex.DecodeString(tx.Args)
+	if err != nil {
+		return err
+	}
+	txTcHeightBytes := args[:8]
+	txTcHeight := binary.BigEndian.Uint64(txTcHeightBytes)
+
+	key = keys.FormBlockKey(tx.ChainType, txTcHeight)
+	currentBatch.Set([]byte(key), args[8:16])
+	return nil
 }

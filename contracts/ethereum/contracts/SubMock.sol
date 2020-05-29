@@ -11,8 +11,8 @@ contract SubMock is ISubscription {
     }
     function () external payable {}
 
-    function attachData(uint256 data) external {
-        nebulaAddress.transfer(reward);
+    function attachData(uint64 data) public {
+        require(address(nebulaAddress).send(reward), "invalid send");
     }
 
 }

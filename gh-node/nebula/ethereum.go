@@ -27,7 +27,7 @@ var (
 )
 
 // NebulaABI is the input ABI used to generate the binding from.
-const NebulaABI = "[{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"newOracle\",\"type\":\"address[]\"},{\"internalType\":\"uint256\",\"name\":\"newBftValue\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"constant\":true,\"inputs\":[],\"name\":\"bftValue\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"isPublseSubSent\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"oracleQueue\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"first\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"last\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"oracles\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"pulseQueue\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"first\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"last\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"pulses\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"dataHash\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"subscriptions\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"contractAddress\",\"type\":\"address\"},{\"internalType\":\"uint8\",\"name\":\"minConfirmations\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"subscriptionsQueue\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"first\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"last\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getOracles\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"dataHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint8[]\",\"name\":\"v\",\"type\":\"uint8[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"r\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"s\",\"type\":\"bytes32[]\"}],\"name\":\"confirmData\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"subscriptionId\",\"type\":\"bytes32\"}],\"name\":\"sendData\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"contractAddress\",\"type\":\"address\"},{\"internalType\":\"uint8\",\"name\":\"minConfirmations\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"}],\"name\":\"subscribe\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"id\",\"type\":\"bytes32\"}],\"name\":\"unsubscribe\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const NebulaABI = "[{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"newOracle\",\"type\":\"address[]\"},{\"internalType\":\"uint256\",\"name\":\"newBftValue\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"constant\":true,\"inputs\":[],\"name\":\"bftValue\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"isPublseSubSent\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"oracleQueue\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"first\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"last\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"oracles\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"pulseQueue\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"first\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"last\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"pulses\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"dataHash\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"subscriptionIds\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"subscriptions\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"contractAddress\",\"type\":\"address\"},{\"internalType\":\"uint8\",\"name\":\"minConfirmations\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"subscriptionsQueue\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"first\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"last\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getOracles\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getSubscriptionIds\",\"outputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"\",\"type\":\"bytes32[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"dataHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint8[]\",\"name\":\"v\",\"type\":\"uint8[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"r\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"s\",\"type\":\"bytes32[]\"}],\"name\":\"confirmData\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"value\",\"type\":\"uint64\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"subscriptionId\",\"type\":\"bytes32\"}],\"name\":\"sendData\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"contractAddress\",\"type\":\"address\"},{\"internalType\":\"uint8\",\"name\":\"minConfirmations\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"}],\"name\":\"subscribe\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // Nebula is an auto generated Go binding around an Ethereum contract.
 type Nebula struct {
@@ -223,6 +223,32 @@ func (_Nebula *NebulaCallerSession) GetOracles() ([]common.Address, error) {
 	return _Nebula.Contract.GetOracles(&_Nebula.CallOpts)
 }
 
+// GetSubscriptionIds is a free data retrieval call binding the contract method 0x35091ab1.
+//
+// Solidity: function getSubscriptionIds() view returns(bytes32[])
+func (_Nebula *NebulaCaller) GetSubscriptionIds(opts *bind.CallOpts) ([][32]byte, error) {
+	var (
+		ret0 = new([][32]byte)
+	)
+	out := ret0
+	err := _Nebula.contract.Call(opts, out, "getSubscriptionIds")
+	return *ret0, err
+}
+
+// GetSubscriptionIds is a free data retrieval call binding the contract method 0x35091ab1.
+//
+// Solidity: function getSubscriptionIds() view returns(bytes32[])
+func (_Nebula *NebulaSession) GetSubscriptionIds() ([][32]byte, error) {
+	return _Nebula.Contract.GetSubscriptionIds(&_Nebula.CallOpts)
+}
+
+// GetSubscriptionIds is a free data retrieval call binding the contract method 0x35091ab1.
+//
+// Solidity: function getSubscriptionIds() view returns(bytes32[])
+func (_Nebula *NebulaCallerSession) GetSubscriptionIds() ([][32]byte, error) {
+	return _Nebula.Contract.GetSubscriptionIds(&_Nebula.CallOpts)
+}
+
 // IsPublseSubSent is a free data retrieval call binding the contract method 0x6148d3f3.
 //
 // Solidity: function isPublseSubSent(uint256 , bytes32 ) view returns(bool)
@@ -373,6 +399,32 @@ func (_Nebula *NebulaCallerSession) Pulses(arg0 *big.Int) ([32]byte, error) {
 	return _Nebula.Contract.Pulses(&_Nebula.CallOpts, arg0)
 }
 
+// SubscriptionIds is a free data retrieval call binding the contract method 0x8cafc358.
+//
+// Solidity: function subscriptionIds(uint256 ) view returns(bytes32)
+func (_Nebula *NebulaCaller) SubscriptionIds(opts *bind.CallOpts, arg0 *big.Int) ([32]byte, error) {
+	var (
+		ret0 = new([32]byte)
+	)
+	out := ret0
+	err := _Nebula.contract.Call(opts, out, "subscriptionIds", arg0)
+	return *ret0, err
+}
+
+// SubscriptionIds is a free data retrieval call binding the contract method 0x8cafc358.
+//
+// Solidity: function subscriptionIds(uint256 ) view returns(bytes32)
+func (_Nebula *NebulaSession) SubscriptionIds(arg0 *big.Int) ([32]byte, error) {
+	return _Nebula.Contract.SubscriptionIds(&_Nebula.CallOpts, arg0)
+}
+
+// SubscriptionIds is a free data retrieval call binding the contract method 0x8cafc358.
+//
+// Solidity: function subscriptionIds(uint256 ) view returns(bytes32)
+func (_Nebula *NebulaCallerSession) SubscriptionIds(arg0 *big.Int) ([32]byte, error) {
+	return _Nebula.Contract.SubscriptionIds(&_Nebula.CallOpts, arg0)
+}
+
 // Subscriptions is a free data retrieval call binding the contract method 0x94259c6c.
 //
 // Solidity: function subscriptions(bytes32 ) view returns(address owner, address contractAddress, uint8 minConfirmations, uint256 reward)
@@ -474,24 +526,24 @@ func (_Nebula *NebulaTransactorSession) ConfirmData(dataHash [32]byte, v []uint8
 	return _Nebula.Contract.ConfirmData(&_Nebula.TransactOpts, dataHash, v, r, s)
 }
 
-// SendData is a paid mutator transaction binding the contract method 0x04dd915d.
+// SendData is a paid mutator transaction binding the contract method 0x09275bd1.
 //
-// Solidity: function sendData(uint256 value, uint256 blockNumber, bytes32 subscriptionId) returns()
-func (_Nebula *NebulaTransactor) SendData(opts *bind.TransactOpts, value *big.Int, blockNumber *big.Int, subscriptionId [32]byte) (*types.Transaction, error) {
+// Solidity: function sendData(uint64 value, uint256 blockNumber, bytes32 subscriptionId) returns()
+func (_Nebula *NebulaTransactor) SendData(opts *bind.TransactOpts, value uint64, blockNumber *big.Int, subscriptionId [32]byte) (*types.Transaction, error) {
 	return _Nebula.contract.Transact(opts, "sendData", value, blockNumber, subscriptionId)
 }
 
-// SendData is a paid mutator transaction binding the contract method 0x04dd915d.
+// SendData is a paid mutator transaction binding the contract method 0x09275bd1.
 //
-// Solidity: function sendData(uint256 value, uint256 blockNumber, bytes32 subscriptionId) returns()
-func (_Nebula *NebulaSession) SendData(value *big.Int, blockNumber *big.Int, subscriptionId [32]byte) (*types.Transaction, error) {
+// Solidity: function sendData(uint64 value, uint256 blockNumber, bytes32 subscriptionId) returns()
+func (_Nebula *NebulaSession) SendData(value uint64, blockNumber *big.Int, subscriptionId [32]byte) (*types.Transaction, error) {
 	return _Nebula.Contract.SendData(&_Nebula.TransactOpts, value, blockNumber, subscriptionId)
 }
 
-// SendData is a paid mutator transaction binding the contract method 0x04dd915d.
+// SendData is a paid mutator transaction binding the contract method 0x09275bd1.
 //
-// Solidity: function sendData(uint256 value, uint256 blockNumber, bytes32 subscriptionId) returns()
-func (_Nebula *NebulaTransactorSession) SendData(value *big.Int, blockNumber *big.Int, subscriptionId [32]byte) (*types.Transaction, error) {
+// Solidity: function sendData(uint64 value, uint256 blockNumber, bytes32 subscriptionId) returns()
+func (_Nebula *NebulaTransactorSession) SendData(value uint64, blockNumber *big.Int, subscriptionId [32]byte) (*types.Transaction, error) {
 	return _Nebula.Contract.SendData(&_Nebula.TransactOpts, value, blockNumber, subscriptionId)
 }
 
@@ -514,25 +566,4 @@ func (_Nebula *NebulaSession) Subscribe(contractAddress common.Address, minConfi
 // Solidity: function subscribe(address contractAddress, uint8 minConfirmations, uint256 reward) returns()
 func (_Nebula *NebulaTransactorSession) Subscribe(contractAddress common.Address, minConfirmations uint8, reward *big.Int) (*types.Transaction, error) {
 	return _Nebula.Contract.Subscribe(&_Nebula.TransactOpts, contractAddress, minConfirmations, reward)
-}
-
-// Unsubscribe is a paid mutator transaction binding the contract method 0xf8c60146.
-//
-// Solidity: function unsubscribe(bytes32 id) returns()
-func (_Nebula *NebulaTransactor) Unsubscribe(opts *bind.TransactOpts, id [32]byte) (*types.Transaction, error) {
-	return _Nebula.contract.Transact(opts, "unsubscribe", id)
-}
-
-// Unsubscribe is a paid mutator transaction binding the contract method 0xf8c60146.
-//
-// Solidity: function unsubscribe(bytes32 id) returns()
-func (_Nebula *NebulaSession) Unsubscribe(id [32]byte) (*types.Transaction, error) {
-	return _Nebula.Contract.Unsubscribe(&_Nebula.TransactOpts, id)
-}
-
-// Unsubscribe is a paid mutator transaction binding the contract method 0xf8c60146.
-//
-// Solidity: function unsubscribe(bytes32 id) returns()
-func (_Nebula *NebulaTransactorSession) Unsubscribe(id [32]byte) (*types.Transaction, error) {
-	return _Nebula.Contract.Unsubscribe(&_Nebula.TransactOpts, id)
 }

@@ -6,10 +6,11 @@ import (
 )
 
 type Config struct {
-	EthNodeUrl     string
+	NodeUrl        string
 	GHNodeURL      string
 	Timeout        int
 	NebulaId       string
+	ChainType      string
 	NebulaContract string
 }
 

@@ -3,6 +3,7 @@ package keys
 import (
 	"encoding/hex"
 	"fmt"
+	"gravity-hub/common/account"
 	"strings"
 )
 
@@ -13,8 +14,19 @@ const (
 	CommitKey     Key = "commit"
 	RevealKey     Key = "reveal"
 	SignResultKey Key = "signResult"
-	ResultKey     Key = "result"
+	BlockKey      Key = "block"
 )
+
+func FormBlockKey(chainType account.ChainType, block uint64) string {
+	var blockchain string
+	switch chainType {
+	case account.Ethereum:
+		blockchain = "ethereum"
+	case account.Waves:
+		blockchain = "waves"
+	}
+	return strings.Join([]string{string(BlockKey), blockchain, fmt.Sprintf("%d", block)}, "_")
+}
 
 func FormValidatorKey(nebulaAddress []byte, validatorAddress []byte) string {
 	return strings.Join([]string{string(ValidatorKey), hex.EncodeToString(nebulaAddress), hex.EncodeToString(validatorAddress)}, "_")
