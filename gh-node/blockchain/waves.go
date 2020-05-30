@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/btcsuite/btcutil/base58"
 	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
 
-	"github.com/mr-tron/base58"
 	"github.com/wavesplatform/gowaves/pkg/proto"
 
 	"github.com/wavesplatform/gowaves/pkg/client"
@@ -63,11 +63,7 @@ func (waves *Waves) SendResult(tcHeight uint64, privKey []byte, nebulaId []byte,
 			return err
 		}
 		for _, oracle := range strings.Split(oracles.Value.(string), ",") {
-			pubKey, err := base58.Decode(oracle)
-			if err != nil {
-				signs = append(signs, "nil")
-				continue
-			}
+			pubKey := base58.Decode(oracle)
 			sign, err := ghClient.GetKey(keys.FormSignResultKey(nebulaId, tcHeight, pubKey), ctx)
 			if err != nil {
 				signs = append(signs, "nil")

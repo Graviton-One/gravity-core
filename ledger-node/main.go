@@ -10,13 +10,12 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/spf13/viper"
 	"github.com/wavesplatform/gowaves/pkg/client"
 
 	"github.com/dgraph-io/badger"
 
 	"github.com/ethereum/go-ethereum/ethclient"
-
-	"github.com/spf13/viper"
 
 	cfg "github.com/tendermint/tendermint/config"
 	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
