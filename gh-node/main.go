@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -10,8 +11,6 @@ import (
 	"gravity-hub/gh-node/extractors"
 	"gravity-hub/gh-node/signer"
 	"time"
-
-	"golang.org/x/net/context"
 )
 
 const (
