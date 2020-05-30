@@ -16,10 +16,11 @@ main () {
 
     JSON_FMT='{
     "GHNodeURL":"http://localhost:26657",
-    "Timeout":"1",
+    "Timeout":0,
     "NebulaId":"0000000000000000000000000000000000000000000000000000000000000000",
     "EthNodeUrl":"http://localhost:8545",
-    "NebulaContract":"%s"\n}\n'
+    "NebulaContract":"%s",
+    "ChainType": "Ethereum"\n}\n'
     printf "$JSON_FMT" "$nebula_address" > "$config_name"
 }
 
