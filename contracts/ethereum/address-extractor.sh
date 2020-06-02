@@ -2,8 +2,8 @@
 
 entered=0
 while read -r in; 
-do     
-    nebula_line=$(echo "$in" | sed -ne "/Deploying \'Nebula\'/,$ p")
+do
+    nebula_line=$(echo "$in" | sed -n -e "s/^.*\(Deploying 'Nebula'\)/\1/p")
 
     if [ -n "$nebula_line" ]
     then
