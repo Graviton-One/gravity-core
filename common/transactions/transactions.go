@@ -68,11 +68,11 @@ func (tx *Transaction) Hash() {
 }
 
 func (tx *Transaction) Sign(privKey []byte) error {
-	txBytes, err := hex.DecodeString(tx.Id)
+	txIdeBytes, err := hex.DecodeString(tx.Id)
 	if err != nil {
 		return err
 	}
-	sign, err := account.Sign(privKey, txBytes, tx.ChainType)
+	sign, err := account.Sign(privKey, txIdeBytes, tx.ChainType)
 	if err != nil {
 		return err
 	}
@@ -131,13 +131,12 @@ func (tx *Transaction) isValidSigns() bool {
 	if err != nil {
 		return false
 	}
+	txIdBytes, err := hex.DecodeString(tx.Id)
+	if err != nil {
+		return false
+	}
 	switch tx.ChainType {
 	case account.Ethereum:
-		txIdBytes, err := hex.DecodeString(tx.Id)
-		if err != nil {
-			return false
-		}
-
 		return crypto.VerifySignature(pubKeyBytes, txIdBytes, sigBytes[0:64])
 	case account.Waves:
 		pubKey := wavesCrypto.PublicKey{}
@@ -145,7 +144,7 @@ func (tx *Transaction) isValidSigns() bool {
 		sig := wavesCrypto.Signature{}
 		copy(sig[:], sigBytes)
 
-		return wavesCrypto.Verify(pubKey, sig, tx.MarshalBytesWithoutSig())
+		return wavesCrypto.Verify(pubKey, sig, txIdBytes)
 	default:
 		return false
 	}
@@ -363,9 +362,7 @@ func (tx *Transaction) isValidNewRound(ethClient *ethclient.Client, wavesClient 
 	txHeightBytes := args[:8]
 	txHeight := binary.BigEndian.Uint64(txHeightBytes)
 	if txHeight != height {
-		return errors.New("invalid eth height")
+		return errors.New("invalid height")
 	}
-	return nil
-
 	return nil
 }

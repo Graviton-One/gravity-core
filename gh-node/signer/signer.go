@@ -177,22 +177,18 @@ func (client *Client) Start(ctx context.Context) error {
 		var startGhHeight uint64
 		if err == gravity.KeyNotFound {
 			fmt.Printf("Target Chain Height: %d\n", tcHeight)
-			switch client.chainType {
-			case account.Ethereum:
-				tcHeightBytes := make([]byte, 8)
-				ghHeightBytes := make([]byte, 8)
-				binary.BigEndian.PutUint64(tcHeightBytes, tcHeight)
-				binary.BigEndian.PutUint64(ghHeightBytes, uint64(ghHeight))
-				tx, err := transactions.New(client.pubKey, transactions.NewRound, client.chainType, client.privKey, append(tcHeightBytes, ghHeightBytes...))
-				if err != nil {
-					return err
-				}
+			tcHeightBytes := make([]byte, 8)
+			ghHeightBytes := make([]byte, 8)
+			binary.BigEndian.PutUint64(tcHeightBytes, tcHeight)
+			binary.BigEndian.PutUint64(ghHeightBytes, uint64(ghHeight))
+			tx, err := transactions.New(client.pubKey, transactions.NewRound, client.chainType, client.privKey, append(tcHeightBytes, ghHeightBytes...))
+			if err != nil {
+				return err
+			}
 
-				err = client.ghClient.SendTx(tx, ctx)
-				if err != nil {
-					return err
-				}
-
+			err = client.ghClient.SendTx(tx, ctx)
+			if err != nil {
+				return err
 			}
 			startGhHeight = uint64(ghHeight)
 			fmt.Printf("GH Height Round Start: %d\n", startGhHeight)
@@ -204,6 +200,8 @@ func (client *Client) Start(ctx context.Context) error {
 			lastGHHeight = ghHeight
 		}
 		switch uint64(ghHeight) {
+		case startGhHeight:
+			fallthrough
 		case startGhHeight + 1:
 			if _, ok := blockStatus[tcHeight]; ok {
 				continue
@@ -262,7 +260,7 @@ func (client *Client) Start(ctx context.Context) error {
 			}
 			blockStatus[tcHeight].resultValue = value
 			blockStatus[tcHeight].resultHash = hash
-		case startGhHeight + 4:
+		default:
 			if _, ok := blockStatus[tcHeight]; !ok {
 				continue
 			}
@@ -272,33 +270,27 @@ func (client *Client) Start(ctx context.Context) error {
 			if _, ok := blockStatus[tcHeight]; !ok && blockStatus[tcHeight].resultValue != 0 {
 				continue
 			}
-			err = client.blockchain.SendResult(tcHeight, client.privKey, client.nebulaId, client.ghClient, client.validators, blockStatus[tcHeight].resultHash, ctx)
+			txId, err := client.blockchain.SendResult(tcHeight, client.privKey, client.nebulaId, client.ghClient, client.validators, blockStatus[tcHeight].resultHash, ctx)
 			if err != nil {
 				return err
 			}
 			blockStatus[tcHeight].isSent = true
-		case startGhHeight + 5:
-			if _, ok := blockStatus[tcHeight]; !ok {
-				continue
-			}
-			if tcHeight%uint64(len(client.validators)) != client.round || blockStatus[tcHeight].isSentSub || !blockStatus[tcHeight].isSent {
-				continue
-			}
-			if _, ok := blockStatus[tcHeight]; !ok && blockStatus[tcHeight].resultValue != 0 {
-				continue
-			}
 			go func() {
-				for i := 0; i < 10; i++ {
-					err = client.blockchain.SendSubs(tcHeight, client.privKey, blockStatus[tcHeight].resultValue)
+				err := client.blockchain.WaitTx(txId)
+				if err != nil {
+					println(err.Error())
+					return
+				}
+				for i := 0; i < 1; i++ {
+					err = client.blockchain.SendSubs(tcHeight, client.privKey, blockStatus[tcHeight].resultValue, ctx)
 					if err != nil {
+						println(err.Error())
 						time.Sleep(time.Second)
 						continue
 					}
 					break
 				}
 			}()
-
-			blockStatus[tcHeight].isSentSub = true
 		}
 
 		time.Sleep(time.Duration(client.timeout) * time.Second)

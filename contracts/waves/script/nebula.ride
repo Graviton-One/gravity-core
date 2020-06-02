@@ -1,4 +1,4 @@
-{-# STDLIB_VERSION 4 #-}
+{-# STDLIB_VERSION 3 #-}
 {-# CONTENT_TYPE DAPP #-}
 {-# SCRIPT_TYPE ACCOUNT #-}
 
@@ -7,23 +7,23 @@ let WAVES = "WAVES"
 
 #-------------------Base functions----------------------
 func getNumberByKey(key: String) = {
-    valueOrElse(getInteger(this, key), 0)
+    match (getInteger(this, key)) {
+        case v:Int => v
+        case _ => 0
+      } 
 }
 func getStringByKey(key: String) = {
-    valueOrElse(getString(this, key), "")
+    match (getString(this, key)) {
+        case v:String => v
+        case _ => ""
+    }
 }
-func getStringByAddressAndKey(contract: Address, key: String) = {
-    valueOrElse(getString(contract, key), "")
-}
-func getNumberByAddressAndKey(contract: Address, key: String) = {
-    valueOrElse(getInteger(contract, key), 0)
-}
-
 
 #-------------------Constructo--------------------------
 let OraclesKey = "oracles"
 let BftCoefficientKey = "bft_coefficient"
 let SubscriberAddressKey = "subscriber_address"
+let ContractPubKeyKey = "contract_pubkey"
 
 #-------------------Global vars-------------------------
 let oracles = getStringByKey(OraclesKey).split(",")
@@ -44,9 +44,13 @@ func confirmData(hash: String, signs: String) = {
         + validateSign(hash, signList[3], oracles[3]) 
         + validateSign(hash, signList[4], oracles[4]) 
 
-    [
-        StringEntry(toString(height), hash)
-    ]
+    if count > bftCoefficient then {
+        throw("invalid bft count")
+    } else {
+        WriteSet([
+            DataEntry(toString(height), hash)
+        ])
+    }
 }
 
 @Verifier(i)
@@ -54,11 +58,21 @@ func sendData() = {
     match (i) {
         case in:InvokeScriptTransaction => 
             let v = match (in.args[0]) {
-                case v:Int => toBytes(v)
+                case v:Int => v
                 case _ => throw("invalid args[0] type")
             }
-
-            in.dApp == addressFromStringValue(subscriberAddress) && keccak256(v) == fromBase58String(getStringByKey(toString(height)))
+            let vHeight = match (in.args[1]) {
+                case vHeight:Int => vHeight
+                case _ => throw("invalid args[1] type")
+            }
+            if in.dApp != addressFromStringValue(subscriberAddress)
+                then throw("invalid dapp address")
+            else if getStringByKey(toString(vHeight)) == ""
+                then throw("invalid height")
+            else if(keccak256(toBytes(v)) != fromBase58String(getStringByKey(toString(vHeight))))
+                then throw("invalid keccak256(value) " + toString(v))
+            else 
+                true
         case _ => true
       }
 }

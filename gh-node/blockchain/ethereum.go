@@ -57,19 +57,23 @@ func (ethereum *Ethereum) GetHeight(ctx context.Context) (uint64, error) {
 	return tcHeightRq.NumberU64(), nil
 }
 
-func (ethereum *Ethereum) SendResult(tcHeight uint64, privKey []byte, nebulaId []byte, ghClient *gravity.Client, validators [][]byte, hash []byte, ctx context.Context) error {
+func (ethereum *Ethereum) SendResult(tcHeight uint64, privKey []byte, nebulaId []byte, ghClient *gravity.Client, validators [][]byte, hash []byte, ctx context.Context) (string, error) {
 	data, err := ethereum.nebula.Pulses(nil, big.NewInt(int64(tcHeight)))
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if bytes.Equal(data[:], make([]byte, 32, 32)) == true {
-		bft := int(float32(len(validators)) * 0.7)
+		bft, err := ethereum.nebula.BftValue(nil)
+		if err != nil {
+			return "", err
+		}
+
 		realSignCount := 0
 
 		oracles, err := ethereum.nebula.GetOracles(nil)
 		if err != nil {
-			return err
+			return "", err
 		}
 		var r [5][32]byte
 		var s [5][32]byte
@@ -77,7 +81,7 @@ func (ethereum *Ethereum) SendResult(tcHeight uint64, privKey []byte, nebulaId [
 		for _, validator := range validators {
 			pubKey, err := crypto.DecompressPubkey(validator)
 			if err != nil {
-				return err
+				return "", err
 			}
 			validatorAddress := crypto.PubkeyToAddress(*pubKey)
 			position := 0
@@ -107,7 +111,7 @@ func (ethereum *Ethereum) SendResult(tcHeight uint64, privKey []byte, nebulaId [
 			realSignCount++
 		}
 
-		if realSignCount >= bft {
+		if realSignCount >= int(bft.Uint64()) {
 			ethPrivKey := &ecdsa.PrivateKey{
 				PublicKey: ecdsa.PublicKey{
 					Curve: secp256k1.S256(),
@@ -122,15 +126,17 @@ func (ethereum *Ethereum) SendResult(tcHeight uint64, privKey []byte, nebulaId [
 			copy(resultBytes32[:], hash)
 			tx, err := ethereum.nebula.ConfirmData(transactOpt, resultBytes32, v[:], r[:], s[:])
 			if err != nil {
-				return err
+				return "", err
 			}
 
 			fmt.Printf("Tx finilize: %s \n", tx.Hash().String())
+
+			return tx.Hash().String(), nil
 		}
 	}
-	return nil
+	return "", nil
 }
-func (ethereum *Ethereum) SendSubs(tcHeight uint64, privKey []byte, value uint64) error {
+func (ethereum *Ethereum) SendSubs(tcHeight uint64, privKey []byte, value uint64, ctx context.Context) error {
 	ids, err := ethereum.nebula.GetSubscriptionIds(nil)
 	if err != nil {
 		return err
@@ -154,5 +160,9 @@ func (ethereum *Ethereum) SendSubs(tcHeight uint64, privKey []byte, value uint64
 
 		fmt.Printf("Sub send tx: %s \n", tx.Hash().String())
 	}
+	return nil
+}
+
+func (ethereum *Ethereum) WaitTx(id string) error {
 	return nil
 }
