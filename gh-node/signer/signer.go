@@ -26,10 +26,6 @@ import (
 	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
 )
 
-const (
-	Rounds = 4
-)
-
 type Status struct {
 	commitPrice uint64
 	commitHash  []byte
@@ -39,11 +35,12 @@ type Status struct {
 	isSentSub   bool
 }
 type Client struct {
-	pubKey     []byte
+	tcPubKey   []byte
 	nebulaId   []byte
+	tcPrivKey  []byte
+	privKey    []byte
 	ghClient   *gravity.Client
 	extractor  extractors.PriceExtractor
-	privKey    []byte
 	round      uint64
 	timeout    int
 	validators [][]byte
@@ -51,14 +48,14 @@ type Client struct {
 	blockchain blockchain.IBlockchain
 }
 
-func New(privKeyString string, nebulaId []byte, chainType account.ChainType, contractAddress string, nodeUrl string, ghClient *gravity.Client, extractor extractors.PriceExtractor, timeout int, ctx context.Context) (*Client, error) {
+func New(privKeyString string, tcPrivKeyString string, nebulaId []byte, chainType account.ChainType, contractAddress string, nodeUrl string, ghClient *gravity.Client, extractor extractors.PriceExtractor, timeout int, ctx context.Context) (*Client, error) {
 	var pubKey []byte
-	var privKey []byte
+	var tcPrivKey []byte
 	var targetBlockchain blockchain.IBlockchain
 	var err error
 	switch chainType {
 	case account.Ethereum:
-		privKeyBytes, err := hex.DecodeString(privKeyString)
+		privKeyBytes, err := hex.DecodeString(tcPrivKeyString)
 		if err != nil {
 			return nil, err
 		}
@@ -79,7 +76,7 @@ func New(privKeyString string, nebulaId []byte, chainType account.ChainType, con
 		privKey = privKeyBytes
 	case account.Waves:
 		wCrypto := wavesplatform.NewWavesCrypto()
-		seed := wavesplatform.Seed(privKeyString)
+		seed := wavesplatform.Seed(tcPrivKeyString)
 		secret, err := wavesCrypto.NewSecretKeyFromBase58(string(wCrypto.PrivateKey(seed)))
 		if err != nil {
 			panic(err)
@@ -138,7 +135,7 @@ func New(privKeyString string, nebulaId []byte, chainType account.ChainType, con
 	return &Client{
 		pubKey:     pubKey,
 		nebulaId:   nebulaId,
-		privKey:    privKey,
+		tcPrivKey:  privKey,
 		ghClient:   ghClient,
 		extractor:  extractor,
 		round:      uint64(myRound),
@@ -270,7 +267,7 @@ func (client *Client) Start(ctx context.Context) error {
 			if _, ok := blockStatus[tcHeight]; !ok && blockStatus[tcHeight].resultValue != 0 {
 				continue
 			}
-			txId, err := client.blockchain.SendResult(tcHeight, client.privKey, client.nebulaId, client.ghClient, client.validators, blockStatus[tcHeight].resultHash, ctx)
+			txId, err := client.blockchain.SendResult(tcHeight, client.tcPrivKey, client.nebulaId, client.ghClient, client.validators, blockStatus[tcHeight].resultHash, ctx)
 			if err != nil {
 				return err
 			}
@@ -282,7 +279,7 @@ func (client *Client) Start(ctx context.Context) error {
 					return
 				}
 				for i := 0; i < 1; i++ {
-					err = client.blockchain.SendSubs(tcHeight, client.privKey, blockStatus[tcHeight].resultValue, ctx)
+					err = client.blockchain.SendSubs(tcHeight, client.tcPrivKey, blockStatus[tcHeight].resultValue, ctx)
 					if err != nil {
 						println(err.Error())
 						time.Sleep(time.Second)
@@ -379,10 +376,7 @@ func (client *Client) signResult(tcHeight uint64, ctx context.Context) (bool, ui
 	binary.BigEndian.PutUint64(bytesResult, value)
 
 	hash := crypto.Keccak256(bytesResult)
-	sign, err := account.Sign(client.privKey, hash, client.chainType)
-	if err != nil {
-		return false, 0, nil, err
-	}
+	sign := account.Sign(client.tcPrivKey, hash)
 
 	fmt.Printf("Result hash: %s \n", hex.EncodeToString(hash))
 

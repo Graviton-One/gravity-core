@@ -19,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/dgraph-io/badger"
+	_ "github.com/tendermint/tendermint/crypto/ed25519"
 	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
 )
 
@@ -72,10 +73,7 @@ func (tx *Transaction) Sign(privKey []byte) error {
 	if err != nil {
 		return err
 	}
-	sign, err := account.Sign(privKey, txIdeBytes, tx.ChainType)
-	if err != nil {
-		return err
-	}
+	sign := account.Sign(privKey, txIdeBytes)
 	tx.Signature = hex.EncodeToString(sign)
 	return nil
 }

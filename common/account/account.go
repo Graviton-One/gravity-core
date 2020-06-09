@@ -2,12 +2,14 @@ package account
 
 import (
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"errors"
 	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
+	_ "github.com/tendermint/tendermint/crypto/ed25519"
 	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
 )
 
@@ -29,7 +31,11 @@ func ParseChainType(chainType string) (ChainType, error) {
 	}
 }
 
-func Sign(privKey []byte, msg []byte, chainType ChainType) ([]byte, error) {
+func Sign(privKey []byte, msg []byte) []byte {
+	return ed25519.Sign(privKey, msg)
+}
+
+func SignWithTCPriv(privKey []byte, msg []byte, chainType ChainType) ([]byte, error) {
 	switch chainType {
 	case Ethereum:
 		ethPrivKey := &ecdsa.PrivateKey{

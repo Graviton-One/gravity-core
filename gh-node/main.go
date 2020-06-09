@@ -25,9 +25,10 @@ func logErr(err error) {
 	fmt.Printf("Error: %s\n", err.Error())
 }
 func main() {
-	var confFileName, privKeyString string
+	var confFileName, privKeyString, tcPrivKeyString string
 	flag.StringVar(&confFileName, "config", DefaultConfigFileName, "set config path")
 	flag.StringVar(&privKeyString, "key", "", "set key")
+	flag.StringVar(&tcPrivKeyString, "tcKey", "", "set target chain key")
 	flag.Parse()
 
 	ctx := context.Background()
