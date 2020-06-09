@@ -1,10 +1,10 @@
-{-# STDLIB_VERSION 4 #-}
+{-# STDLIB_VERSION 3 #-}
 {-# CONTENT_TYPE DAPP #-}
 {-# SCRIPT_TYPE ACCOUNT #-}
 
 @Callable(i)
-func attachData(v: Int) = {
-    [
-        IntegerEntry(toString(height), v)
-    ]
+func attachData(v: Int, height: Int) = {
+    WriteSet([
+        DataEntry(toString(height), v)
+    ])
 }
