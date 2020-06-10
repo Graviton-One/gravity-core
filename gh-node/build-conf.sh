@@ -16,7 +16,7 @@ main () {
 
     JSON_FMT='{
     "GHNodeURL":"http://localhost:26657",
-    "Timeout":"1",
+    "Timeout":0,
     "NebulaId":"0000000000000000000000000000000000000000000000000000000000000000",
     "NodeUrl":"http://localhost:8545",
     "NebulaContract":"%s"
