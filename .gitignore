@@ -24,4 +24,8 @@ ledger-node/data/*
 */.idea
 */build
 */*/build
-*/gh-node
+# */gh-node
+
+# Deploy vendor
+nebula-address.txt
+migration.txt
