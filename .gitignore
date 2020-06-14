@@ -24,4 +24,4 @@ ledger-node/data/*
 */.idea
 */build
 */*/build
-*/gh-node
+# */gh-node
