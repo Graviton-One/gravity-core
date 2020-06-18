@@ -6,10 +6,10 @@ eth_port='8545'
 eth_network=''
 
 replace_address_in_migration () {
-    local migration_name='2_initial_contracts.js'
-    local route_to_file="migrations/$migration_name"
+    migration_name='2_initial_contracts.js'
+    route_to_file="migrations/$migration_name"
     
-    local updated_file=$(cat "$route_to_file" | sed "s/ADDRESS/$eth_address/")
+    updated_file=$(cat "$route_to_file" | sed "s/ADDRESS/$eth_address/")
 
     > "$route_to_file"
 
@@ -18,7 +18,7 @@ replace_address_in_migration () {
 
 update_truffle_config () {
 
-    local template='
+    template='
     module.exports = {
         networks: {
             external: {
@@ -35,15 +35,11 @@ update_truffle_config () {
     printf "$template" $eth_network > "truffle-config.js"
 }
 
-main () {
-    while [ -n "$1" ]
-    do
-        case "$1" in
-            --eth-address) eth_address=$2; replace_address_in_migration ;;
-            --eth-network) eth_network=$2; update_truffle_config ;;
-        esac 
-        shift
-    done
-}
-
-main $@
+while [ -n "$1" ]
+do
+    case "$1" in
+        --eth-address) eth_address=$2; replace_address_in_migration ;;
+        --eth-network) eth_network=$2; update_truffle_config ;;
+    esac 
+    shift
+done
