@@ -7,6 +7,7 @@ import (
 
 type Config struct {
 	NodeUrl        string
+	TCPrivateKey string
 	GHNodeURL      string
 	Timeout        int
 	NebulaId       string

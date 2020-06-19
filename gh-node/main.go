@@ -25,9 +25,8 @@ func logErr(err error) {
 	fmt.Printf("Error: %s\n", err.Error())
 }
 func main() {
-	var confFileName, privKeyString string
+	var confFileName string
 	flag.StringVar(&confFileName, "config", DefaultConfigFileName, "set config path")
-	flag.StringVar(&privKeyString, "key", "", "set key")
 	flag.Parse()
 
 	ctx := context.Background()
@@ -47,7 +46,7 @@ func main() {
 		panic(err)
 	}
 
-	client, err := signer.New(privKeyString, nebulaId, chainType, cfg.NebulaContract, cfg.NodeUrl, ghClient, &extractors.BinanceExtractor{}, cfg.Timeout, ctx)
+	client, err := signer.New(cfg.TCPrivateKey, nebulaId, chainType, cfg.NebulaContract, cfg.NodeUrl, ghClient, &extractors.BinanceExtractor{}, cfg.Timeout, ctx)
 	if err != nil {
 		panic(err)
 	}

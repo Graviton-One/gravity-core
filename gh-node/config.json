@@ -1,8 +1,9 @@
 {
-  "GHNodeURL": "http://localhost:26657",
-  "Timeout": 0,
-  "NebulaId": "0000000000000000000000000000000000000000000000000000000000000001",
-  "NodeUrl": "http://127.0.0.1:6869",
-  "NebulaContract": "3MHQtdw8myT6b42RD4a9zc346MxgeKeKTkE",
-  "ChainType": "Waves"
+  "TCPrivateKey": "",
+  "GHNodeURL":"http://",
+  "Timeout":0,
+  "NebulaId":"0000000000000000000000000000000000000000000000000000000000000000",
+  "NodeUrl":"http://172.17.0.2:8545",
+  "NebulaContract":"c162b15C6D6b478bB1272B02EDA321863CfEE81F",
+  "ChainType": "Ethereum"
 }
