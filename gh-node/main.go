@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"gravity-hub/common/account"
@@ -11,6 +10,8 @@ import (
 	"gravity-hub/gh-node/extractors"
 	"gravity-hub/gh-node/signer"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 const (
@@ -25,10 +26,8 @@ func logErr(err error) {
 	fmt.Printf("Error: %s\n", err.Error())
 }
 func main() {
-	var confFileName, privKeyString, tcPrivKeyString string
+	var confFileName string
 	flag.StringVar(&confFileName, "config", DefaultConfigFileName, "set config path")
-	flag.StringVar(&privKeyString, "key", "", "set key")
-	flag.StringVar(&tcPrivKeyString, "tcKey", "", "set target chain key")
 	flag.Parse()
 
 	ctx := context.Background()
@@ -38,7 +37,7 @@ func main() {
 	}
 
 	ghClient := gravity.NewClient(cfg.GHNodeURL)
-	nebulaId, err := hex.DecodeString(cfg.NebulaId)
+	nebulaId, err := hexutil.Decode(cfg.NebulaId)
 	if err != nil {
 		panic(err)
 	}
@@ -48,7 +47,7 @@ func main() {
 		panic(err)
 	}
 
-	client, err := signer.New(privKeyString, nebulaId, chainType, cfg.NebulaContract, cfg.NodeUrl, ghClient, &extractors.BinanceExtractor{}, cfg.Timeout, ctx)
+	client, err := signer.New(cfg.GHPrivKey, cfg.TCPrivKey, nebulaId, chainType, cfg.NebulaContract, cfg.NodeUrl, ghClient, &extractors.BinanceExtractor{}, cfg.Timeout, ctx)
 	if err != nil {
 		panic(err)
 	}

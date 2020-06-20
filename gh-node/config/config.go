@@ -6,6 +6,8 @@ import (
 )
 
 type Config struct {
+	GHPrivKey      string
+	TCPrivKey      string
 	NodeUrl        string
 	GHNodeURL      string
 	Timeout        int

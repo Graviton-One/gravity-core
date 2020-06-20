@@ -1,73 +1,63 @@
 package gravity
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"gravity-hub/common/transactions"
-	"gravity-hub/gh-node/api"
-	"net/http"
-	"strings"
-	"time"
+
+	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 )
 
 type Client struct {
-	nodeUrl string
-	client  *http.Client
+	HttpClient *rpchttp.HTTP
 }
 
 const (
-	CodeError = 1
+	ErrorCode = 500
 )
 
 var (
 	KeyNotFound = errors.New("key not found")
 )
 
-func NewClient(nodeUrl string) *Client {
-	return &Client{nodeUrl: nodeUrl, client: &http.Client{Timeout: time.Second * 10}}
+func NewClient(rpcAddress string) (*Client, error) {
+	client, err := rpchttp.New(rpcAddress, "/websocket")
+	if err != nil {
+		return nil, err
+	}
+	return &Client{HttpClient: client}, nil
 }
 
-func (ghClient *Client) SendTx(transaction *transactions.Transaction, ctx context.Context) error {
+func (ghClient *Client) SendTx(transaction *transactions.Transaction) error {
 	txBytes, err := json.Marshal(transaction)
 	if err != nil {
 		return err
 	}
 
-	rs, err := api.Do(ghClient.client, fmt.Sprintf("%s/broadcast_tx_commit?tx=\"%s\"", ghClient.nodeUrl, strings.ReplaceAll(string(txBytes), "\"", "\\\"")), api.POST, nil, ctx)
+	rs, err := ghClient.HttpClient.BroadcastTxCommit(txBytes)
 	if err != nil {
 		return err
 	}
-	var response ResponseTx
-	err = json.Unmarshal(rs, &response)
-	if err != nil {
-		return err
-	}
-	if response.Result.CheckTx.Code == CodeError {
-		return errors.New(response.Result.CheckTx.Info)
+	if rs.CheckTx.Code == ErrorCode {
+		return errors.New(rs.CheckTx.Info)
+	} else if rs.DeliverTx.Code == ErrorCode {
+		return errors.New(rs.DeliverTx.Info)
 	}
 	return err
 }
 
-func (ghClient *Client) GetKey(key string, ctx context.Context) ([]byte, error) {
-	data, err := api.Do(ghClient.client, fmt.Sprintf(ghClient.nodeUrl+"/abci_query?path=\"%s\"&data=\"%s\"", "key", key), api.GET, nil, ctx)
+func (ghClient *Client) GetKey(key string) ([]byte, error) {
+	rs, err := ghClient.HttpClient.ABCIQuery("key", []byte(key))
 	if err != nil {
 		return nil, err
 	}
 
-	var response ResponseGet
-	err = json.Unmarshal(data, &response)
-	if err != nil {
-		return nil, err
-	}
-
-	if response.Result.Response.Code == CodeError {
+	if rs.Response.Code == ErrorCode {
 		return nil, KeyNotFound
 	}
 
-	value, err := base64.StdEncoding.DecodeString(response.Result.Response.Value)
+	value, err := base64.StdEncoding.DecodeString(string(rs.Response.Value))
 	if err != nil {
 		return nil, err
 	}
@@ -75,46 +65,26 @@ func (ghClient *Client) GetKey(key string, ctx context.Context) ([]byte, error) 
 	return value, nil
 }
 
-func (ghClient *Client) GetByPrefix(prefix string, ctx context.Context) (map[string][]byte, error) {
-	data, err := api.Do(ghClient.client, fmt.Sprintf(ghClient.nodeUrl+"/abci_query?path=\"%s\"&data=\"%s\"", "prefix", prefix), api.GET, nil, ctx)
+func (ghClient *Client) GetByPrefix(prefix string) (map[string][]byte, error) {
+	rs, err := ghClient.HttpClient.ABCIQuery("prefix", []byte(prefix))
 	if err != nil {
 		return nil, err
 	}
 
-	var response ResponseGet
-	err = json.Unmarshal(data, &response)
-	if err != nil {
-		return nil, err
+	if rs.Response.Code == ErrorCode {
+		return nil, KeyNotFound
 	}
 
-	if response.Result.Response.Code == CodeError {
-		return nil, errors.New(response.Result.Response.Info)
-	}
-	value, err := base64.StdEncoding.DecodeString(response.Result.Response.Value)
+	rsValue, err := base64.StdEncoding.DecodeString(string(rs.Response.Value))
 	if err != nil {
 		return nil, err
 	}
 
 	values := make(map[string][]byte)
-	err = json.Unmarshal(value, &values)
+	err = json.Unmarshal(rsValue, &values)
 	if err != nil {
 		return nil, err
 	}
 
 	return values, nil
-}
-
-func (ghClient *Client) GetBlock(ctx context.Context) (ResponseBlock, error) {
-	data, err := api.Do(ghClient.client, fmt.Sprintf("%s/block", ghClient.nodeUrl), api.POST, nil, ctx)
-	if err != nil {
-		return ResponseBlock{}, err
-	}
-
-	var response ResponseBlock
-	err = json.Unmarshal(data, &response)
-	if err != nil {
-		return ResponseBlock{}, err
-	}
-
-	return response, nil
 }

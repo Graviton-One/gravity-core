@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
-	"encoding/hex"
 	"fmt"
 	"gravity-hub/common/keys"
 	"gravity-hub/gh-node/api/gravity"
 	"gravity-hub/gh-node/nebula"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -27,7 +28,7 @@ type Ethereum struct {
 
 func NewEthereum(contractAddress string, nodeUrl string, ctx context.Context) (*Ethereum, error) {
 	ethContractAddress := common.Address{}
-	hexAddress, err := hex.DecodeString(contractAddress)
+	hexAddress, err := hexutil.Decode(contractAddress)
 	if err != nil {
 		return nil, err
 	}

@@ -16,7 +16,7 @@ import (
 
 const (
 	Success uint32 = 0
-	Error   uint32 = 1
+	Error   uint32 = 500
 )
 
 type GHApplication struct {

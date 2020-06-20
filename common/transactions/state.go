@@ -2,10 +2,13 @@ package transactions
 
 import (
 	"encoding/binary"
-	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"gravity-hub/common/keys"
+	"gravity-hub/gravity-score-calculator/models"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/dgraph-io/badger"
 )
@@ -28,14 +31,14 @@ func (tx *Transaction) SetState(currentBatch *badger.Txn) error {
 }
 
 func (tx *Transaction) SetStateCommit(currentBatch *badger.Txn) error {
-	args, err := hex.DecodeString(tx.Args)
+	args, err := hexutil.Decode(tx.Args)
 	if err != nil {
 		return err
 	}
 	nebula := args[0:32]
 	height := args[32:40]
 	commit := args[40:]
-	sender, err := hex.DecodeString(tx.SenderPubKey)
+	sender, err := hexutil.Decode(tx.SenderPubKey)
 	if err != nil {
 		return err
 	}
@@ -45,7 +48,7 @@ func (tx *Transaction) SetStateCommit(currentBatch *badger.Txn) error {
 }
 
 func (tx *Transaction) SetStateReveal(currentBatch *badger.Txn) error {
-	args, err := hex.DecodeString(tx.Args)
+	args, err := hexutil.Decode(tx.Args)
 	if err != nil {
 		return err
 	}
@@ -60,7 +63,7 @@ func (tx *Transaction) SetStateReveal(currentBatch *badger.Txn) error {
 }
 
 func (tx *Transaction) SetStateAddValidator(currentBatch *badger.Txn) error {
-	args, err := hex.DecodeString(tx.Args)
+	args, err := hexutil.Decode(tx.Args)
 	if err != nil {
 		return err
 	}
@@ -72,7 +75,7 @@ func (tx *Transaction) SetStateAddValidator(currentBatch *badger.Txn) error {
 }
 
 func (tx *Transaction) SetStateSignResult(currentBatch *badger.Txn) error {
-	args, err := hex.DecodeString(tx.Args)
+	args, err := hexutil.Decode(tx.Args)
 	if err != nil {
 		return err
 	}
@@ -81,7 +84,7 @@ func (tx *Transaction) SetStateSignResult(currentBatch *badger.Txn) error {
 	height := args[32:40]
 	signBytes := args[72:]
 
-	sender, err := hex.DecodeString(tx.SenderPubKey)
+	sender, err := hexutil.Decode(tx.SenderPubKey)
 	if err != nil {
 		return err
 	}
@@ -92,7 +95,7 @@ func (tx *Transaction) SetStateSignResult(currentBatch *badger.Txn) error {
 
 func (tx *Transaction) SetStatesNewRound(currentBatch *badger.Txn) error {
 	var key string
-	args, err := hex.DecodeString(tx.Args)
+	args, err := hexutil.Decode(tx.Args)
 	if err != nil {
 		return err
 	}
@@ -101,5 +104,31 @@ func (tx *Transaction) SetStatesNewRound(currentBatch *badger.Txn) error {
 
 	key = keys.FormBlockKey(tx.ChainType, txTcHeight)
 	currentBatch.Set([]byte(key), args[8:16])
+	return nil
+}
+
+func (tx *Transaction) SetVote(currentBatch *badger.Txn) error {
+	var key string
+	args, err := hexutil.Decode(tx.Args)
+	if err != nil {
+		return err
+	}
+	pubKey, err := hexutil.Decode(tx.SenderPubKey)
+	if err != nil {
+		return err
+	}
+	var votes []models.Vote
+	err = json.Unmarshal(args, &votes)
+	if err != nil {
+		return err
+	}
+
+	b, err := json.Marshal(votes)
+	if err != nil {
+		return err
+	}
+
+	key = keys.FormVoteKey(pubKey)
+	currentBatch.Set([]byte(key), b)
 	return nil
 }

@@ -62,7 +62,6 @@ func main() {
 }
 
 func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
-
 	// read config
 	config := cfg.DefaultConfig()
 	config.RootDir = filepath.Dir(filepath.Dir(configFile))

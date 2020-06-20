@@ -1,0 +1,63 @@
+{-# STDLIB_VERSION 3 #-}
+{-# CONTENT_TYPE DAPP #-}
+{-# SCRIPT_TYPE ACCOUNT #-}
+
+#-------------------Constants.....----------------------
+let MaxConsuls = 5 
+
+#-------------------Base functions----------------------
+func getNumberByKey(key: String) = {
+    match (getInteger(this, key)) {
+        case v:Int => v
+        case _ => 0
+      } 
+}
+func getStringByKey(key: String) = {
+    match (getString(this, key)) {
+        case v:String => v
+        case _ => ""
+    }
+}
+
+#-------------------Constructor--------------------------
+let OraclesKey = "oracles"
+let OraclesSorted = "oracles"
+let ScoresKey = "scores"
+let ConsulsKey = "consuls"
+let BftCoefficientKey = "bft_coefficient"
+
+#-------------------Global vars-------------------------
+let oracles = getStringByKey(OraclesKey).split(",")
+let scores = getStringByKey(ScoresKey).split(",")
+let consuls = getStringByKey(ConsulsKey).split(",")
+let bftCoefficient = getNumberByKey(BftCoefficientKey)
+
+
+func validateSign(hash: ByteVector, sign: String, oracle: String) = {
+    if (sign != "nil") then 
+        (if sigVerify(hash, fromBase58String(sign), fromBase58String(oracle)) then 1 else 0) 
+    else 0
+}
+
+#-------------------Callable----------------------------
+@Callable(i)
+func setGravityScore(newSortedOracles: String, newSortedConsuls: String, scores: String, stringSigns: String) = {
+    let signs = stringSigns.split(",")
+    let count = validateSign(keccak256(toBytes(newSortedOracles)), signs[0], consuls[0]) +
+                validateSign(keccak256(toBytes(newSortedOracles)), signs[1], consuls[1]) +
+                validateSign(keccak256(toBytes(newSortedOracles)), signs[2], consuls[2]) +
+                validateSign(keccak256(toBytes(newSortedOracles)), signs[3], consuls[3]) +
+                validateSign(keccak256(toBytes(newSortedOracles)), signs[4], consuls[4])
+
+    if (newSortedConsuls.split(",").size() > MaxConsuls) 
+        then throw("invalid max consul size")
+    else if(count > bftCoefficient) 
+        then throw("invalid bft count")
+    else {  
+        WriteSet([
+            DataEntry(OraclesKey, newSortedOracles),
+            DataEntry(ConsulsKey, newSortedConsuls),
+            DataEntry(ScoresKey, scores)
+        ])
+    }
+}

@@ -2,10 +2,11 @@ package account
 
 import (
 	"crypto/ecdsa"
-	"crypto/ed25519"
 	"errors"
 	"math/big"
 	"strings"
+
+	tendermintCrypto "github.com/tendermint/tendermint/crypto/ed25519"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
@@ -31,8 +32,8 @@ func ParseChainType(chainType string) (ChainType, error) {
 	}
 }
 
-func Sign(privKey []byte, msg []byte) []byte {
-	return ed25519.Sign(privKey, msg)
+func Sign(privKey tendermintCrypto.PrivKeyEd25519, msg []byte) ([]byte, error) {
+	return privKey.Sign(msg)
 }
 
 func SignWithTCPriv(privKey []byte, msg []byte, chainType ChainType) ([]byte, error) {

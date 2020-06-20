@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"gravity-hub/common/account"
 	"gravity-hub/common/keys"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/wavesplatform/gowaves/pkg/client"
 
@@ -20,22 +21,21 @@ import (
 
 	"github.com/dgraph-io/badger"
 	_ "github.com/tendermint/tendermint/crypto/ed25519"
+	tendermintCrypto "github.com/tendermint/tendermint/crypto/ed25519"
 	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
 )
 
 type TxFunc string
-type ChainType byte
 
 const (
-	Commit       TxFunc = "commit"
-	Reveal       TxFunc = "reveal"
-	AddValidator TxFunc = "addValidator"
-	SignResult   TxFunc = "signResult"
-	NewRound     TxFunc = "newRound"
-)
-const (
-	Ethereum ChainType = iota
-	Waves
+	Commit               TxFunc = "commit"
+	Reveal               TxFunc = "reveal"
+	AddValidator         TxFunc = "addValidator"
+	SignResult           TxFunc = "signResult"
+	NewRound             TxFunc = "newRound"
+	Vote                 TxFunc = "vote"
+	SignVoteResult       TxFunc = "signVoteResult"
+	SignNebulaValidators TxFunc = "signNebulaValidators"
 )
 
 type Transaction struct {
@@ -47,10 +47,10 @@ type Transaction struct {
 	Args         string
 }
 
-func New(pubKey []byte, funcName TxFunc, chainType account.ChainType, privKey []byte, args []byte) (*Transaction, error) {
+func New(pubKey []byte, funcName TxFunc, chainType account.ChainType, privKey tendermintCrypto.PrivKeyEd25519, args []byte) (*Transaction, error) {
 	tx := &Transaction{
-		SenderPubKey: hex.EncodeToString(pubKey),
-		Args:         hex.EncodeToString(args),
+		SenderPubKey: hexutil.Encode(pubKey),
+		Args:         hexutil.Encode(args),
 		Func:         funcName,
 		ChainType:    chainType,
 	}
@@ -65,16 +65,19 @@ func New(pubKey []byte, funcName TxFunc, chainType account.ChainType, privKey []
 }
 
 func (tx *Transaction) Hash() {
-	tx.Id = hex.EncodeToString(crypto.Keccak256(tx.MarshalBytesWithoutSig()))
+	tx.Id = hexutil.Encode(crypto.Keccak256(tx.MarshalBytesWithoutSig()))
 }
 
-func (tx *Transaction) Sign(privKey []byte) error {
-	txIdeBytes, err := hex.DecodeString(tx.Id)
+func (tx *Transaction) Sign(privKey tendermintCrypto.PrivKeyEd25519) error {
+	txIdeBytes, err := hexutil.Decode(tx.Id)
 	if err != nil {
 		return err
 	}
-	sign := account.Sign(privKey, txIdeBytes)
-	tx.Signature = hex.EncodeToString(sign)
+	sign, err := account.Sign(privKey, txIdeBytes)
+	if err != nil {
+		return err
+	}
+	tx.Signature = hexutil.Encode(sign)
 	return nil
 }
 
@@ -120,16 +123,16 @@ func (tx *Transaction) IsValid(ethClient *ethclient.Client, wavesClient *client.
 }
 
 func (tx *Transaction) isValidSigns() bool {
-	pubKeyBytes, err := hex.DecodeString(tx.SenderPubKey)
+	pubKeyBytes, err := hexutil.Decode(tx.SenderPubKey)
 	if err != nil {
 		return false
 	}
 
-	sigBytes, err := hex.DecodeString(tx.Signature)
+	sigBytes, err := hexutil.Decode(tx.Signature)
 	if err != nil {
 		return false
 	}
-	txIdBytes, err := hex.DecodeString(tx.Id)
+	txIdBytes, err := hexutil.Decode(tx.Id)
 	if err != nil {
 		return false
 	}
@@ -153,7 +156,7 @@ func (tx *Transaction) isValidAddValidator(db *badger.DB) error {
 		return errors.New("invalid args size")
 	}
 
-	args, err := hex.DecodeString(tx.Args)
+	args, err := hexutil.Decode(tx.Args)
 	if err != nil {
 		return err
 	}
@@ -178,13 +181,13 @@ func (tx *Transaction) isValidCommit(db *badger.DB) error {
 	if len(tx.Args) == 72 {
 		return errors.New("invalid commit size")
 	}
-	args, err := hex.DecodeString(tx.Args)
+	args, err := hexutil.Decode(tx.Args)
 	if err != nil {
 		return err
 	}
 	nebula := args[0:32]
 	height := args[32:40]
-	sender, err := hex.DecodeString(tx.SenderPubKey)
+	sender, err := hexutil.Decode(tx.SenderPubKey)
 	if err != nil {
 		return err
 	}
@@ -202,7 +205,7 @@ func (tx *Transaction) isValidCommit(db *badger.DB) error {
 }
 
 func (tx *Transaction) isValidReveal(db *badger.DB) error {
-	args, err := hex.DecodeString(tx.Args)
+	args, err := hexutil.Decode(tx.Args)
 	if err != nil {
 		return err
 	}
@@ -222,7 +225,7 @@ func (tx *Transaction) isValidReveal(db *badger.DB) error {
 		return errors.New("reveal is exist")
 	})
 
-	sender, err := hex.DecodeString(tx.SenderPubKey)
+	sender, err := hexutil.Decode(tx.SenderPubKey)
 	if err != nil {
 		return err
 	}
@@ -254,7 +257,7 @@ func (tx *Transaction) isValidReveal(db *badger.DB) error {
 }
 
 func (tx *Transaction) isValidSignResult(db *badger.DB) error {
-	args, err := hex.DecodeString(tx.Args)
+	args, err := hexutil.Decode(tx.Args)
 	if err != nil {
 		return err
 	}
@@ -265,7 +268,7 @@ func (tx *Transaction) isValidSignResult(db *badger.DB) error {
 	signBytes := args[72:]
 
 	height := binary.BigEndian.Uint64(heightBytes)
-	prefix := strings.Join([]string{string(keys.RevealKey), hex.EncodeToString(nebulaAddress), fmt.Sprintf("%d", height)}, "_")
+	prefix := strings.Join([]string{string(keys.RevealKey), hexutil.Encode(nebulaAddress), fmt.Sprintf("%d", height)}, "_")
 
 	var reveals []uint64
 	db.View(func(txn *badger.Txn) error {
@@ -295,7 +298,7 @@ func (tx *Transaction) isValidSignResult(db *badger.DB) error {
 	if bytes.Compare(resultHash, hash[:]) != 0 {
 		return errors.New("invalid result hash")
 	}
-	senderPubKeyBytes, err := hex.DecodeString(tx.SenderPubKey)
+	senderPubKeyBytes, err := hexutil.Decode(tx.SenderPubKey)
 	if err != nil {
 		return err
 	}
@@ -353,7 +356,7 @@ func (tx *Transaction) isValidNewRound(ethClient *ethclient.Client, wavesClient 
 	if err != nil {
 		return err
 	}
-	args, err := hex.DecodeString(tx.Args)
+	args, err := hexutil.Decode(tx.Args)
 	if err != nil {
 		return err
 	}
