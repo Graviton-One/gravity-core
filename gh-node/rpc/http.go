@@ -5,25 +5,26 @@ import (
 	"gravity-hub/common/account"
 	"gravity-hub/common/transactions"
 	"gravity-hub/gh-node/api/gravity"
-	"gravity-hub/gravity-score-calculator/models"
+	"gravity-hub/score-calculator/models"
 	"net/http"
 
 	tendermintCrypto "github.com/tendermint/tendermint/crypto/ed25519"
 )
 
-//TODO: to struct
-var pubKey []byte
-var privKey tendermintCrypto.PrivKeyEd25519
-var chainType account.ChainType
-var ghClient gravity.Client
+type ServerConfig struct {
+	Host      string
+	PubKey    []byte
+	PrivKey   tendermintCrypto.PrivKeyEd25519
+	ChainType account.ChainType
+	GhClient  *gravity.Client
+}
 
-func ListenRpcServer(host string, newPubKey []byte, newPrivKey tendermintCrypto.PrivKeyEd25519, newChainType account.ChainType, newGhClient gravity.Client) error {
-	pubKey = newPubKey
-	privKey = newPrivKey
-	chainType = newChainType
-	ghClient = newGhClient
+var cfg ServerConfig
+
+func ListenRpcServer(config ServerConfig) error {
+	cfg = config
 	http.HandleFunc("/vote", vote)
-	err := http.ListenAndServe(host, nil)
+	err := http.ListenAndServe(cfg.Host, nil)
 	return err
 }
 
@@ -41,8 +42,8 @@ func vote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := transactions.New(pubKey, transactions.Vote, chainType, privKey, b)
-	err = ghClient.SendTx(tx)
+	tx, err := transactions.New(cfg.PubKey, transactions.Vote, cfg.ChainType, cfg.PrivKey, b)
+	err = cfg.GhClient.SendTx(tx)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

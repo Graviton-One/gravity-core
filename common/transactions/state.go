@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"gravity-hub/common/keys"
-	"gravity-hub/gravity-score-calculator/models"
+	"gravity-hub/score-calculator/models"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 

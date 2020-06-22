@@ -98,7 +98,7 @@ func (ethereum *Ethereum) SendResult(tcHeight uint64, privKey []byte, nebulaId [
 				continue
 			}
 
-			sign, err := ghClient.GetKey(keys.FormSignResultKey(nebulaId, tcHeight, validator), ctx)
+			sign, err := ghClient.GetKey(keys.FormSignResultKey(nebulaId, tcHeight, validator))
 			if err != nil {
 				r[position] = [32]byte{}
 				s[position] = [32]byte{}

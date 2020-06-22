@@ -62,9 +62,9 @@ func (waves *Waves) SendResult(tcHeight uint64, privKey []byte, nebulaId []byte,
 		if err != nil {
 			return "", err
 		}
-		for _, oracle := range strings.Split(n.Value.(string), ",") {
+		for _, oracle := range strings.Split(oracles.Value.(string), ",") {
 			pubKey := base58.Decode(oracle)
-			sign, err := ghClient.GetKey(keys.FormSignResultKey(nebulaId, tcHeight, pubKey), ctx)
+			sign, err := ghClient.GetKey(keys.FormSignResultKey(nebulaId, tcHeight, pubKey))
 			if err != nil {
 				signs = append(signs, "nil")
 				continue

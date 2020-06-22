@@ -4,14 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"gravity-hub/common/account"
-	"gravity-hub/gh-node/api/gravity"
 	"gravity-hub/gh-node/config"
-	"gravity-hub/gh-node/extractors"
 	"gravity-hub/gh-node/signer"
 	"time"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 const (
@@ -36,18 +31,7 @@ func main() {
 		panic(err)
 	}
 
-	ghClient := gravity.NewClient(cfg.GHNodeURL)
-	nebulaId, err := hexutil.Decode(cfg.NebulaId)
-	if err != nil {
-		panic(err)
-	}
-
-	chainType, err := account.ParseChainType(cfg.ChainType)
-	if err != nil {
-		panic(err)
-	}
-
-	client, err := signer.New(cfg.GHPrivKey, cfg.TCPrivKey, nebulaId, chainType, cfg.NebulaContract, cfg.NodeUrl, ghClient, &extractors.BinanceExtractor{}, cfg.Timeout, ctx)
+	client, err := signer.New(cfg, ctx)
 	if err != nil {
 		panic(err)
 	}

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	api2 "gravity-hub/common/api"
-	"gravity-hub/gravity-score-calculator/models"
+	"gravity-hub/score-calculator/models"
 	"net/http"
 	"time"
 )
