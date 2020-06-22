@@ -4,7 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	score_calculator "gravity-hub/common/api/score-calculator"
 	"gravity-hub/ledger-node/app"
+	"gravity-hub/ledger-node/scheduler"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -86,7 +88,9 @@ func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	app := app.NewGHApplication(ethClient, wavesClient, db, ctx)
+
+	scheduler := scheduler.New(score_calculator.NewClient(viper.GetString("scoreCalculatorApi"), ctx))
+	app := app.NewGHApplication(ethClient, wavesClient, scheduler, db, ctx)
 
 	// create logger
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))

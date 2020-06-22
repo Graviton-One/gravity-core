@@ -1,6 +1,6 @@
 pragma solidity >=0.4.21 <0.7.0;
 
-import "./ISubscription.sol";
+import "../interfaces/ISubscription.sol";
 
 contract SubMock is ISubscription {
     address payable nebulaAddress;

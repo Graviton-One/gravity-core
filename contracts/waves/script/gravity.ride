@@ -41,7 +41,7 @@ func validateSign(hash: ByteVector, sign: String, oracle: String) = {
 
 #-------------------Callable----------------------------
 @Callable(i)
-func setGravityScore(newSortedOracles: String, newSortedConsuls: String, scores: String, stringSigns: String) = {
+func setGravityScore(newSortedOracles: String, scores: String, stringSigns: String) = {
     let signs = stringSigns.split(",")
     let count = validateSign(keccak256(toBytes(newSortedOracles)), signs[0], consuls[0]) +
                 validateSign(keccak256(toBytes(newSortedOracles)), signs[1], consuls[1]) +
@@ -49,14 +49,11 @@ func setGravityScore(newSortedOracles: String, newSortedConsuls: String, scores:
                 validateSign(keccak256(toBytes(newSortedOracles)), signs[3], consuls[3]) +
                 validateSign(keccak256(toBytes(newSortedOracles)), signs[4], consuls[4])
 
-    if (newSortedConsuls.split(",").size() > MaxConsuls) 
-        then throw("invalid max consul size")
-    else if(count > bftCoefficient) 
+    if(count > bftCoefficient) 
         then throw("invalid bft count")
     else {  
         WriteSet([
             DataEntry(OraclesKey, newSortedOracles),
-            DataEntry(ConsulsKey, newSortedConsuls),
             DataEntry(ScoresKey, scores)
         ])
     }

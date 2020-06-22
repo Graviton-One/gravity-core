@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"gravity-hub/common/transactions"
+	"gravity-hub/ledger-node/scheduler"
 
 	"github.com/wavesplatform/gowaves/pkg/client"
 
@@ -24,16 +26,18 @@ type GHApplication struct {
 	currentBatch *badger.Txn
 	ethClient    *ethclient.Client
 	wavesClient  *client.Client
+	scheduler    *scheduler.Scheduler
 	ctx          context.Context
 }
 
 var _ abcitypes.Application = (*GHApplication)(nil)
 
-func NewGHApplication(ethClient *ethclient.Client, wavesClient *client.Client, db *badger.DB, ctx context.Context) *GHApplication {
+func NewGHApplication(ethClient *ethclient.Client, wavesClient *client.Client, scheduler *scheduler.Scheduler, db *badger.DB, ctx context.Context) *GHApplication {
 	return &GHApplication{
 		db:          db,
 		ethClient:   ethClient,
 		wavesClient: wavesClient,
+		scheduler:   scheduler,
 		ctx:         ctx,
 	}
 }
@@ -152,6 +156,10 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 }
 
 func (app *GHApplication) BeginBlock(req abcitypes.RequestBeginBlock) abcitypes.ResponseBeginBlock {
+	err := app.scheduler.HandleBlock(req.Header.Height, app.currentBatch)
+	if err != nil {
+		fmt.Printf("Error: %s", err.Error())
+	}
 	app.currentBatch = app.db.NewTransaction(true)
 	return abcitypes.ResponseBeginBlock{}
 }

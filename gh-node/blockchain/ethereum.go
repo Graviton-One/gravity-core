@@ -5,9 +5,9 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"gravity-hub/common/contracts"
 	"gravity-hub/common/keys"
 	"gravity-hub/gh-node/api/gravity"
-	"gravity-hub/gh-node/nebula"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -23,7 +23,7 @@ import (
 
 type Ethereum struct {
 	ethClient *ethclient.Client
-	nebula    *nebula.Nebula
+	nebula    *contracts.Nebula
 }
 
 func NewEthereum(contractAddress string, nodeUrl string, ctx context.Context) (*Ethereum, error) {
@@ -38,7 +38,7 @@ func NewEthereum(contractAddress string, nodeUrl string, ctx context.Context) (*
 	if err != nil {
 		return nil, err
 	}
-	nebulaContract, err := nebula.NewNebula(ethContractAddress, ethClient)
+	nebulaContract, err := contracts.NewNebula(ethContractAddress, ethClient)
 	if err != nil {
 		return nil, err
 	}
@@ -137,6 +137,7 @@ func (ethereum *Ethereum) SendResult(tcHeight uint64, privKey []byte, nebulaId [
 	}
 	return "", nil
 }
+
 func (ethereum *Ethereum) SendSubs(tcHeight uint64, privKey []byte, value uint64, ctx context.Context) error {
 	ids, err := ethereum.nebula.GetSubscriptionIds(nil)
 	if err != nil {

@@ -1,8 +1,8 @@
 pragma solidity >=0.4.21 <0.7.0;
 
-import "./libs/Queue.sol";
+import "../libs/Queue.sol";
 import "./Models.sol";
-import "./SubMock.sol";
+import "../Mock/SubMock.sol";
 
 contract Nebula {
     uint8 constant oracleCountInEpoch = 5;

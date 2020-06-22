@@ -25,6 +25,8 @@ func (tx *Transaction) SetState(currentBatch *badger.Txn) error {
 		return tx.SetStateSignResult(currentBatch)
 	case NewRound:
 		return tx.SetStatesNewRound(currentBatch)
+	case Vote:
+		return tx.SetVote(currentBatch)
 	default:
 		return errors.New(fmt.Sprintf("function '%s' is not found", string(tx.Func)))
 	}

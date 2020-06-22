@@ -11,12 +11,16 @@ import (
 type Key string
 
 const (
-	ValidatorKey  Key = "validator"
-	VoteKey       Key = "vote"
-	CommitKey     Key = "commit"
-	RevealKey     Key = "reveal"
-	SignResultKey Key = "signResult"
-	BlockKey      Key = "block"
+	Separator string = "_"
+
+	ValidatorKey            Key = "validator"
+	VoteKey                 Key = "vote"
+	SignNebulaValidatorsKey Key = "signNebulaValidators"
+	ScoreKey                Key = "score"
+	CommitKey               Key = "commit"
+	RevealKey               Key = "reveal"
+	SignResultKey           Key = "signResult"
+	BlockKey                Key = "block"
 )
 
 func FormBlockKey(chainType account.ChainType, block uint64) string {
@@ -27,25 +31,33 @@ func FormBlockKey(chainType account.ChainType, block uint64) string {
 	case account.Waves:
 		blockchain = "waves"
 	}
-	return strings.Join([]string{string(BlockKey), blockchain, fmt.Sprintf("%d", block)}, "_")
+	return strings.Join([]string{string(BlockKey), blockchain, fmt.Sprintf("%d", block)}, Separator)
+}
+
+func FormScoreKey(validatorAddress []byte) string {
+	return strings.Join([]string{string(ScoreKey), hexutil.Encode(validatorAddress)}, Separator)
 }
 
 func FormVoteKey(validatorAddress []byte) string {
-	return strings.Join([]string{string(VoteKey), hexutil.Encode(validatorAddress)}, "_")
+	return strings.Join([]string{string(VoteKey), hexutil.Encode(validatorAddress)}, Separator)
 }
 
 func FormValidatorKey(nebulaAddress []byte, validatorAddress []byte) string {
-	return strings.Join([]string{string(ValidatorKey), hexutil.Encode(nebulaAddress), hexutil.Encode(validatorAddress)}, "_")
+	return strings.Join([]string{string(ValidatorKey), hexutil.Encode(nebulaAddress), hexutil.Encode(validatorAddress)}, Separator)
 }
 
 func FormCommitKey(nebulaAddress []byte, block uint64, validatorAddress []byte) string {
-	return strings.Join([]string{string(CommitKey), hexutil.Encode(nebulaAddress), fmt.Sprintf("%d", block), hexutil.Encode(validatorAddress)}, "_")
+	return strings.Join([]string{string(CommitKey), hexutil.Encode(nebulaAddress), fmt.Sprintf("%d", block), hexutil.Encode(validatorAddress)}, Separator)
 }
 
 func FormRevealKey(nebulaAddress []byte, block uint64, commitHash []byte) string {
-	return strings.Join([]string{string(RevealKey), hexutil.Encode(nebulaAddress), fmt.Sprintf("%d", block), hexutil.Encode(commitHash)}, "_")
+	return strings.Join([]string{string(RevealKey), hexutil.Encode(nebulaAddress), fmt.Sprintf("%d", block), hexutil.Encode(commitHash)}, Separator)
 }
 
 func FormSignResultKey(nebulaAddress []byte, block uint64, validatorAddress []byte) string {
-	return strings.Join([]string{string(SignResultKey), hexutil.Encode(nebulaAddress), fmt.Sprintf("%d", block), hexutil.Encode(validatorAddress)}, "_")
+	return strings.Join([]string{string(SignResultKey), hexutil.Encode(nebulaAddress), fmt.Sprintf("%d", block), hexutil.Encode(validatorAddress)}, Separator)
+}
+
+func FormSignNebulaValidatorsKey(nebulaAddress []byte, validatorAddress []byte) string {
+	return strings.Join([]string{string(SignNebulaValidatorsKey), hexutil.Encode(nebulaAddress), hexutil.Encode(validatorAddress)}, Separator)
 }
