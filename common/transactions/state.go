@@ -70,10 +70,46 @@ func (tx *Transaction) SetStateAddValidator(currentBatch *badger.Txn) error {
 		return err
 	}
 
-	nebulaAddress := args[:32]
-	pubKey := args[32:]
-	key := keys.FormValidatorKey(nebulaAddress, pubKey)
-	return currentBatch.Set([]byte(key), []byte{1})
+	chainType := args[:1]
+	nebulaAddress := args[1:33]
+	pubKey := args[33:]
+	key := []byte(keys.FormValidatorKey(nebulaAddress, pubKey))
+	err = currentBatch.Set(key, chainType)
+	if err != nil {
+		return err
+	}
+
+	key = []byte(keys.FormNebulaeByValidatorKey(pubKey))
+	item, err := currentBatch.Get(key)
+	if err != nil && err != badger.ErrKeyNotFound {
+		return err
+	}
+
+	var nebulae []string
+	if err != badger.ErrKeyNotFound {
+		value, err := item.ValueCopy(nil)
+		if err != nil {
+			return err
+		}
+
+		err = json.Unmarshal(value, &nebulae)
+		if err != nil {
+			return err
+		}
+	}
+	nebulae = append(nebulae, hexutil.Encode(nebulaAddress))
+
+	b, err := json.Marshal(nebulae)
+	if err != nil {
+		return err
+	}
+
+	err = currentBatch.Set(key, b)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (tx *Transaction) SetStateSignResult(currentBatch *badger.Txn) error {

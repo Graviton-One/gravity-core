@@ -19,9 +19,8 @@ func getStringByKey(key: String) = {
     }
 }
 
-#-------------------Constructor--------------------------
+#-----------------------Key-----------------------------
 let OraclesKey = "oracles"
-let OraclesSorted = "oracles"
 let ScoresKey = "scores"
 let ConsulsKey = "consuls"
 let BftCoefficientKey = "bft_coefficient"

@@ -13,6 +13,7 @@ type Key string
 const (
 	Separator string = "_"
 
+	NebulaeByValidatorKey   Key = "nebulaByValidators"
 	ValidatorKey            Key = "validator"
 	VoteKey                 Key = "vote"
 	SignNebulaValidatorsKey Key = "signNebulaValidators"
@@ -42,6 +43,10 @@ func FormVoteKey(validatorAddress []byte) string {
 	return strings.Join([]string{string(VoteKey), hexutil.Encode(validatorAddress)}, Separator)
 }
 
+func FormNebulaeByValidatorKey(validatorAddress []byte) string {
+	return strings.Join([]string{string(NebulaeByValidatorKey), hexutil.Encode(validatorAddress)}, Separator)
+}
+
 func FormValidatorKey(nebulaAddress []byte, validatorAddress []byte) string {
 	return strings.Join([]string{string(ValidatorKey), hexutil.Encode(nebulaAddress), hexutil.Encode(validatorAddress)}, Separator)
 }
@@ -58,6 +63,6 @@ func FormSignResultKey(nebulaAddress []byte, block uint64, validatorAddress []by
 	return strings.Join([]string{string(SignResultKey), hexutil.Encode(nebulaAddress), fmt.Sprintf("%d", block), hexutil.Encode(validatorAddress)}, Separator)
 }
 
-func FormSignNebulaValidatorsKey(nebulaAddress []byte, validatorAddress []byte) string {
-	return strings.Join([]string{string(SignNebulaValidatorsKey), hexutil.Encode(nebulaAddress), hexutil.Encode(validatorAddress)}, Separator)
+func FormSignScoreValidatorsKey(validatorAddress []byte) string {
+	return strings.Join([]string{string(SignNebulaValidatorsKey), hexutil.Encode(validatorAddress)}, Separator)
 }

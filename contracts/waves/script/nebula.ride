@@ -26,13 +26,12 @@ func getStringByAddressAndKey(address: Address,key: String) = {
     }
 }
 
-#-------------------Constructo--------------------------
+#-----------------------Key-----------------------------
 let OraclesKey = "oracles"
 let ConsulsKey = "consuls"
 let GravityContractKey = "gravity_contract"
 let BftCoefficientKey = "bft_coefficient"
 let SubscriberAddressKey = "subscriber_address"
-let ContractPubKeyKey = "contract_pubkey"
 
 #-------------------Global vars-------------------------
 let oracles = getStringByKey(OraclesKey).split(",")

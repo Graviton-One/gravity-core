@@ -2,11 +2,15 @@ package app
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gravity-hub/common/keys"
 	"gravity-hub/common/transactions"
 	"gravity-hub/ledger-node/scheduler"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/wavesplatform/gowaves/pkg/client"
 
@@ -28,17 +32,19 @@ type GHApplication struct {
 	wavesClient  *client.Client
 	scheduler    *scheduler.Scheduler
 	ctx          context.Context
+	initScores   map[string]uint64
 }
 
 var _ abcitypes.Application = (*GHApplication)(nil)
 
-func NewGHApplication(ethClient *ethclient.Client, wavesClient *client.Client, scheduler *scheduler.Scheduler, db *badger.DB, ctx context.Context) *GHApplication {
+func NewGHApplication(ethClient *ethclient.Client, wavesClient *client.Client, scheduler *scheduler.Scheduler, db *badger.DB, initScores map[string]uint64, ctx context.Context) *GHApplication {
 	return &GHApplication{
 		db:          db,
 		ethClient:   ethClient,
 		wavesClient: wavesClient,
 		scheduler:   scheduler,
 		ctx:         ctx,
+		initScores:  initScores,
 	}
 }
 
@@ -156,13 +162,31 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 }
 
 func (app *GHApplication) BeginBlock(req abcitypes.RequestBeginBlock) abcitypes.ResponseBeginBlock {
+	if req.Header.Height == 1 {
+		for key, value := range app.initScores {
+			var scoreBytes []byte
+			binary.BigEndian.PutUint64(scoreBytes, value)
+
+			validatorAddress, err := hexutil.Decode(key)
+			if err != nil {
+				fmt.Printf("Error: %s", err.Error())
+			}
+			err = app.currentBatch.Set([]byte(keys.FormScoreKey(validatorAddress)), scoreBytes)
+			if err != nil {
+				fmt.Printf("Error: %s", err.Error())
+			}
+		}
+	}
+
 	err := app.scheduler.HandleBlock(req.Header.Height, app.currentBatch)
 	if err != nil {
 		fmt.Printf("Error: %s", err.Error())
 	}
+
 	app.currentBatch = app.db.NewTransaction(true)
 	return abcitypes.ResponseBeginBlock{}
 }
+
 func (app *GHApplication) EndBlock(req abcitypes.RequestEndBlock) abcitypes.ResponseEndBlock {
 	return abcitypes.ResponseEndBlock{}
 }

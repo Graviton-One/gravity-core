@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"gravity-hub/common/account"
 	"gravity-hub/common/keys"
+	"gravity-hub/common/score"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -174,7 +175,30 @@ func (tx *Transaction) isValidAddValidator(db *badger.DB) error {
 		return errors.New("validator is exist")
 	})
 
-	return err
+	scoreKey := keys.FormScoreKey(pubKey)
+	var scoreValue float32
+	err = db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get([]byte(scoreKey))
+		if err != nil {
+			return err
+		}
+
+		err = item.Value(func(val []byte) error {
+			scoreValue = score.UInt64ToFloat32Score(binary.BigEndian.Uint64(val))
+			return err
+		})
+		return err
+	})
+
+	if err != nil && err != badger.ErrKeyNotFound {
+		return err
+	}
+
+	if scoreValue < 0 {
+		return errors.New("invalid score. score <= 0")
+	}
+
+	return nil
 }
 
 func (tx *Transaction) isValidCommit(db *badger.DB) error {

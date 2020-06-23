@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	score_calculator "gravity-hub/common/api/score-calculator"
 	"gravity-hub/ledger-node/app"
 	"gravity-hub/ledger-node/scheduler"
 	"os"
@@ -89,8 +88,8 @@ func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
 		return nil, err
 	}
 
-	scheduler := scheduler.New(score_calculator.NewClient(viper.GetString("scoreCalculatorApi"), ctx))
-	app := app.NewGHApplication(ethClient, wavesClient, scheduler, db, ctx)
+	s, err := scheduler.New(wavesClient, ethClient, "", "")
+	application := app.NewGHApplication(ethClient, wavesClient, s, db, map[string]uint64{}, ctx)
 
 	// create logger
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
@@ -116,7 +115,7 @@ func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
 		config,
 		pv,
 		nodeKey,
-		proxy.NewLocalClientCreator(app),
+		proxy.NewLocalClientCreator(application),
 		nm.DefaultGenesisDocProviderFunc(config),
 		nm.DefaultDBProvider,
 		nm.DefaultMetricsProvider(config.Instrumentation),
