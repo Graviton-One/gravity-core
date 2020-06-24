@@ -209,7 +209,7 @@ func (scheduler *Scheduler) sendValidatorScoresWaves(txn *badger.Txn) error {
 		Timestamp: client.NewTimestampFromTime(time.Now()),
 	}
 
-	//TODO chainid to cinfig
+	//TODO chainid to config
 	err = tx.Sign('R', secret)
 	if err != nil {
 		return err

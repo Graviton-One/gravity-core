@@ -9,6 +9,8 @@ import (
 	"gravity-hub/common/keys"
 	"gravity-hub/common/transactions"
 	"gravity-hub/ledger-node/scheduler"
+	"sort"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -23,6 +25,8 @@ import (
 const (
 	Success uint32 = 0
 	Error   uint32 = 500
+
+	ValidatorCount = 5 // TODO: config
 )
 
 type GHApplication struct {
@@ -158,26 +162,24 @@ func (app *GHApplication) Query(reqQuery abcitypes.RequestQuery) (resQuery abcit
 }
 
 func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.ResponseInitChain {
+	for key, value := range app.initScores {
+		var scoreBytes []byte
+		binary.BigEndian.PutUint64(scoreBytes, value)
+
+		validatorAddress, err := hexutil.Decode(key)
+		if err != nil {
+			fmt.Printf("Error: %s", err.Error())
+		}
+		err = app.currentBatch.Set([]byte(keys.FormScoreKey(validatorAddress)), scoreBytes)
+		if err != nil {
+			fmt.Printf("Error: %s", err.Error())
+		}
+	}
+
 	return abcitypes.ResponseInitChain{}
 }
 
 func (app *GHApplication) BeginBlock(req abcitypes.RequestBeginBlock) abcitypes.ResponseBeginBlock {
-	if req.Header.Height == 1 {
-		for key, value := range app.initScores {
-			var scoreBytes []byte
-			binary.BigEndian.PutUint64(scoreBytes, value)
-
-			validatorAddress, err := hexutil.Decode(key)
-			if err != nil {
-				fmt.Printf("Error: %s", err.Error())
-			}
-			err = app.currentBatch.Set([]byte(keys.FormScoreKey(validatorAddress)), scoreBytes)
-			if err != nil {
-				fmt.Printf("Error: %s", err.Error())
-			}
-		}
-	}
-
 	err := app.scheduler.HandleBlock(req.Header.Height, app.currentBatch)
 	if err != nil {
 		fmt.Printf("Error: %s", err.Error())
@@ -188,5 +190,60 @@ func (app *GHApplication) BeginBlock(req abcitypes.RequestBeginBlock) abcitypes.
 }
 
 func (app *GHApplication) EndBlock(req abcitypes.RequestEndBlock) abcitypes.ResponseEndBlock {
-	return abcitypes.ResponseEndBlock{}
+	it := app.currentBatch.NewIterator(badger.DefaultIteratorOptions)
+	defer it.Close()
+
+	prefix := []byte(keys.ScoreKey)
+
+	type Scores struct {
+		Validator string
+		Value     uint64
+	}
+
+	var scores []Scores
+
+	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+		item := it.Item()
+		k := item.Key()
+		err := item.Value(func(v []byte) error {
+			validator := strings.Split(keys.Separator, string(k))[1]
+
+			scores = append(scores, Scores{
+				Value:     binary.BigEndian.Uint64(v),
+				Validator: validator,
+			})
+			return nil
+		})
+		if err != nil {
+			fmt.Printf("Error: %s", err.Error())
+		}
+	}
+
+	sort.SliceStable(scores, func(i, j int) bool {
+		return scores[i].Value < scores[j].Value
+	})
+
+	var newValidators []abcitypes.ValidatorUpdate
+
+	for i := 0; i < ValidatorCount; i++ {
+		pubKeyBytes, err := hexutil.Decode(scores[i].Validator)
+		if err != nil {
+			fmt.Printf("Error: %s", err)
+			return abcitypes.ResponseEndBlock{}
+		}
+
+		pubKey := abcitypes.PubKey{}
+		err = pubKey.Unmarshal(pubKeyBytes)
+		if err != nil {
+			fmt.Printf("Error: %s", err)
+			return abcitypes.ResponseEndBlock{}
+		}
+
+		newValidators = append(newValidators, abcitypes.ValidatorUpdate{
+			PubKey: pubKey,
+			Power:  int64(scores[i].Value),
+		})
+	}
+
+	return abcitypes.ResponseEndBlock{ValidatorUpdates: newValidators}
 }

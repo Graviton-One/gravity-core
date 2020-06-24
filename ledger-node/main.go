@@ -30,7 +30,7 @@ import (
 var configFile, db string
 
 func init() {
-	flag.StringVar(&db, "db", "./db", "Path to config.toml")
+	flag.StringVar(&db, "db", "./.db", "Path to config.toml")
 	flag.StringVar(&configFile, "config", "./data/config/config.toml", "Path to config.toml")
 	flag.Parse()
 }
