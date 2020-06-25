@@ -20,7 +20,7 @@ install_deps_waves_gh_node () {
    	 apt-get -y install gcc mono-mcs && \
     	 rm -rf /var/lib/apt/lists/*
     npm i -g --unsafe-perm=true --allow-root @waves/surfboard
-    cd .. && cd ./contracts/waves && bash patch-surfboard.sh $NODE_URL surfboard.config.json
+    cd .. && cd ./contracts/waves && bash patch-surfboard.sh --api $NODE_URL --out surfboard.config.json 
 }
 
 
