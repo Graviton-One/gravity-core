@@ -40,7 +40,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
+        fmt.Printf("Node url: %v;\n", cfg.NodeUrl)
 	chainType, err := account.ParseChainType(cfg.ChainType)
 	if err != nil {
 		panic(err)
