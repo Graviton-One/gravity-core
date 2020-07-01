@@ -23,6 +23,7 @@ install_deps_waves_gh_node () {
     echo "Building Surfboard config..."
     cd ./contracts/waves && bash patch-surfboard.sh --api $NODE_URL --out surfboard.config.json 
     cat surfboard.config.json
+    surfboard test deploy.js
 }
 
 
