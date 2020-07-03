@@ -1,3 +1,6 @@
+// Code generated - DO NOT EDIT.
+// This file is a generated binding and any manual changes will be lost.
+
 package contracts
 
 import (
@@ -24,7 +27,7 @@ var (
 )
 
 // GravityABI is the input ABI used to generate the binding from.
-const GravityABI = "[{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"newConsuls\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"constant\":true,\"inputs\":[],\"name\":\"oracleQueue\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"first\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"last\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"newOracles\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"newScores\",\"type\":\"uint256[]\"},{\"internalType\":\"uint8[]\",\"name\":\"v\",\"type\":\"uint8[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"r\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"s\",\"type\":\"bytes32[]\"}],\"name\":\"updateScores\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"newOracles\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"scores\",\"type\":\"uint256[]\"}],\"name\":\"hashScores\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"}]"
+const GravityABI = "[{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"newConsuls\",\"type\":\"address[]\"},{\"internalType\":\"uint256\",\"name\":\"newBftValue\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"constant\":true,\"inputs\":[],\"name\":\"bftValue\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"consuls\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"rounds\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getConsuls\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"newConsuls\",\"type\":\"address[]\"},{\"internalType\":\"uint8[]\",\"name\":\"v\",\"type\":\"uint8[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"r\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"s\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"newLastRound\",\"type\":\"uint256\"}],\"name\":\"updateConsuls\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"newConsuls\",\"type\":\"address[]\"}],\"name\":\"hashNewConsuls\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"}]"
 
 // Gravity is an auto generated Go binding around an Ethereum contract.
 type Gravity struct {
@@ -168,85 +171,153 @@ func (_Gravity *GravityTransactorRaw) Transact(opts *bind.TransactOpts, method s
 	return _Gravity.Contract.contract.Transact(opts, method, params...)
 }
 
-// HashScores is a free data retrieval call binding the contract method 0xd0b6c1d4.
+// BftValue is a free data retrieval call binding the contract method 0x3cec1bdd.
 //
-// Solidity: function hashScores(address[] newOracles, uint256[] scores) pure returns(bytes32)
-func (_Gravity *GravityCaller) HashScores(opts *bind.CallOpts, newOracles []common.Address, scores []*big.Int) ([32]byte, error) {
+// Solidity: function bftValue() view returns(uint256)
+func (_Gravity *GravityCaller) BftValue(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _Gravity.contract.Call(opts, out, "bftValue")
+	return *ret0, err
+}
+
+// BftValue is a free data retrieval call binding the contract method 0x3cec1bdd.
+//
+// Solidity: function bftValue() view returns(uint256)
+func (_Gravity *GravitySession) BftValue() (*big.Int, error) {
+	return _Gravity.Contract.BftValue(&_Gravity.CallOpts)
+}
+
+// BftValue is a free data retrieval call binding the contract method 0x3cec1bdd.
+//
+// Solidity: function bftValue() view returns(uint256)
+func (_Gravity *GravityCallerSession) BftValue() (*big.Int, error) {
+	return _Gravity.Contract.BftValue(&_Gravity.CallOpts)
+}
+
+// Consuls is a free data retrieval call binding the contract method 0xa2c2c617.
+//
+// Solidity: function consuls(uint256 ) view returns(address)
+func (_Gravity *GravityCaller) Consuls(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _Gravity.contract.Call(opts, out, "consuls", arg0)
+	return *ret0, err
+}
+
+// Consuls is a free data retrieval call binding the contract method 0xa2c2c617.
+//
+// Solidity: function consuls(uint256 ) view returns(address)
+func (_Gravity *GravitySession) Consuls(arg0 *big.Int) (common.Address, error) {
+	return _Gravity.Contract.Consuls(&_Gravity.CallOpts, arg0)
+}
+
+// Consuls is a free data retrieval call binding the contract method 0xa2c2c617.
+//
+// Solidity: function consuls(uint256 ) view returns(address)
+func (_Gravity *GravityCallerSession) Consuls(arg0 *big.Int) (common.Address, error) {
+	return _Gravity.Contract.Consuls(&_Gravity.CallOpts, arg0)
+}
+
+// GetConsuls is a free data retrieval call binding the contract method 0xad595b1a.
+//
+// Solidity: function getConsuls() view returns(address[])
+func (_Gravity *GravityCaller) GetConsuls(opts *bind.CallOpts) ([]common.Address, error) {
+	var (
+		ret0 = new([]common.Address)
+	)
+	out := ret0
+	err := _Gravity.contract.Call(opts, out, "getConsuls")
+	return *ret0, err
+}
+
+// GetConsuls is a free data retrieval call binding the contract method 0xad595b1a.
+//
+// Solidity: function getConsuls() view returns(address[])
+func (_Gravity *GravitySession) GetConsuls() ([]common.Address, error) {
+	return _Gravity.Contract.GetConsuls(&_Gravity.CallOpts)
+}
+
+// GetConsuls is a free data retrieval call binding the contract method 0xad595b1a.
+//
+// Solidity: function getConsuls() view returns(address[])
+func (_Gravity *GravityCallerSession) GetConsuls() ([]common.Address, error) {
+	return _Gravity.Contract.GetConsuls(&_Gravity.CallOpts)
+}
+
+// HashNewConsuls is a free data retrieval call binding the contract method 0x4dea5eba.
+//
+// Solidity: function hashNewConsuls(address[] newConsuls) pure returns(bytes32)
+func (_Gravity *GravityCaller) HashNewConsuls(opts *bind.CallOpts, newConsuls []common.Address) ([32]byte, error) {
 	var (
 		ret0 = new([32]byte)
 	)
 	out := ret0
-	err := _Gravity.contract.Call(opts, out, "hashScores", newOracles, scores)
+	err := _Gravity.contract.Call(opts, out, "hashNewConsuls", newConsuls)
 	return *ret0, err
 }
 
-// HashScores is a free data retrieval call binding the contract method 0xd0b6c1d4.
+// HashNewConsuls is a free data retrieval call binding the contract method 0x4dea5eba.
 //
-// Solidity: function hashScores(address[] newOracles, uint256[] scores) pure returns(bytes32)
-func (_Gravity *GravitySession) HashScores(newOracles []common.Address, scores []*big.Int) ([32]byte, error) {
-	return _Gravity.Contract.HashScores(&_Gravity.CallOpts, newOracles, scores)
+// Solidity: function hashNewConsuls(address[] newConsuls) pure returns(bytes32)
+func (_Gravity *GravitySession) HashNewConsuls(newConsuls []common.Address) ([32]byte, error) {
+	return _Gravity.Contract.HashNewConsuls(&_Gravity.CallOpts, newConsuls)
 }
 
-// HashScores is a free data retrieval call binding the contract method 0xd0b6c1d4.
+// HashNewConsuls is a free data retrieval call binding the contract method 0x4dea5eba.
 //
-// Solidity: function hashScores(address[] newOracles, uint256[] scores) pure returns(bytes32)
-func (_Gravity *GravityCallerSession) HashScores(newOracles []common.Address, scores []*big.Int) ([32]byte, error) {
-	return _Gravity.Contract.HashScores(&_Gravity.CallOpts, newOracles, scores)
+// Solidity: function hashNewConsuls(address[] newConsuls) pure returns(bytes32)
+func (_Gravity *GravityCallerSession) HashNewConsuls(newConsuls []common.Address) ([32]byte, error) {
+	return _Gravity.Contract.HashNewConsuls(&_Gravity.CallOpts, newConsuls)
 }
 
-// OracleQueue is a free data retrieval call binding the contract method 0x69a4246d.
+// Rounds is a free data retrieval call binding the contract method 0x8c65c81f.
 //
-// Solidity: function oracleQueue() view returns(bytes32 first, bytes32 last)
-func (_Gravity *GravityCaller) OracleQueue(opts *bind.CallOpts) (struct {
-	First [32]byte
-	Last  [32]byte
-}, error) {
-	ret := new(struct {
-		First [32]byte
-		Last  [32]byte
-	})
-	out := ret
-	err := _Gravity.contract.Call(opts, out, "oracleQueue")
-	return *ret, err
+// Solidity: function rounds(uint256 ) view returns(bool)
+func (_Gravity *GravityCaller) Rounds(opts *bind.CallOpts, arg0 *big.Int) (bool, error) {
+	var (
+		ret0 = new(bool)
+	)
+	out := ret0
+	err := _Gravity.contract.Call(opts, out, "rounds", arg0)
+	return *ret0, err
 }
 
-// OracleQueue is a free data retrieval call binding the contract method 0x69a4246d.
+// Rounds is a free data retrieval call binding the contract method 0x8c65c81f.
 //
-// Solidity: function oracleQueue() view returns(bytes32 first, bytes32 last)
-func (_Gravity *GravitySession) OracleQueue() (struct {
-	First [32]byte
-	Last  [32]byte
-}, error) {
-	return _Gravity.Contract.OracleQueue(&_Gravity.CallOpts)
+// Solidity: function rounds(uint256 ) view returns(bool)
+func (_Gravity *GravitySession) Rounds(arg0 *big.Int) (bool, error) {
+	return _Gravity.Contract.Rounds(&_Gravity.CallOpts, arg0)
 }
 
-// OracleQueue is a free data retrieval call binding the contract method 0x69a4246d.
+// Rounds is a free data retrieval call binding the contract method 0x8c65c81f.
 //
-// Solidity: function oracleQueue() view returns(bytes32 first, bytes32 last)
-func (_Gravity *GravityCallerSession) OracleQueue() (struct {
-	First [32]byte
-	Last  [32]byte
-}, error) {
-	return _Gravity.Contract.OracleQueue(&_Gravity.CallOpts)
+// Solidity: function rounds(uint256 ) view returns(bool)
+func (_Gravity *GravityCallerSession) Rounds(arg0 *big.Int) (bool, error) {
+	return _Gravity.Contract.Rounds(&_Gravity.CallOpts, arg0)
 }
 
-// UpdateScores is a paid mutator transaction binding the contract method 0x16b2d85e.
+// UpdateConsuls is a paid mutator transaction binding the contract method 0x92c388ab.
 //
-// Solidity: function updateScores(address[] newOracles, uint256[] newScores, uint8[] v, bytes32[] r, bytes32[] s) returns()
-func (_Gravity *GravityTransactor) UpdateScores(opts *bind.TransactOpts, newOracles []common.Address, newScores []*big.Int, v []uint8, r [][32]byte, s [][32]byte) (*types.Transaction, error) {
-	return _Gravity.contract.Transact(opts, "updateScores", newOracles, newScores, v, r, s)
+// Solidity: function updateConsuls(address[] newConsuls, uint8[] v, bytes32[] r, bytes32[] s, uint256 newLastRound) returns()
+func (_Gravity *GravityTransactor) UpdateConsuls(opts *bind.TransactOpts, newConsuls []common.Address, v []uint8, r [][32]byte, s [][32]byte, newLastRound *big.Int) (*types.Transaction, error) {
+	return _Gravity.contract.Transact(opts, "updateConsuls", newConsuls, v, r, s, newLastRound)
 }
 
-// UpdateScores is a paid mutator transaction binding the contract method 0x16b2d85e.
+// UpdateConsuls is a paid mutator transaction binding the contract method 0x92c388ab.
 //
-// Solidity: function updateScores(address[] newOracles, uint256[] newScores, uint8[] v, bytes32[] r, bytes32[] s) returns()
-func (_Gravity *GravitySession) UpdateScores(newOracles []common.Address, newScores []*big.Int, v []uint8, r [][32]byte, s [][32]byte) (*types.Transaction, error) {
-	return _Gravity.Contract.UpdateScores(&_Gravity.TransactOpts, newOracles, newScores, v, r, s)
+// Solidity: function updateConsuls(address[] newConsuls, uint8[] v, bytes32[] r, bytes32[] s, uint256 newLastRound) returns()
+func (_Gravity *GravitySession) UpdateConsuls(newConsuls []common.Address, v []uint8, r [][32]byte, s [][32]byte, newLastRound *big.Int) (*types.Transaction, error) {
+	return _Gravity.Contract.UpdateConsuls(&_Gravity.TransactOpts, newConsuls, v, r, s, newLastRound)
 }
 
-// UpdateScores is a paid mutator transaction binding the contract method 0x16b2d85e.
+// UpdateConsuls is a paid mutator transaction binding the contract method 0x92c388ab.
 //
-// Solidity: function updateScores(address[] newOracles, uint256[] newScores, uint8[] v, bytes32[] r, bytes32[] s) returns()
-func (_Gravity *GravityTransactorSession) UpdateScores(newOracles []common.Address, newScores []*big.Int, v []uint8, r [][32]byte, s [][32]byte) (*types.Transaction, error) {
-	return _Gravity.Contract.UpdateScores(&_Gravity.TransactOpts, newOracles, newScores, v, r, s)
+// Solidity: function updateConsuls(address[] newConsuls, uint8[] v, bytes32[] r, bytes32[] s, uint256 newLastRound) returns()
+func (_Gravity *GravityTransactorSession) UpdateConsuls(newConsuls []common.Address, v []uint8, r [][32]byte, s [][32]byte, newLastRound *big.Int) (*types.Transaction, error) {
+	return _Gravity.Contract.UpdateConsuls(&_Gravity.TransactOpts, newConsuls, v, r, s, newLastRound)
 }

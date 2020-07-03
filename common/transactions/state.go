@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gravity-hub/common/account"
 	"gravity-hub/common/keys"
 	"gravity-hub/score-calculator/models"
 
@@ -19,8 +20,10 @@ func (tx *Transaction) SetState(currentBatch *badger.Txn) error {
 		return tx.SetStateCommit(currentBatch)
 	case Reveal:
 		return tx.SetStateReveal(currentBatch)
-	case AddValidator:
-		return tx.SetStateAddValidator(currentBatch)
+	case AddOracleInNebula:
+		return tx.SetStateAddOracleInNebula(currentBatch)
+	case AddOracle:
+		return tx.SetStateAddOracle(currentBatch)
 	case SignResult:
 		return tx.SetStateSignResult(currentBatch)
 	case NewRound:
@@ -64,42 +67,35 @@ func (tx *Transaction) SetStateReveal(currentBatch *badger.Txn) error {
 	return currentBatch.Set([]byte(key), reveal)
 }
 
-func (tx *Transaction) SetStateAddValidator(currentBatch *badger.Txn) error {
+func (tx *Transaction) SetStateAddOracleInNebula(currentBatch *badger.Txn) error {
 	args, err := hexutil.Decode(tx.Args)
 	if err != nil {
 		return err
 	}
 
-	chainType := args[:1]
-	nebulaAddress := args[1:33]
-	pubKey := args[33:]
-	key := []byte(keys.FormValidatorKey(nebulaAddress, pubKey))
-	err = currentBatch.Set(key, chainType)
-	if err != nil {
-		return err
-	}
+	nebulaAddress := args[0:32]
+	pubKey := args[32:]
 
-	key = []byte(keys.FormNebulaeByValidatorKey(pubKey))
+	key := []byte(keys.FormOraclesByNebulaKey(nebulaAddress))
 	item, err := currentBatch.Get(key)
 	if err != nil && err != badger.ErrKeyNotFound {
 		return err
 	}
 
-	var nebulae []string
-	if err != badger.ErrKeyNotFound {
-		value, err := item.ValueCopy(nil)
-		if err != nil {
-			return err
-		}
-
-		err = json.Unmarshal(value, &nebulae)
-		if err != nil {
-			return err
-		}
+	oraclesByNebula := make(map[string]string)
+	b, err := item.ValueCopy(nil)
+	if err != nil {
+		return err
 	}
-	nebulae = append(nebulae, hexutil.Encode(nebulaAddress))
 
-	b, err := json.Marshal(nebulae)
+	err = json.Unmarshal(b, &oraclesByNebula)
+	if err != nil {
+		return err
+	}
+
+	oraclesByNebula[hexutil.Encode(pubKey)] = tx.SenderPubKey
+
+	b, err = json.Marshal(&oraclesByNebula)
 	if err != nil {
 		return err
 	}
@@ -109,6 +105,51 @@ func (tx *Transaction) SetStateAddValidator(currentBatch *badger.Txn) error {
 		return err
 	}
 
+	return nil
+}
+
+func (tx *Transaction) SetStateAddOracle(currentBatch *badger.Txn) error {
+	args, err := hexutil.Decode(tx.Args)
+	if err != nil {
+		return err
+	}
+
+	chainType := args[:1]
+	pubKey := args[1:]
+
+	pubKeyOwner, err := hexutil.Decode(tx.SenderPubKey)
+	if err != nil {
+		return err
+	}
+	key := []byte(keys.FormOraclesByValidatorKey(pubKeyOwner))
+	item, err := currentBatch.Get(key)
+	if err != nil && err != badger.ErrKeyNotFound {
+		return err
+	}
+
+	oracles := make(map[account.ChainType][]byte)
+	if err != badger.ErrKeyNotFound {
+		value, err := item.ValueCopy(nil)
+		if err != nil {
+			return err
+		}
+
+		err = json.Unmarshal(value, &oracles)
+		if err != nil {
+			return err
+		}
+	}
+
+	oracles[account.ChainType(chainType[0])] = pubKey
+	b, err := json.Marshal(oracles)
+	if err != nil {
+		return err
+	}
+
+	err = currentBatch.Set(key, b)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -151,14 +192,29 @@ func (tx *Transaction) SetVote(currentBatch *badger.Txn) error {
 	if err != nil {
 		return err
 	}
+
 	pubKey, err := hexutil.Decode(tx.SenderPubKey)
 	if err != nil {
 		return err
 	}
+
 	var votes []models.Vote
 	err = json.Unmarshal(args, &votes)
 	if err != nil {
 		return err
+	}
+
+	for _, v := range votes {
+		pubKey, err := hexutil.Decode(v.Target)
+		if err != nil {
+			return err
+		}
+		if _, err := currentBatch.Get([]byte(keys.FormScoreKey(pubKey))); err == badger.ErrKeyNotFound {
+			err := currentBatch.Set([]byte(keys.FormScoreKey(pubKey)), make([]byte, 8, 8))
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	b, err := json.Marshal(votes)

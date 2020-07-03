@@ -20,17 +20,13 @@ func getStringByKey(key: String) = {
 }
 
 #-----------------------Key-----------------------------
-let OraclesKey = "oracles"
-let ScoresKey = "scores"
 let ConsulsKey = "consuls"
 let BftCoefficientKey = "bft_coefficient"
+let LastRoundKey = "last_round"
 
 #-------------------Global vars-------------------------
-let oracles = getStringByKey(OraclesKey).split(",")
-let scores = getStringByKey(ScoresKey).split(",")
 let consuls = getStringByKey(ConsulsKey).split(",")
 let bftCoefficient = getNumberByKey(BftCoefficientKey)
-
 
 func validateSign(hash: ByteVector, sign: String, oracle: String) = {
     if (sign != "nil") then 
@@ -40,20 +36,20 @@ func validateSign(hash: ByteVector, sign: String, oracle: String) = {
 
 #-------------------Callable----------------------------
 @Callable(i)
-func setGravityScore(newSortedOracles: String, scores: String, stringSigns: String) = {
+func setConsuls(newConsuls: String, stringSigns: String, round: Int) = {
     let signs = stringSigns.split(",")
-    let count = validateSign(keccak256(toBytes(newSortedOracles)), signs[0], consuls[0]) +
-                validateSign(keccak256(toBytes(newSortedOracles)), signs[1], consuls[1]) +
-                validateSign(keccak256(toBytes(newSortedOracles)), signs[2], consuls[2]) +
-                validateSign(keccak256(toBytes(newSortedOracles)), signs[3], consuls[3]) +
-                validateSign(keccak256(toBytes(newSortedOracles)), signs[4], consuls[4])
+    let count = validateSign(toBytes(newConsuls), signs[0], consuls[0]) +
+                validateSign(toBytes(newConsuls), signs[1], consuls[1]) +
+                validateSign(toBytes(newConsuls), signs[2], consuls[2]) +
+                validateSign(toBytes(newConsuls), signs[3], consuls[3]) +
+                validateSign(toBytes(newConsuls), signs[4], consuls[4])
 
     if(count > bftCoefficient) 
         then throw("invalid bft count")
     else {  
         WriteSet([
-            DataEntry(OraclesKey, newSortedOracles),
-            DataEntry(ScoresKey, scores)
+            DataEntry(ConsulsKey, newConsuls),
+             DataEntry(LastRoundKey + "_" + toString(round), round)
         ])
     }
 }

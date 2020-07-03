@@ -1,19 +1,31 @@
 package scheduler
 
 import (
+	"context"
+	"crypto/ecdsa"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"gravity-hub/common/account"
 	"gravity-hub/common/contracts"
 	"gravity-hub/common/keys"
 	"gravity-hub/common/score"
+	"gravity-hub/common/transactions"
+	"gravity-hub/gh-node/api/gravity"
+	"gravity-hub/gh-node/helpers"
 	score_calculator "gravity-hub/score-calculator"
 	"gravity-hub/score-calculator/models"
 	"math/big"
+	"sort"
 	"strings"
 	"time"
 
-	"github.com/mr-tron/base58"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+
+	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/btcsuite/btcutil/base58"
+
 	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
 	"github.com/wavesplatform/gowaves/pkg/proto"
 
@@ -32,38 +44,120 @@ import (
 
 const (
 	CalculateScoreInterval = 20
+	OraclesCount           = 5
 )
 
+type Scores struct {
+	Validator string
+	Value     uint64
+}
+type LedgerValidator struct {
+	PrivKey ed25519.PrivKeyEd25519
+	PubKey  ed25519.PubKeyEd25519
+}
+type WavesConf struct {
+	PrivKey []byte
+	Client  *client.Client
+	ChainId byte
+	Helper  helpers.Node
+}
+type EthereumConf struct {
+	PrivKey      *ecdsa.PrivateKey
+	PrivKeyBytes []byte
+	Client       *ethclient.Client
+}
 type Scheduler struct {
-	wavesPrivKey     []byte
-	validatorPrivKey ed25519.PrivKeyEd25519
-	validatorPubKey  ed25519.PubKeyEd25519
-	validatorsPubKey []ed25519.PubKeyEd25519
-	wavesClient      *client.Client
-	ethereum         *ethclient.Client
-	gravityContract  *contracts.Gravity
-	gravityWaves     string
-	gravityEthereum  string
-	validatorCount   int
+	Ledger          *LedgerValidator
+	Waves           *WavesConf
+	Ethereum        *EthereumConf
+	GhNode          string
+	gravityEthereum *contracts.Gravity
+	gravityWaves    string
+	ctx             context.Context
+	nebulae         map[account.ChainType][][]byte
 }
 
-func New(wavesClient *client.Client, ethereum *ethclient.Client, gravityWaves string, gravityEthereum string) (*Scheduler, error) {
+func New(waves *WavesConf, ethereum *EthereumConf, ghNode string, ctx context.Context, ledger *LedgerValidator, nebulae map[account.ChainType][][]byte, gravityWaves string, gravityEthereum string) (*Scheduler, error) {
 	address := common.HexToAddress(gravityEthereum)
-	gravityContract, err := contracts.NewGravity(address, nil)
+
+	gravityContract, err := contracts.NewGravity(address, ethereum.Client)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Scheduler{
-		wavesClient:     wavesClient,
-		ethereum:        ethereum,
-		gravityEthereum: gravityEthereum,
+		Ledger:          ledger,
+		Waves:           waves,
+		Ethereum:        ethereum,
+		ctx:             ctx,
+		GhNode:          strings.Replace(ghNode, "tcp", "http", 1),
+		gravityEthereum: gravityContract,
 		gravityWaves:    gravityWaves,
-		gravityContract: gravityContract,
+		nebulae:         nebulae,
 	}, nil
 }
 
+func testVote(owner string, res []string, txn *badger.Txn) error {
+	a, err := hexutil.Decode(owner)
+	if err != nil {
+		println(err)
+	}
+	key := keys.FormVoteKey(a)
+
+	var votesModels []models.Vote
+
+	for _, vres := range res {
+		tagetValidator, _ := hexutil.Decode(vres)
+		votesModels = append(votesModels, models.Vote{
+			Score:  0.001,
+			Target: vres,
+		})
+		if _, err := txn.Get([]byte(keys.FormScoreKey(tagetValidator))); err == badger.ErrKeyNotFound {
+			txn.Set([]byte(keys.FormScoreKey(tagetValidator)), []byte{0, 0, 0, 0, 0, 0, 0, 0})
+		}
+	}
+
+	b, err := json.Marshal(votesModels)
+	if err != nil {
+		return err
+	}
+	txn.Set([]byte(key), b)
+
+	return nil
+}
+
 func (scheduler *Scheduler) HandleBlock(height int64, txn *badger.Txn) error {
+	go scheduler.setPrivKeys(txn)
+	//TODO
+
+	key := []byte(keys.FormOraclesByNebulaKey(scheduler.nebulae[account.Ethereum][0]))
+	item, err := txn.Get(key)
+	if err != nil && err != badger.ErrKeyNotFound {
+		return err
+	}
+	oraclesByNebula := make(map[string]string)
+	if item != nil {
+		b, err := item.ValueCopy(nil)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(b, &oraclesByNebula)
+		if err != nil {
+			return err
+		}
+	}
+
+	oraclesByNebula["0xD4a0E39737796c4Bd4Bb24243c9bf4fCd3CfA3da"] = "0xffff1bff7e8d034da2b043decc106789b55b84702bf2c2f2cf6c859e37dc30ec"
+	b, err := json.Marshal(&oraclesByNebula)
+	if err != nil {
+		return err
+	}
+	err = txn.Set(key, b)
+	if err != nil {
+		return err
+	}
+	//TODO
+	roundId := height / CalculateScoreInterval
 	if height%CalculateScoreInterval == 0 {
 		votes, err := scheduler.getVotes(txn)
 		if err != nil {
@@ -79,111 +173,492 @@ func (scheduler *Scheduler) HandleBlock(height int64, txn *badger.Txn) error {
 		if err != nil {
 			return err
 		}
+	} else if height%CalculateScoreInterval < CalculateScoreInterval/2 {
+		err := scheduler.signResult(roundId, OraclesCount, scheduler.nebulae[account.Waves], account.Waves, txn)
+		if err != nil {
+			return err
+		}
 
-		for key, value := range scoresValue {
-			scoreValue := score.Float32ToUInt64Score(value)
-			pubKey, err := hexutil.Decode(key)
+		err = scheduler.signResult(roundId, OraclesCount, scheduler.nebulae[account.Ethereum], account.Ethereum, txn)
+		if err != nil {
+			return err
+		}
+	} else if height%CalculateScoreInterval > CalculateScoreInterval/2 {
+		err := scheduler.sendConsulsWaves(roundId, txn)
+		if err != nil {
+			return err
+		}
+
+		err = scheduler.sendConsulsEthereum(roundId, txn)
+		if err != nil {
+			return err
+		}
+
+		for _, v := range scheduler.nebulae[account.Waves] {
+			err := scheduler.sendOraclesWaves(v, roundId, txn)
+			if err != nil {
+				continue
+			}
+		}
+
+		for _, v := range scheduler.nebulae[account.Ethereum] {
+			err := scheduler.sendOraclesEthereum(v, roundId, txn)
+			if err != nil {
+				continue
+			}
+		}
+	}
+
+	return nil
+}
+
+func (scheduler *Scheduler) setPrivKeys(txn *badger.Txn) error {
+	item, err := txn.Get([]byte(keys.FormOraclesByValidatorKey(scheduler.Ledger.PubKey[:])))
+	if err != nil && err != badger.ErrKeyNotFound {
+		return err
+	}
+
+	var oracles map[account.ChainType][]byte
+	if item != nil {
+		b, err := item.ValueCopy(nil)
+		if err != nil {
+			return err
+		}
+
+		err = json.Unmarshal(b, &oracles)
+		if err != nil {
+			return err
+		}
+	}
+
+	var tx *transactions.Transaction
+	if _, ok := oracles[account.Waves]; !ok {
+		args := []byte{byte(account.Waves)}
+		s, err := wavesCrypto.NewSecretKeyFromBytes(scheduler.Waves.PrivKey)
+		if err != nil {
+			return err
+		}
+
+		pubKey := wavesCrypto.GeneratePublicKey(s)
+		tx, err = transactions.New(scheduler.Ledger.PubKey[:], transactions.AddOracle, account.Waves, scheduler.Ledger.PrivKey, append(args, pubKey.Bytes()...))
+		if err != nil {
+			return err
+		}
+	}
+	if tx != nil {
+		client, err := gravity.NewClient(scheduler.GhNode)
+		if err != nil {
+			panic(err)
+		}
+		_, err = client.HttpClient.NetInfo()
+		if err != nil {
+			return nil
+		}
+
+		err = client.SendTx(tx)
+		if err != nil {
+			return err
+		}
+	}
+
+	tx = nil
+	if _, ok := oracles[account.Ethereum]; !ok {
+		args := []byte{byte(account.Ethereum)}
+
+		tx, err = transactions.New(scheduler.Ledger.PubKey[:], transactions.AddOracle, account.Ethereum,
+			scheduler.Ledger.PrivKey, append(args, crypto.PubkeyToAddress(scheduler.Ethereum.PrivKey.PublicKey).Bytes()...))
+		if err != nil {
+			return err
+		}
+	}
+	if tx != nil {
+		client, err := gravity.NewClient(scheduler.GhNode)
+		if err != nil {
+			panic(err)
+		}
+		_, err = client.HttpClient.NetInfo()
+		if err != nil {
+			return nil
+		}
+
+		err = client.SendTx(tx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (scheduler *Scheduler) signResult(roundId int64, validatorCount int, nebulaeIds [][]byte, chainType account.ChainType, txn *badger.Txn) error {
+	consulsByRoundKey := keys.FormConsulsSignKey(scheduler.Ledger.PubKey[:], chainType, roundId)
+	_, err := txn.Get([]byte(consulsByRoundKey))
+	if err != nil && err != badger.ErrKeyNotFound {
+		return err
+	}
+
+	var scores []Scores
+	prefix := []byte(keys.ScoreKey)
+	it := txn.NewIterator(badger.DefaultIteratorOptions)
+	defer it.Close()
+	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+		item := it.Item()
+		k := item.Key()
+		err := item.Value(func(v []byte) error {
+			validator := strings.Split(string(k), keys.Separator)[1]
+
+			scores = append(scores, Scores{
+				Value:     binary.BigEndian.Uint64(v),
+				Validator: validator,
+			})
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+	sort.SliceStable(scores, func(i, j int) bool {
+		return scores[i].Value > scores[j].Value
+	})
+
+	if err == badger.ErrKeyNotFound {
+		var newConsuls []Scores
+		for i := 0; i < len(scores); i++ {
+			newConsuls = append(newConsuls, scores[i])
+			if len(newConsuls) >= validatorCount {
+				break
+			}
+		}
+
+		key := []byte(keys.FormConsulsKey())
+		b, err := json.Marshal(newConsuls)
+		if err != nil {
+			return err
+		}
+		err = txn.Set(key, b)
+		if err != nil {
+			return err
+		}
+
+		prevConsuls, err := txn.Get(key)
+		if err != nil && err != badger.ErrKeyNotFound {
+			return err
+		}
+
+		if prevConsuls != nil {
+			b, err := prevConsuls.ValueCopy(nil)
+			key = []byte(keys.FormPrevConsulsKey())
+			err = txn.Set(key, b)
+			if err != nil {
+				return err
+			}
+		}
+
+		var sign []byte
+		switch chainType {
+		case account.Ethereum:
+			var validators []common.Address
+			for _, v := range newConsuls {
+				b, err := hexutil.Decode(v.Validator)
+				if err != nil {
+					return err
+				}
+
+				item, err := txn.Get([]byte(keys.FormOraclesByValidatorKey(b)))
+				if err != nil && err != badger.ErrKeyNotFound {
+					return err
+				}
+
+				if item == nil {
+					continue
+				}
+				b, err = item.ValueCopy(nil)
+				if err != nil {
+					return err
+				}
+
+				var oracles map[account.ChainType][]byte
+				err = json.Unmarshal(b, &oracles)
+				if err != nil {
+					return err
+				}
+
+				validators = append(validators, common.BytesToAddress(oracles[account.Ethereum]))
+			}
+
+			hash, err := scheduler.gravityEthereum.HashNewConsuls(nil, validators)
+			if err != nil {
+				return err
+			}
+			sign, err = account.SignWithTCPriv(scheduler.Ethereum.PrivKeyBytes, hash[:], account.Ethereum)
+			if err != nil {
+				return err
+			}
+		case account.Waves:
+			var validators []string
+			for _, v := range newConsuls {
+				b, err := hexutil.Decode(v.Validator)
+				if err != nil {
+					return err
+				}
+
+				item, err := txn.Get([]byte(keys.FormOraclesByValidatorKey(b)))
+				if err != nil && err != badger.ErrKeyNotFound {
+					return err
+				}
+
+				if item == nil {
+					continue
+				}
+
+				b, err = item.ValueCopy(nil)
+				if err != nil {
+					return err
+				}
+
+				var oracles map[account.ChainType][]byte
+				err = json.Unmarshal(b, &oracles)
+				if err != nil {
+					return err
+				}
+
+				validators = append(validators, base58.Encode(oracles[account.Waves]))
+			}
+			sign, err = account.SignWithTCPriv(scheduler.Waves.PrivKey, []byte(strings.Join(validators, ",")), account.Waves)
+			if err != nil {
+				return err
+			}
+		}
+
+		err = txn.Set([]byte(consulsByRoundKey), sign)
+		if err != nil {
+			return err
+		}
+
+	}
+
+	for _, nebulaId := range nebulaeIds {
+		oraclesByRoundKey := keys.FormOraclesSignNebulaKey(scheduler.Ledger.PubKey[:], nebulaId, roundId)
+		_, err := txn.Get([]byte(oraclesByRoundKey))
+		if err != nil && err != badger.ErrKeyNotFound {
+			return err
+		} else if err == nil {
+			continue
+		}
+
+		key := []byte(keys.FormOraclesByNebulaKey(nebulaId))
+		item, err := txn.Get(key)
+		if err != nil {
+			continue
+		}
+
+		oraclesByNebula := make(map[string]string)
+		if item != nil {
+			b, err := item.ValueCopy(nil)
+			if err != nil {
+				continue
+			}
+			err = json.Unmarshal(b, &oraclesByNebula)
+			if err != nil {
+				continue
+			}
+		}
+
+		oraclesByValidators := make(map[string]string)
+		//Revert map
+		for k, v := range oraclesByNebula {
+			oraclesByValidators[v] = k
+		}
+
+		var newOracles []string
+		newOraclesMap := make(map[string]string)
+		for i := 0; i < len(scores); i++ {
+			v, ok := oraclesByValidators[scores[i].Validator]
+			if !ok {
+				continue
+			}
+
+			newOracles = append(newOracles, v)
+			newOraclesMap[v] = scores[i].Validator
+			if len(newOracles) >= OraclesCount {
+				break
+			}
+		}
+
+		b, err := json.Marshal(&newOraclesMap)
+		if err != nil {
+			continue
+		}
+
+		err = txn.Set([]byte(keys.FormBftOraclesByNebulaKey(nebulaId)), b)
+		if err != nil {
+			continue
+		}
+
+		var sign []byte
+		switch chainType {
+		case account.Ethereum:
+			nebula, err := contracts.NewNebula(common.BytesToAddress(nebulaId), scheduler.Ethereum.Client)
+			if err != nil {
+				return err
+			}
+			var validators []common.Address
+			for _, v := range newOracles {
+				validators = append(validators, common.HexToAddress(v))
+			}
+			hash, err := nebula.HashNewOracles(nil, validators)
+			if err != nil {
+				return err
+			}
+			sign, err = account.SignWithTCPriv(scheduler.Ethereum.PrivKeyBytes, hash[:], account.Ethereum)
+			if err != nil {
+				return err
+			}
+		case account.Waves:
+			sign, err = account.SignWithTCPriv(scheduler.Waves.PrivKey, []byte(strings.Join(newOracles, ",")), account.Waves)
+			if err != nil {
+				return err
+			}
+		}
+
+		err = txn.Set([]byte(oraclesByRoundKey), sign)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (scheduler *Scheduler) sendConsulsWaves(round int64, txn *badger.Txn) error {
+	state, err := scheduler.Waves.Helper.GetStateByAddressAndKey(scheduler.gravityWaves, "last_round_"+fmt.Sprintf("%d", round))
+	if err != nil {
+		return err
+	}
+	if state != nil {
+		return nil
+	}
+
+	item, err := txn.Get([]byte(keys.FormPrevConsulsKey()))
+	if err != nil && err != badger.ErrKeyNotFound {
+		return err
+	}
+	if err == badger.ErrKeyNotFound {
+		return nil
+	}
+	b, err := item.ValueCopy(nil)
+	if err != nil {
+		return err
+	}
+
+	var consuls []Scores
+	err = json.Unmarshal(b, &consuls)
+	if err != nil {
+		return err
+	}
+
+	isOneFound := false
+
+	var signs []string
+	for _, v := range consuls {
+		validator, err := hexutil.Decode(v.Validator)
+		if err != nil {
+			return err
+		}
+
+		item, err = txn.Get([]byte(keys.FormConsulsSignKey(validator, account.Waves, round)))
+		if err != nil && err != badger.ErrKeyNotFound {
+			return err
+		}
+		if item == nil {
+			signs = append(signs, base58.Encode([]byte{0}))
+			continue
+		}
+
+		sign, err := item.ValueCopy(nil)
+		if err != nil {
+			return err
+		}
+
+		isOneFound = true
+		signs = append(signs, base58.Encode(sign))
+	}
+
+	var newConsulsString []string
+	item, err = txn.Get([]byte(keys.FormConsulsKey()))
+	if err != nil {
+		return err
+	}
+	b, err = item.ValueCopy(nil)
+	if err != nil {
+		return err
+	}
+
+	var newConsuls []Scores
+	err = json.Unmarshal(b, &newConsuls)
+	if err != nil {
+		return err
+	}
+
+	for _, v := range newConsuls {
+		validator, err := hexutil.Decode(v.Validator)
+		if err != nil {
+			return err
+		}
+
+		item, err := txn.Get([]byte(keys.FormOraclesByValidatorKey(validator)))
+		if err != nil && err != badger.ErrKeyNotFound {
+			return err
+		}
+		if item == nil {
+			newConsulsString = append(newConsulsString, base58.Encode([]byte{0}))
+			continue
+		}
+
+		oracles := make(map[account.ChainType][]byte)
+		if err != badger.ErrKeyNotFound {
+			value, err := item.ValueCopy(nil)
 			if err != nil {
 				return err
 			}
 
-			if scoreValue <= 0 {
-				err = scheduler.dropValidator(pubKey, txn)
-				if err != nil {
-					return err
-				}
+			err = json.Unmarshal(value, &oracles)
+			if err != nil {
+				return err
 			}
 		}
+
+		newConsulsString = append(newConsulsString, base58.Encode(oracles[account.Waves]))
 	}
 
-	err := scheduler.sendValidatorScoresEthereum(txn)
-	if err != nil {
-		return err
+	emptyCount := OraclesCount - len(signs)
+	for i := 0; i < emptyCount; i++ {
+		signs = append(signs, base58.Encode([]byte{0}))
 	}
 
-	err = scheduler.sendValidatorScoresWaves(txn)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (scheduler *Scheduler) sendValidatorScoresEthereum(txn *badger.Txn) error {
-	var addresses []common.Address
-	var newScores []*big.Int
-
-	var r [][32]byte
-	var s [][32]byte
-	var v []uint8
-	for _, value := range scheduler.validatorsPubKey {
-		signKey := keys.FormSignScoreValidatorsKey(value.Bytes())
-		item, err := txn.Get([]byte(signKey))
-		if err != nil {
-			return err
-		}
-		sign, err := item.ValueCopy(nil)
-		if err != nil {
-			return err
-		}
-		var bytes32R [32]byte
-		copy(bytes32R[:], sign[:32])
-		r = append(r, bytes32R)
-
-		var bytes32S [32]byte
-		copy(bytes32S[:], sign[32:64])
-		s = append(s, bytes32S)
-		v = append(v, sign[64:][0])
-	}
-
-	tx, err := scheduler.gravityContract.UpdateScores(nil, addresses, newScores, v, r, s)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Finilize tx id: %s", tx.Hash().String())
-	return nil
-}
-
-func (scheduler *Scheduler) sendValidatorScoresWaves(txn *badger.Txn) error {
-	var addresses []common.Address
-	var newScores []uint64
-
-	var addressesString []string
-	var newScoresString []string
-	for _, value := range addresses {
-		addressesString = append(addressesString, value.String())
-	}
-	for _, value := range newScores {
-		newScoresString = append(newScoresString, fmt.Sprintf("%d", value))
+	emptyCount = OraclesCount - len(newConsulsString)
+	for i := 0; i < emptyCount; i++ {
+		newConsulsString = append(newConsulsString, base58.Encode([]byte{0}))
 	}
 	funcArgs := new(proto.Arguments)
-	var signs []string
-	for _, value := range scheduler.validatorsPubKey {
-		signKey := keys.FormSignScoreValidatorsKey(value.Bytes())
-		item, err := txn.Get([]byte(signKey))
-		if err != nil {
-			return err
-		}
-		sign, err := item.ValueCopy(nil)
-		if err != nil {
-			return err
-		}
-		signs = append(signs, base58.Encode(sign))
+
+	if !isOneFound {
+		return nil
 	}
-
 	funcArgs.Append(proto.StringArgument{
-		Value: strings.Join(signs, ","),
+		Value: strings.Join(newConsulsString, ","),
 	})
 	funcArgs.Append(proto.StringArgument{
 		Value: strings.Join(signs, ","),
 	})
-	funcArgs.Append(proto.StringArgument{
-		Value: strings.Join(signs, ","),
+	funcArgs.Append(proto.IntegerArgument{
+		Value: round,
 	})
 
-	secret, err := wavesCrypto.NewSecretKeyFromBytes(scheduler.wavesPrivKey)
-
+	secret, err := wavesCrypto.NewSecretKeyFromBytes(scheduler.Waves.PrivKey)
+	if err != nil {
+		return err
+	}
 	asset, err := proto.NewOptionalAssetFromString("WAVES")
 	if err != nil {
 		return err
@@ -197,7 +672,286 @@ func (scheduler *Scheduler) sendValidatorScoresWaves(txn *badger.Txn) error {
 		Type:            proto.InvokeScriptTransaction,
 		Version:         1,
 		SenderPK:        wavesCrypto.GeneratePublicKey(secret),
-		ChainID:         'R', //TODO config
+		ChainID:         scheduler.Waves.ChainId,
+		ScriptRecipient: contract,
+		FunctionCall: proto.FunctionCall{
+			Name:      "setConsuls",
+			Arguments: *funcArgs,
+		},
+		Payments:  nil,
+		FeeAsset:  *asset,
+		Fee:       500000,
+		Timestamp: client.NewTimestampFromTime(time.Now()),
+	}
+
+	err = tx.Sign(scheduler.Waves.ChainId, secret)
+	if err != nil {
+		return err
+	}
+
+	_, err = scheduler.Waves.Client.Transactions.Broadcast(scheduler.ctx, tx)
+	if err != nil {
+		return err
+	}
+
+	err = <-scheduler.Waves.Helper.WaitTx(tx.ID.String())
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Tx waves consuls update: %s \n", tx.ID)
+	return nil
+
+}
+func (scheduler *Scheduler) sendConsulsEthereum(round int64, txn *badger.Txn) error {
+	lastRound, err := scheduler.gravityEthereum.Rounds(nil, big.NewInt(round))
+	if err != nil {
+		return err
+	}
+
+	if lastRound {
+		return nil
+	}
+
+	item, err := txn.Get([]byte(keys.FormPrevConsulsKey()))
+	if err != nil && err != badger.ErrKeyNotFound {
+		return err
+	}
+	if err == badger.ErrKeyNotFound {
+		return nil
+	}
+	b, err := item.ValueCopy(nil)
+	if err != nil {
+		return err
+	}
+
+	var consuls []Scores
+	err = json.Unmarshal(b, &consuls)
+	if err != nil {
+		return err
+	}
+
+	var r [][32]byte
+	var s [][32]byte
+	var v []uint8
+	for _, value := range consuls {
+		validator, err := hexutil.Decode(value.Validator)
+		if err != nil {
+			return err
+		}
+
+		item, err := txn.Get([]byte(keys.FormOraclesByValidatorKey(validator)))
+		if err != nil && err != badger.ErrKeyNotFound {
+			return err
+		}
+		if item == nil {
+			continue
+		}
+		oracles := make(map[account.ChainType][]byte)
+		if err != badger.ErrKeyNotFound {
+			value, err := item.ValueCopy(nil)
+			if err != nil {
+				return err
+			}
+
+			err = json.Unmarshal(value, &oracles)
+			if err != nil {
+				return err
+			}
+		}
+
+		item, err = txn.Get([]byte(keys.FormConsulsSignKey(validator, account.Ethereum, round)))
+		if err != nil && err != badger.ErrKeyNotFound {
+			return err
+		}
+		if item == nil {
+			r = append(r, [32]byte{})
+			s = append(s, [32]byte{})
+			v = append(v, 0)
+			continue
+		}
+
+		sign, err := item.ValueCopy(nil)
+		if err != nil {
+			return err
+		}
+
+		var bytes32R [32]byte
+		copy(bytes32R[:], sign[:32])
+		var bytes32S [32]byte
+		copy(bytes32S[:], sign[32:64])
+
+		r = append(r, bytes32R)
+		s = append(s, bytes32S)
+		v = append(v, sign[64:][0]+27)
+	}
+
+	var consulsAddress []common.Address
+	item, err = txn.Get([]byte(keys.FormConsulsKey()))
+	if err != nil && err != badger.ErrKeyNotFound {
+		return err
+	}
+	if err == badger.ErrKeyNotFound {
+		return nil
+	}
+	b, err = item.ValueCopy(nil)
+	if err != nil {
+		return err
+	}
+
+	var newConsuls []Scores
+	err = json.Unmarshal(b, &newConsuls)
+	if err != nil {
+		return err
+	}
+
+	for _, value := range newConsuls {
+		validator, err := hexutil.Decode(value.Validator)
+		if err != nil {
+			return err
+		}
+
+		item, err := txn.Get([]byte(keys.FormOraclesByValidatorKey(validator)))
+		if err != nil && err != badger.ErrKeyNotFound {
+			return err
+		}
+		if item == nil {
+			continue
+		}
+		oracles := make(map[account.ChainType][]byte)
+		if err != badger.ErrKeyNotFound {
+			value, err := item.ValueCopy(nil)
+			if err != nil {
+				return err
+			}
+
+			err = json.Unmarshal(value, &oracles)
+			if err != nil {
+				return err
+			}
+		}
+
+		consulsAddress = append(consulsAddress, common.BytesToAddress(oracles[account.Ethereum]))
+	}
+
+	tx, err := scheduler.gravityEthereum.UpdateConsuls(bind.NewKeyedTransactor(scheduler.Ethereum.PrivKey), consulsAddress, v, r, s, big.NewInt(round))
+	if err != nil {
+		return nil
+	}
+	fmt.Printf("Tx ethereum consuls update: %s \n", tx.Hash().Hex())
+	return nil
+
+}
+
+func (scheduler *Scheduler) sendOraclesWaves(nebulaId []byte, round int64, txn *badger.Txn) error {
+	contractAddress := base58.Encode(nebulaId)
+	state, err := scheduler.Waves.Helper.GetStateByAddressAndKey(contractAddress, "last_round_"+fmt.Sprintf("%d", round))
+	if err != nil {
+		return err
+	}
+
+	if state != nil {
+		return nil
+	}
+
+	var newOracles []string
+	item, err := txn.Get([]byte(keys.FormOraclesByNebulaKey(nebulaId)))
+	if err != nil {
+		return err
+	}
+	b, err := item.ValueCopy(nil)
+	if err != nil {
+		return err
+	}
+
+	var oracles map[string]string
+	err = json.Unmarshal(b, &oracles)
+	if err != nil {
+		return err
+	}
+
+	for k, _ := range oracles {
+		newOracles = append(newOracles, fmt.Sprintf("%s", k))
+	}
+
+	emptyCount := OraclesCount - len(newOracles)
+	for i := 0; i < emptyCount; i++ {
+		newOracles = append(newOracles, base58.Encode([]byte{0}))
+	}
+
+	item, err = txn.Get([]byte(keys.FormPrevConsulsKey()))
+	if err != nil && err != badger.ErrKeyNotFound {
+		return err
+	}
+	if err == badger.ErrKeyNotFound {
+		return nil
+	}
+
+	b, err = item.ValueCopy(nil)
+	if err != nil {
+		return err
+	}
+
+	var consuls []Scores
+	err = json.Unmarshal(b, &consuls)
+	if err != nil {
+		return err
+	}
+
+	funcArgs := new(proto.Arguments)
+	var signs []string
+
+	for _, v := range consuls {
+		address, err := hexutil.Decode(v.Validator)
+		if err != nil {
+			return err
+		}
+
+		item, err := txn.Get([]byte(keys.FormOraclesSignNebulaKey(address, nebulaId, round)))
+		if err != nil {
+			signs = append(signs, base58.Encode([]byte{0}))
+			continue
+		}
+
+		sign, err := item.ValueCopy(nil)
+		if err != nil {
+			return err
+		}
+
+		signs = append(signs, base58.Encode(sign))
+	}
+
+	emptyCount = OraclesCount - len(signs)
+	for i := 0; i < emptyCount; i++ {
+		signs = append(signs, base58.Encode([]byte{0}))
+	}
+
+	funcArgs.Append(proto.StringArgument{
+		Value: strings.Join(newOracles, ","),
+	})
+	funcArgs.Append(proto.StringArgument{
+		Value: strings.Join(signs, ","),
+	})
+	funcArgs.Append(proto.IntegerArgument{
+		Value: round,
+	})
+
+	secret, err := wavesCrypto.NewSecretKeyFromBytes(scheduler.Waves.PrivKey)
+	asset, err := proto.NewOptionalAssetFromString("WAVES")
+	if err != nil {
+		return err
+	}
+
+	contract, err := proto.NewRecipientFromString(contractAddress)
+	if err != nil {
+		return err
+	}
+
+	tx := &proto.InvokeScriptWithProofs{
+		Type:            proto.InvokeScriptTransaction,
+		Version:         1,
+		SenderPK:        wavesCrypto.GeneratePublicKey(secret),
+		ChainID:         scheduler.Waves.ChainId,
 		ScriptRecipient: contract,
 		FunctionCall: proto.FunctionCall{
 			Name:      "setSortedOracles",
@@ -209,54 +963,113 @@ func (scheduler *Scheduler) sendValidatorScoresWaves(txn *badger.Txn) error {
 		Timestamp: client.NewTimestampFromTime(time.Now()),
 	}
 
-	//TODO chainid to config
-	err = tx.Sign('R', secret)
+	err = tx.Sign(scheduler.Waves.ChainId, secret)
 	if err != nil {
 		return err
 	}
 
-	_, err = scheduler.wavesClient.Transactions.Broadcast(nil, tx)
+	_, err = scheduler.Waves.Client.Transactions.Broadcast(scheduler.ctx, tx)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Tx waves finilize: %s \n", tx.ID)
+	fmt.Printf("Tx waves nebula (%s) oracles update: %s \n", contractAddress, tx.ID.String())
 	return nil
 
 }
-
-func (scheduler *Scheduler) dropValidator(pubKey []byte, txn *badger.Txn) error {
-	key := []byte(keys.FormNebulaeByValidatorKey(pubKey))
-	var nebulae []string
-	item, err := txn.Get(key)
+func (scheduler *Scheduler) sendOraclesEthereum(nebulaId []byte, round int64, txn *badger.Txn) error {
+	nebula, err := contracts.NewNebula(common.BytesToAddress(nebulaId), scheduler.Ethereum.Client)
 	if err != nil {
 		return err
 	}
 
-	value, err := item.ValueCopy(nil)
+	lastRound, err := nebula.Rounds(nil, big.NewInt(round))
 	if err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(value, &nebulae)
+	if lastRound {
+		return nil
+	}
+
+	item, err := txn.Get([]byte(keys.FormConsulsKey()))
+	if err != nil {
+		return err
+	}
+	b, err := item.ValueCopy(nil)
 	if err != nil {
 		return err
 	}
 
-	for _, v := range nebulae {
-		nebulaAddress, err := hexutil.Decode(v)
+	var consuls []Scores
+	err = json.Unmarshal(b, &consuls)
+	if err != nil {
+		return err
+	}
+
+	item, err = txn.Get([]byte(keys.FormOraclesByNebulaKey(nebulaId)))
+	if err != nil {
+		return err
+	}
+	b, err = item.ValueCopy(nil)
+	if err != nil {
+		return err
+	}
+
+	var oracles map[string]string
+	err = json.Unmarshal(b, &oracles)
+	if err != nil {
+		return err
+	}
+
+	var oraclesAddresses []common.Address
+	for k, _ := range oracles {
+		oraclesAddresses = append(oraclesAddresses, common.HexToAddress(k))
+	}
+
+	var r [][32]byte
+	var s [][32]byte
+	var v []uint8
+	for _, value := range consuls {
+		address, err := hexutil.Decode(value.Validator)
 		if err != nil {
 			return err
 		}
 
-		key := []byte(keys.FormValidatorKey(nebulaAddress, pubKey))
-		err = txn.Delete(key)
+		item, err := txn.Get([]byte(keys.FormOraclesSignNebulaKey(address, nebulaId, round)))
+		if err != nil && err != badger.ErrKeyNotFound {
+			return err
+		}
+		if item == nil {
+			r = append(r, [32]byte{})
+			s = append(s, [32]byte{})
+			v = append(v, 0)
+			continue
+		}
+
+		sign, err := item.ValueCopy(nil)
 		if err != nil {
 			return err
 		}
+
+		var bytes32R [32]byte
+		copy(bytes32R[:], sign[:32])
+		var bytes32S [32]byte
+		copy(bytes32S[:], sign[32:64])
+
+		r = append(r, bytes32R)
+		s = append(s, bytes32S)
+		v = append(v, sign[64:][0]+27)
 	}
 
+	tx, err := nebula.UpdateOracles(bind.NewKeyedTransactor(scheduler.Ethereum.PrivKey), oraclesAddresses, v, r, s, big.NewInt(round))
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Tx ethereum nebula (%s) oracles update: %s \n", common.BytesToAddress(nebulaId).Hex(), tx.Hash().Hex())
 	return nil
+
 }
 
 func (scheduler *Scheduler) getVotes(txn *badger.Txn) (map[string][]byte, error) {
@@ -283,6 +1096,26 @@ func (scheduler *Scheduler) getVotes(txn *badger.Txn) (map[string][]byte, error)
 func (scheduler *Scheduler) calculate(votes map[string][]byte, txn *badger.Txn) (map[string]float32, error) {
 	voteMap := make(map[string][]models.Vote)
 	var actors []models.Actor
+	it := txn.NewIterator(badger.DefaultIteratorOptions)
+	defer it.Close()
+
+	prefix := []byte(keys.ScoreKey)
+	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+		item := it.Item()
+		k := item.Key()
+		err := item.Value(func(v []byte) error {
+			scoreUInt := v
+
+			initScore := score.UInt64ToFloat32Score(binary.BigEndian.Uint64(scoreUInt))
+			actors = append(actors, models.Actor{Name: strings.Split(string(k), keys.Separator)[1], InitScore: initScore})
+
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	for key, value := range votes {
 		var voteByValidator []models.Vote
 
@@ -293,24 +1126,6 @@ func (scheduler *Scheduler) calculate(votes map[string][]byte, txn *badger.Txn) 
 
 		validator := strings.Split(key, keys.Separator)[1]
 		voteMap[validator] = voteByValidator
-		validatorAddress, err := hexutil.Decode(validator)
-		if err != nil {
-			return nil, err
-		}
-		var initScore float32
-		item, err := txn.Get([]byte(keys.FormScoreKey(validatorAddress)))
-		if err != nil && err != badger.ErrKeyNotFound {
-			return nil, err
-		} else if err == badger.ErrKeyNotFound {
-			initScore = 0
-		}
-		scoreUInt, err := item.ValueCopy(nil)
-		if err != nil {
-			return nil, err
-		}
-
-		initScore = score.UInt64ToFloat32Score(binary.BigEndian.Uint64(scoreUInt))
-		actors = append(actors, models.Actor{Name: validator, InitScore: initScore})
 	}
 
 	scores, err := score_calculator.Calculate(actors, voteMap)
@@ -328,9 +1143,9 @@ func (scheduler *Scheduler) saveScores(scoresValue map[string]float32, txn *badg
 		if err != nil {
 			return err
 		}
-		var scoreBytes []byte
-		binary.BigEndian.PutUint64(scoreBytes, initScore)
-		err = txn.Set([]byte(keys.FormScoreKey(validatorAddress)), scoreBytes)
+		var scoreBytes [8]byte
+		binary.BigEndian.PutUint64(scoreBytes[:], initScore)
+		err = txn.Set([]byte(keys.FormScoreKey(validatorAddress)), scoreBytes[:])
 		if err != nil {
 			return err
 		}

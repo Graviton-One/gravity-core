@@ -4,47 +4,37 @@ import "../libs/Queue.sol";
 import "./Models.sol";
 
 contract Gravity {
-    uint8 constant bftValueNumerator = 2;
-    uint8 constant bftValueDenominator = 3;
+    mapping(uint256=>bool) public rounds;
+    address[] public consuls;
+    uint256 public bftValue;
 
-    QueueLib.Queue public oracleQueue;
-    address[] consuls;
-
-    mapping (bytes32 => Models.Score) scores;
-
-    constructor(address[] memory newConsuls) public {
+    constructor(address[] memory newConsuls, uint256 newBftValue) public {
         consuls = newConsuls;
+        bftValue = newBftValue;
     }
 
-    function updateScores(address[] memory newOracles, uint256[] memory newScores,
-        uint8[] memory v, bytes32[] memory r, bytes32[] memory s) public {
+    function getConsuls() external view returns(address[] memory) {
+        return consuls;
+    }
 
+    function updateConsuls(address[] memory newConsuls, uint8[] memory v, bytes32[] memory r, bytes32[] memory s, uint256 newLastRound) public {
         uint256 count = 0;
 
-        bytes32 dataHash = hashScores(newOracles, newScores);
+        bytes32 dataHash = hashNewConsuls(newConsuls);
 
         for(uint i = 0; i < consuls.length; i++) {
             count += ecrecover(dataHash, v[i], r[i], s[i]) == consuls[i] ? 1 : 0;
         }
-        require(count >= consuls.length*bftValueNumerator/bftValueDenominator, "invalid bft count");
+        require(count >= bftValue, "invalid bft count");
 
-        oracleQueue.first = 0x00;
-        oracleQueue.last = 0x00;
-        for(uint i = 0; i < newOracles.length; i++) {
-            bytes32 id = keccak256(abi.encode(newOracles[i]));
-            scores[id] = Models.Score({
-                owner: newOracles[i],
-                score: newScores[i]
-            });
-            QueueLib.push(oracleQueue, id);
-        }
-        oracleQueue = oracleQueue;
+       consuls = newConsuls;
+       rounds[newLastRound] = true;
     }
 
-    function hashScores(address[] memory newOracles, uint256[] memory scores) public pure returns(bytes32) {
+    function hashNewConsuls(address[] memory newConsuls) public pure returns(bytes32) {
         bytes memory data;
-        for(uint i = 0; i < newOracles.length; i++) {
-            data = abi.encodePacked(data, newOracles[i], scores[i]);
+        for(uint i = 0; i < newConsuls.length; i++) {
+            data = abi.encodePacked(data, newConsuls[i]);
         }
 
         return keccak256(data);

@@ -16,9 +16,12 @@
 data/
 .idea/
 db/
-ledger-node/data/*
+.data/
+.db/
+ledger-node/.data/*
 */data
 */db
+*/.db
 */gravity-hub
 */gravity-hub.exe
 */.idea

@@ -3,6 +3,7 @@ package transactions
 import (
 	"bytes"
 	"context"
+	"crypto/ed25519"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -31,7 +32,8 @@ type TxFunc string
 const (
 	Commit               TxFunc = "commit"
 	Reveal               TxFunc = "reveal"
-	AddValidator         TxFunc = "addValidator"
+	AddOracle            TxFunc = "addOracle"
+	AddOracleInNebula    TxFunc = "addOracleInNebula"
 	SignResult           TxFunc = "signResult"
 	NewRound             TxFunc = "newRound"
 	Vote                 TxFunc = "vote"
@@ -112,8 +114,10 @@ func (tx *Transaction) IsValid(ethClient *ethclient.Client, wavesClient *client.
 		return tx.isValidCommit(db)
 	case Reveal:
 		return tx.isValidReveal(db)
-	case AddValidator:
-		return tx.isValidAddValidator(db)
+	case AddOracle:
+		return nil
+	case AddOracleInNebula:
+		return tx.isValidAddOracleInNebula(db)
 	case SignResult:
 		return tx.isValidSignResult(db)
 	case NewRound:
@@ -137,22 +141,11 @@ func (tx *Transaction) isValidSigns() bool {
 	if err != nil {
 		return false
 	}
-	switch tx.ChainType {
-	case account.Ethereum:
-		return crypto.VerifySignature(pubKeyBytes, txIdBytes, sigBytes[0:64])
-	case account.Waves:
-		pubKey := wavesCrypto.PublicKey{}
-		copy(pubKey[:], pubKeyBytes)
-		sig := wavesCrypto.Signature{}
-		copy(sig[:], sigBytes)
 
-		return wavesCrypto.Verify(pubKey, sig, txIdBytes)
-	default:
-		return false
-	}
+	return ed25519.Verify(pubKeyBytes, txIdBytes, sigBytes)
 }
 
-func (tx *Transaction) isValidAddValidator(db *badger.DB) error {
+func (tx *Transaction) isValidAddOracleInNebula(db *badger.DB) error {
 	if len(tx.Args) == 64 {
 		return errors.New("invalid args size")
 	}
@@ -164,18 +157,42 @@ func (tx *Transaction) isValidAddValidator(db *badger.DB) error {
 
 	nebulaAddress := args[:32]
 	pubKey := args[32:]
-	key := keys.FormValidatorKey(nebulaAddress, pubKey)
+
+	key := []byte(keys.FormOraclesByNebulaKey(nebulaAddress))
 
 	err = db.View(func(txn *badger.Txn) error {
-		_, err := txn.Get([]byte(key))
+		item, err := txn.Get(key)
+		if err != nil && err != badger.ErrKeyNotFound {
+			return err
+		}
 		if err == badger.ErrKeyNotFound {
+			return nil
+		}
+
+		oraclesByNebula := make(map[string]string)
+		b, err := item.ValueCopy(nil)
+		if err != nil {
+			return err
+		}
+
+		err = json.Unmarshal(b, &oraclesByNebula)
+		if err != nil {
+			return err
+		}
+
+		if _, ok := oraclesByNebula[hexutil.Encode(pubKey)]; !ok {
 			return nil
 		}
 
 		return errors.New("validator is exist")
 	})
 
-	scoreKey := keys.FormScoreKey(pubKey)
+	pubKeyOwner, err := hexutil.Decode(tx.SenderPubKey)
+	if err != nil {
+		return err
+	}
+
+	scoreKey := keys.FormScoreKey(pubKeyOwner)
 	var scoreValue float32
 	err = db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(scoreKey))

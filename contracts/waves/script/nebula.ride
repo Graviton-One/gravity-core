@@ -12,6 +12,7 @@ func getNumberByKey(key: String) = {
         case _ => 0
       } 
 }
+
 func getStringByKey(key: String) = {
     match (getString(this, key)) {
         case v:String => v
@@ -29,16 +30,17 @@ func getStringByAddressAndKey(address: Address,key: String) = {
 #-----------------------Key-----------------------------
 let OraclesKey = "oracles"
 let ConsulsKey = "consuls"
+let SubscriberAddressKey = "subscriber_address"
 let GravityContractKey = "gravity_contract"
 let BftCoefficientKey = "bft_coefficient"
-let SubscriberAddressKey = "subscriber_address"
+let LasrRoundKey = "last_round"
 
 #-------------------Global vars-------------------------
 let oracles = getStringByKey(OraclesKey).split(",")
 let bftCoefficient = getNumberByKey(BftCoefficientKey)
-let subscriberAddress = getStringByKey(SubscriberAddressKey)
 let gracityContract = addressFromStringValue(getStringByKey(GravityContractKey))
 let consuls = getStringByAddressAndKey(gracityContract, ConsulsKey).split(",")
+let subscriberAddress = getStringByKey(SubscriberAddressKey)
 
 func validateSign(hash: ByteVector, sign: String, oracle: String) = {
     if (sign != "nil") then 
@@ -90,19 +92,20 @@ func sendData() = {
 }
 
 @Callable(i)
-func setSortedOracles(newSortedOracles: String, stringSigns: String) = {
+func setSortedOracles(newSortedOracles: String, stringSigns: String, round: Int) = {
     let signs = stringSigns.split(",")
-    let count = validateSign(keccak256(toBytes(newSortedOracles)), signs[0], consuls[0]) +
-                validateSign(keccak256(toBytes(newSortedOracles)), signs[1], consuls[1]) +
-                validateSign(keccak256(toBytes(newSortedOracles)), signs[2], consuls[2]) +
-                validateSign(keccak256(toBytes(newSortedOracles)), signs[3], consuls[3]) +
-                validateSign(keccak256(toBytes(newSortedOracles)), signs[4], consuls[4])
+    let count = validateSign(toBytes(newSortedOracles), signs[0], consuls[0]) +
+                validateSign(toBytes(newSortedOracles), signs[1], consuls[1]) +
+                validateSign(toBytes(newSortedOracles), signs[2], consuls[2]) +
+                validateSign(toBytes(newSortedOracles), signs[3], consuls[3]) +
+                validateSign(toBytes(newSortedOracles), signs[4], consuls[4])
 
     if(count > bftCoefficient) 
         then throw("invalid bft count")
     else {  
         WriteSet([
-            DataEntry(OraclesKey, newSortedOracles)
+            DataEntry(OraclesKey, newSortedOracles),
+            DataEntry(LasrRoundKey + "_" + toString(round), round)
         ])
     }
 }

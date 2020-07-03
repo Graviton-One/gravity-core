@@ -15,9 +15,27 @@ func Calculate(actors []models.Actor, votes map[string][]models.Vote) (map[strin
 			return nil, err
 		}
 	}
-	for k, v := range votes {
-		for _, scoreV := range v {
-			err := group.Add(actorsScore[k], actorsScore[scoreV.Target], scoreV.Score)
+
+	for _, v := range actors {
+		existVote := make(map[string]bool)
+		for _, scoreV := range votes[v.Name] {
+			if v.Name == scoreV.Target {
+				continue
+			}
+			err := group.Add(actorsScore[v.Name], actorsScore[scoreV.Target], scoreV.Score)
+			if err != nil {
+				return nil, err
+			}
+			existVote[scoreV.Target] = true
+		}
+		for _, actor := range actors {
+			if existVote[actor.Name] {
+				continue
+			}
+			if v.Name == actor.Name {
+				continue
+			}
+			err := group.Add(actorsScore[v.Name], actorsScore[actor.Name], 1)
 			if err != nil {
 				return nil, err
 			}

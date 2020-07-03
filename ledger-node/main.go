@@ -2,14 +2,27 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"flag"
 	"fmt"
+	"gravity-hub/common/account"
+	"gravity-hub/gh-node/helpers"
 	"gravity-hub/ledger-node/app"
 	"gravity-hub/ledger-node/scheduler"
+	"math/big"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"syscall"
+
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
+
+	"github.com/tendermint/tendermint/crypto/ed25519"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/wavesplatform/gowaves/pkg/crypto"
 
 	"github.com/spf13/viper"
 	"github.com/wavesplatform/gowaves/pkg/client"
@@ -88,14 +101,18 @@ func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
 		return nil, err
 	}
 
-	s, err := scheduler.New(wavesClient, ethClient, "", "")
-	application := app.NewGHApplication(ethClient, wavesClient, s, db, map[string]uint64{}, ctx)
-
-	// create logger
-	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
-	logger, err = tmflags.ParseLogLevel(config.LogLevel, logger, cfg.DefaultLogLevel())
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse log level: %w", err)
+	initScore := viper.GetString("initScore")
+	initScoreMap := make(map[string]uint64)
+	for _, v := range strings.Split(initScore, ",") {
+		if v == "" {
+			continue
+		}
+		elements := strings.Split(v, "@")
+		value, err := strconv.ParseUint(elements[1], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		initScoreMap[elements[0]] = value
 	}
 
 	// read private validator
@@ -104,12 +121,93 @@ func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
 		config.PrivValidatorStateFile(),
 	)
 
+	contracts := viper.GetStringMapString("targetContracts")
+	privKeys := viper.GetStringMapString("privKeys")
+
+	wavesPrivKey := crypto.MustBytesFromBase58(privKeys["waves"])
+
+	ethereumPrivKey, err := hexutil.Decode(privKeys["ethereum"])
+	if err != nil {
+		return nil, err
+	}
+	wavesConf := &scheduler.WavesConf{
+		PrivKey: wavesPrivKey,
+		Client:  wavesClient,
+		Helper:  helpers.New(wavesClient.GetOptions().BaseUrl, ""),
+		ChainId: 'R',
+	}
+
+	ethPrivKey := &ecdsa.PrivateKey{
+		PublicKey: ecdsa.PublicKey{
+			Curve: secp256k1.S256(),
+		},
+		D: new(big.Int),
+	}
+	ethPrivKey.D.SetBytes(ethereumPrivKey)
+	ethPrivKey.PublicKey.X, ethPrivKey.PublicKey.Y = ethPrivKey.PublicKey.Curve.ScalarBaseMult(ethereumPrivKey)
+
+	ethConf := &scheduler.EthereumConf{
+		PrivKey:      ethPrivKey,
+		PrivKeyBytes: ethereumPrivKey,
+		Client:       ethClient,
+	}
+
+	ledgerPrivKey := ed25519.PrivKeyEd25519{}
+	copy(ledgerPrivKey[:], pv.Key.PrivKey.Bytes()[5:])
+
+	ledgerPubKey := ed25519.PubKeyEd25519{}
+	lPubKey, err := pv.GetPubKey()
+	if err != nil {
+		return nil, err
+	}
+	copy(ledgerPubKey[:], lPubKey.Bytes()[5:])
+	ledger := &scheduler.LedgerValidator{
+		PrivKey: ledgerPrivKey,
+		PubKey:  ledgerPubKey,
+	}
+	nebulae := make(map[account.ChainType][][]byte)
+	nebulaeCfg := viper.GetStringMap("nebulae")
+	for chainType, v := range nebulaeCfg {
+		nebulaeStrings := v.([]interface{})
+		var nebulaeBytes [][]byte
+		for _, v := range nebulaeStrings {
+			var b []byte
+			switch chainType {
+			case "waves":
+				b = crypto.MustBytesFromBase58(v.(string))
+			case "ethereum":
+				b, err = hexutil.Decode(v.(string))
+				if err != nil {
+					continue
+				}
+			}
+
+			nebulaeBytes = append(nebulaeBytes, b)
+		}
+
+		switch chainType {
+		case "waves":
+			nebulae[account.Waves] = nebulaeBytes
+		case "ethereum":
+			nebulae[account.Ethereum] = nebulaeBytes
+		}
+	}
+
+	s, err := scheduler.New(wavesConf, ethConf, config.RPC.ListenAddress, context.Background(), ledger, nebulae, contracts["waves"], contracts["ethereum"])
+	application := app.NewGHApplication(ethClient, wavesClient, s, db, initScoreMap, ctx)
+
+	// create logger
+	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
+	logger, err = tmflags.ParseLogLevel(config.LogLevel, logger, cfg.DefaultLogLevel())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse log level: %w", err)
+	}
+
 	// read node key
 	nodeKey, err := p2p.LoadNodeKey(config.NodeKeyFile())
 	if err != nil {
 		return nil, fmt.Errorf("failed to load node's key: %w", err)
 	}
-
 	// create node
 	node, err := nm.NewNode(
 		config,
