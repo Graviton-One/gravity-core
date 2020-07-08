@@ -1,7 +1,6 @@
 package gravity
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"gravity-hub/common/transactions"
@@ -57,12 +56,7 @@ func (ghClient *Client) GetKey(key string) ([]byte, error) {
 		return nil, KeyNotFound
 	}
 
-	value, err := base64.StdEncoding.DecodeString(string(rs.Response.Value))
-	if err != nil {
-		return nil, err
-	}
-
-	return value, nil
+	return rs.Response.Value, nil
 }
 
 func (ghClient *Client) GetByPrefix(prefix string) (map[string][]byte, error) {
@@ -75,13 +69,8 @@ func (ghClient *Client) GetByPrefix(prefix string) (map[string][]byte, error) {
 		return nil, KeyNotFound
 	}
 
-	rsValue, err := base64.StdEncoding.DecodeString(string(rs.Response.Value))
-	if err != nil {
-		return nil, err
-	}
-
 	values := make(map[string][]byte)
-	err = json.Unmarshal(rsValue, &values)
+	err = json.Unmarshal(rs.Response.Value, &values)
 	if err != nil {
 		return nil, err
 	}

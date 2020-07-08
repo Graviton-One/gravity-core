@@ -6,15 +6,14 @@ import (
 )
 
 type Config struct {
-	GHPrivKey      string
-	TCPrivKey      string
-	RPCHost        string
-	NodeUrl        string
-	GHNodeURL      string
-	Timeout        int
-	NebulaId       string
-	ChainType      string
-	NebulaContract string
+	GHPrivKey string
+	TCPrivKey string
+	RPCHost   string
+	NodeUrl   string
+	GHNodeURL string
+	Timeout   int
+	NebulaId  string
+	ChainType string
 }
 
 func Load(filename string) (Config, error) {

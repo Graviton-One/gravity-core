@@ -1,8 +1,10 @@
 {
-  "GHNodeURL": "http://localhost:26657",
-  "Timeout": 0,
-  "NebulaId": "0000000000000000000000000000000000000000000000000000000000000001",
+  "GHPrivKey": "",
+  "TCPrivKey": "",
+  "RPCHost": "127.0.0.1:5000",
   "NodeUrl": "http://127.0.0.1:6869",
-  "NebulaContract": "3MHQtdw8myT6b42RD4a9zc346MxgeKeKTkE",
+  "GHNodeURL": "http://localhost:26657",
+  "Timeout": 1,
+  "NebulaId": "",
   "ChainType": "Waves"
 }

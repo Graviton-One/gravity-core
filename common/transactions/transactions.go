@@ -12,6 +12,7 @@ import (
 	"gravity-hub/common/keys"
 	"gravity-hub/common/score"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -30,15 +31,13 @@ import (
 type TxFunc string
 
 const (
-	Commit               TxFunc = "commit"
-	Reveal               TxFunc = "reveal"
-	AddOracle            TxFunc = "addOracle"
-	AddOracleInNebula    TxFunc = "addOracleInNebula"
-	SignResult           TxFunc = "signResult"
-	NewRound             TxFunc = "newRound"
-	Vote                 TxFunc = "vote"
-	SignVoteResult       TxFunc = "signVoteResult"
-	SignNebulaValidators TxFunc = "signNebulaValidators"
+	Commit            TxFunc = "commit"
+	Reveal            TxFunc = "reveal"
+	AddOracle         TxFunc = "addOracle"
+	AddOracleInNebula TxFunc = "addOracleInNebula"
+	SignResult        TxFunc = "signResult"
+	NewRound          TxFunc = "newRound"
+	Vote              TxFunc = "vote"
 )
 
 type Transaction struct {
@@ -46,6 +45,7 @@ type Transaction struct {
 	SenderPubKey string
 	Signature    string
 	Func         TxFunc
+	Timestamp    time.Time
 	ChainType    account.ChainType
 	Args         string
 }
@@ -56,6 +56,7 @@ func New(pubKey []byte, funcName TxFunc, chainType account.ChainType, privKey te
 		Args:         hexutil.Encode(args),
 		Func:         funcName,
 		ChainType:    chainType,
+		Timestamp:    time.Now(),
 	}
 	tx.Hash()
 
@@ -91,6 +92,12 @@ func (tx *Transaction) MarshalBytesWithoutSig() []byte {
 	result = append(result, tx.Func...)
 	result = append(result, byte(tx.ChainType))
 	result = append(result, tx.Args...)
+
+	time := tx.Timestamp.Unix()
+	var b [8]byte
+	binary.BigEndian.PutUint64(b[:], uint64(time))
+	result = append(result, b[:]...)
+
 	return result
 }
 
@@ -219,21 +226,16 @@ func (tx *Transaction) isValidAddOracleInNebula(db *badger.DB) error {
 }
 
 func (tx *Transaction) isValidCommit(db *badger.DB) error {
-	if len(tx.Args) == 72 {
-		return errors.New("invalid commit size")
-	}
 	args, err := hexutil.Decode(tx.Args)
 	if err != nil {
 		return err
 	}
-	nebula := args[0:32]
-	height := args[32:40]
-	sender, err := hexutil.Decode(tx.SenderPubKey)
-	if err != nil {
-		return err
-	}
+	length := args[0]
+	nebula := args[1 : 1+length]
+	height := args[1+length : 9+length]
+	pubKey := args[41+length:]
 
-	key := keys.FormCommitKey(nebula, binary.BigEndian.Uint64(height), sender)
+	key := keys.FormCommitKey(nebula, binary.BigEndian.Uint64(height), pubKey)
 	err = db.View(func(txn *badger.Txn) error {
 		_, err := txn.Get([]byte(key))
 		if err == badger.ErrKeyNotFound {
@@ -252,9 +254,13 @@ func (tx *Transaction) isValidReveal(db *badger.DB) error {
 	}
 
 	commit := args[0:32]
-	nebula := args[32:64]
-	height := args[64:72]
-	reveal := args[72:]
+	length := int(args[32])
+	nebula := args[33 : 33+length]
+	height := args[33+length : 41+length]
+	lengthReveal := int(args[41+length])
+	reveal := args[42+length : lengthReveal+42+length]
+	pubKey := args[lengthReveal+42+length:]
+
 	revealKey := keys.FormRevealKey(nebula, binary.BigEndian.Uint64(height), commit)
 
 	err = db.View(func(txn *badger.Txn) error {
@@ -266,13 +272,8 @@ func (tx *Transaction) isValidReveal(db *badger.DB) error {
 		return errors.New("reveal is exist")
 	})
 
-	sender, err := hexutil.Decode(tx.SenderPubKey)
-	if err != nil {
-		return err
-	}
-
 	var commitBytes []byte
-	keyCommit := keys.FormCommitKey(nebula, binary.BigEndian.Uint64(height), sender)
+	keyCommit := keys.FormCommitKey(nebula, binary.BigEndian.Uint64(height), pubKey)
 	err = db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(keyCommit))
 		if err == badger.ErrKeyNotFound {
@@ -303,10 +304,11 @@ func (tx *Transaction) isValidSignResult(db *badger.DB) error {
 		return err
 	}
 
-	nebulaAddress := args[:32]
-	heightBytes := args[32:40]
-	resultHash := args[40:72]
-	signBytes := args[72:]
+	length := args[0]
+	nebulaAddress := args[1 : 1+length]
+	heightBytes := args[1+length : 9+length]
+	resultHash := args[9+length : 41+length]
+	signBytes := args[41+length:]
 
 	height := binary.BigEndian.Uint64(heightBytes)
 	prefix := strings.Join([]string{string(keys.RevealKey), hexutil.Encode(nebulaAddress), fmt.Sprintf("%d", height)}, "_")
@@ -343,16 +345,39 @@ func (tx *Transaction) isValidSignResult(db *badger.DB) error {
 	if err != nil {
 		return err
 	}
+
+	key := []byte(keys.FormOraclesByValidatorKey(senderPubKeyBytes))
+	oracles := make(map[account.ChainType][]byte)
+
+	err = db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get(key)
+		if err != nil {
+			return err
+		}
+
+		b, err := item.ValueCopy(nil)
+		if err != nil {
+			return err
+		}
+
+		err = json.Unmarshal(b, &oracles)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
 	switch tx.ChainType {
 	case account.Ethereum:
-		if !crypto.VerifySignature(senderPubKeyBytes, resultHash, signBytes[0:64]) {
+		if !crypto.VerifySignature(senderPubKeyBytes, resultHash, oracles[account.Ethereum][0:64]) {
 			return errors.New("invalid result hash sign")
 		}
 	case account.Waves:
 		var senderPubKey [32]byte
-		copy(senderPubKey[:], senderPubKeyBytes)
+		copy(senderPubKey[:], oracles[account.Waves])
 		sign := wavesCrypto.Signature{}
 		copy(sign[:], signBytes)
+
 		if !wavesCrypto.Verify(senderPubKey, sign, resultHash) {
 			return errors.New("invalid result hash sign")
 		}

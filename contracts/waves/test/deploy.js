@@ -37,7 +37,8 @@ describe('Deploy script', async function () {
             data: [
                 { key: "bft_coefficient", value: 1 },
                 { key: "subscriber_address", value: address(subMockSeed) },
-                { key: "gravity_contract", value: address(gravitySeed) }
+                { key: "gravity_contract", value: address(gravitySeed) },
+                { key: "contract_pubkey", value: nebulaPubKey }
             ],
             fee: 500000
         }, nebulaSeed);

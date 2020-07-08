@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -18,6 +19,8 @@ import (
 	"math/big"
 	"strings"
 	"time"
+
+	"github.com/btcsuite/btcutil/base58"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -47,6 +50,7 @@ type Client struct {
 	nebulaId []byte
 	TCAccount
 	ghPrivKey  tendermintCrypto.PrivKeyEd25519
+	ghPubKey   []byte
 	ghClient   *gravity.Client
 	extractor  extractors.PriceExtractor
 	timeout    int
@@ -55,19 +59,25 @@ type Client struct {
 }
 
 func New(cfg config.Config, ctx context.Context) (*Client, error) {
-	nebulaId, err := hexutil.Decode(cfg.NebulaId)
-	if err != nil {
-		return nil, err
-	}
-
 	chainType, err := account.ParseChainType(cfg.ChainType)
 	if err != nil {
 		return nil, err
 	}
 
+	var nebulaId []byte
+	switch chainType {
+	case account.Waves:
+		nebulaId = base58.Decode(cfg.NebulaId)
+	case account.Ethereum:
+		nebulaId, err = hexutil.Decode(cfg.NebulaId)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	ghClient, err := gravity.NewClient(cfg.GHNodeURL)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	var tcPubKey []byte
@@ -90,7 +100,7 @@ func New(cfg config.Config, ctx context.Context) (*Client, error) {
 		ethPrivKey.PublicKey.X, ethPrivKey.PublicKey.Y = ethPrivKey.PublicKey.Curve.ScalarBaseMult(privKeyBytes)
 		tcPubKey = crypto.CompressPubkey(&ethPrivKey.PublicKey)
 
-		targetBlockchain, err = blockchain.NewEthereum(cfg.NebulaContract, cfg.NodeUrl, ctx)
+		targetBlockchain, err = blockchain.NewEthereum(cfg.NebulaId, cfg.NodeUrl, ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -100,29 +110,39 @@ func New(cfg config.Config, ctx context.Context) (*Client, error) {
 		seed := wavesplatform.Seed(cfg.TCPrivKey)
 		secret, err := wavesCrypto.NewSecretKeyFromBase58(string(wCrypto.PrivateKey(seed)))
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		key := wavesCrypto.GeneratePublicKey(secret)
 		tcPubKey = key.Bytes()
 		tcPrivKey = secret.Bytes()
-		targetBlockchain, err = blockchain.NewWaves(cfg.NebulaContract, cfg.NodeUrl, ctx)
+		targetBlockchain, err = blockchain.NewWaves(cfg.NebulaId, cfg.NodeUrl, ctx)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	ghPrivKeyBytes, err := hexutil.Decode(cfg.GHPrivKey)
+	ghPrivKeyBytes, err := base64.StdEncoding.DecodeString(cfg.GHPrivKey)
 	if err != nil {
 		return nil, err
 	}
-	ghPrivKey := tendermintCrypto.GenPrivKeyFromSecret(ghPrivKeyBytes)
-	ghPubKey := ghPrivKey.PubKey().Bytes()
+	ghPrivKey := tendermintCrypto.PrivKeyEd25519{}
+	copy(ghPrivKey[:], ghPrivKeyBytes)
+	ghPubKey := ghPrivKey.PubKey().Bytes()[5:]
 
-	oracleKey := keys.FormOraclesByValidatorKey(tcPubKey)
-	b, err := ghClient.GetKey(oracleKey)
+	oracleKey := keys.FormOraclesByValidatorKey(ghPubKey)
+
+	rs, err := ghClient.HttpClient.ABCIQuery("key", []byte(oracleKey))
+	if err != nil {
+		return nil, err
+	}
 
 	var oracles map[account.ChainType][]byte
-	err = json.Unmarshal(b, &oracles)
+	if rs.Response.Value != nil {
+		err = json.Unmarshal(rs.Response.Value, &oracles)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	isFound := false
 	for _, value := range oracles {
@@ -150,16 +170,22 @@ func New(cfg config.Config, ctx context.Context) (*Client, error) {
 	}
 
 	oracleNebulaKey := keys.FormOraclesByNebulaKey(nebulaId)
-	item, err := ghClient.GetKey(oracleNebulaKey)
-	if err != nil && err != gravity.KeyNotFound {
+	rs, err = ghClient.HttpClient.ABCIQuery("key", []byte(oracleNebulaKey))
+	if err != nil {
 		return nil, err
 	}
 
 	oraclesByNebula := make(map[string]string)
-	err = json.Unmarshal(item, &oraclesByNebula)
+	if rs.Response.Value != nil {
+		err = json.Unmarshal(rs.Response.Value, &oraclesByNebula)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	if _, ok := oraclesByNebula[hexutil.Encode(tcPubKey)]; !ok {
-		tx, err := transactions.New(ghPubKey, transactions.AddOracleInNebula, chainType, ghPrivKey, append(nebulaId, tcPubKey...))
+		args := []byte{byte(len(nebulaId))}
+		tx, err := transactions.New(ghPubKey, transactions.AddOracleInNebula, chainType, ghPrivKey, append(args, append(nebulaId, tcPubKey...)...))
 		if err != nil {
 			return nil, err
 		}
@@ -173,16 +199,13 @@ func New(cfg config.Config, ctx context.Context) (*Client, error) {
 		time.Sleep(time.Duration(5) * time.Second)
 	}
 
-	err = rpc.ListenRpcServer(rpc.ServerConfig{
+	go rpc.ListenRpcServer(rpc.ServerConfig{
 		Host:      cfg.RPCHost,
 		PubKey:    tcPubKey,
 		PrivKey:   ghPrivKey,
 		ChainType: chainType,
 		GhClient:  ghClient,
 	})
-	if err != nil {
-		return nil, err
-	}
 
 	return &Client{
 		TCAccount: TCAccount{
@@ -196,6 +219,7 @@ func New(cfg config.Config, ctx context.Context) (*Client, error) {
 		chainType:  chainType,
 		blockchain: targetBlockchain,
 		timeout:    cfg.Timeout,
+		ghPubKey:   ghPubKey,
 	}, nil
 }
 
@@ -209,26 +233,27 @@ func (client *Client) Start(ctx context.Context) error {
 			return err
 		}
 
-		info, err := client.ghClient.HttpClient.ABCIInfo()
+		info, err := client.ghClient.HttpClient.Status()
 		if err != nil {
 			return err
 		}
 
-		ghHeight := info.Response.LastBlockHeight
+		ghHeight := info.SyncInfo.LatestBlockHeight
 
 		blockKey := keys.FormBlockKey(client.chainType, tcHeight)
-		startGhHeightBytes, err := client.ghClient.GetKey(blockKey)
-		if err != nil && err != gravity.KeyNotFound {
+		rs, err := client.ghClient.HttpClient.ABCIQuery("key", []byte(blockKey))
+		if err != nil {
 			return err
 		}
+
 		var startGhHeight uint64
-		if err == gravity.KeyNotFound {
+		if rs.Response.Value == nil {
 			fmt.Printf("Target Chain Height: %d\n", tcHeight)
 			tcHeightBytes := make([]byte, 8)
 			ghHeightBytes := make([]byte, 8)
 			binary.BigEndian.PutUint64(tcHeightBytes, tcHeight)
 			binary.BigEndian.PutUint64(ghHeightBytes, uint64(ghHeight))
-			tx, err := transactions.New(client.pubKey, transactions.NewRound, client.chainType, client.ghPrivKey, append(tcHeightBytes, ghHeightBytes...))
+			tx, err := transactions.New(client.ghPubKey, transactions.NewRound, client.chainType, client.ghPrivKey, append(tcHeightBytes, ghHeightBytes...))
 			if err != nil {
 				return err
 			}
@@ -240,7 +265,7 @@ func (client *Client) Start(ctx context.Context) error {
 			startGhHeight = uint64(ghHeight)
 			fmt.Printf("GH Height Round Start: %d\n", startGhHeight)
 		} else {
-			startGhHeight = binary.BigEndian.Uint64(startGhHeightBytes)
+			startGhHeight = binary.BigEndian.Uint64(rs.Response.Value)
 		}
 		if lastGHHeight != ghHeight {
 			fmt.Printf("GH Height: %d\n", ghHeight)
@@ -254,7 +279,7 @@ func (client *Client) Start(ctx context.Context) error {
 			if _, ok := blockStatus[tcHeight]; ok {
 				continue
 			}
-			commitKey := keys.FormCommitKey(client.nebulaId, tcHeight, client.pubKey)
+			commitKey := keys.FormCommitKey(client.nebulaId, tcHeight, client.TCAccount.pubKey)
 			_, err = client.ghClient.GetKey(commitKey)
 			if err != nil && err != gravity.KeyNotFound {
 				return err
@@ -291,7 +316,7 @@ func (client *Client) Start(ctx context.Context) error {
 			if _, ok := blockStatus[tcHeight]; !ok {
 				continue
 			}
-			signKey := keys.FormSignResultKey(client.nebulaId, tcHeight, client.pubKey)
+			signKey := keys.FormSignResultKey(client.nebulaId, tcHeight, client.TCAccount.pubKey)
 			_, err = client.ghClient.GetKey(signKey)
 			if err != nil && err != gravity.KeyNotFound {
 				return err
@@ -338,9 +363,19 @@ func (client *Client) Start(ctx context.Context) error {
 			if _, ok := blockStatus[tcHeight]; !ok {
 				continue
 			}
-			if tcHeight%uint64(len(oracles)) != myRound || blockStatus[tcHeight].isSent {
+			if tcHeight%uint64(len(oracles)) != myRound {
 				continue
 			}
+
+			signKey := keys.FormSignResultKey(client.nebulaId, tcHeight, client.TCAccount.pubKey)
+			_, err = client.ghClient.GetKey(signKey)
+			if err != nil && err != gravity.KeyNotFound {
+				return err
+			}
+			if err == gravity.KeyNotFound {
+				continue
+			}
+
 			if _, ok := blockStatus[tcHeight]; !ok && blockStatus[tcHeight].resultValue != 0 {
 				continue
 			}
@@ -349,22 +384,26 @@ func (client *Client) Start(ctx context.Context) error {
 				return err
 			}
 			blockStatus[tcHeight].isSent = true
-			go func() {
-				err := client.blockchain.WaitTx(txId)
-				if err != nil {
-					println(err.Error())
-					return
-				}
-				for i := 0; i < 1; i++ {
-					err = client.blockchain.SendSubs(tcHeight, client.TCAccount.privKey, blockStatus[tcHeight].resultValue, ctx)
+
+			if txId == "" {
+
+				go func(txId string) {
+					err := client.blockchain.WaitTx(txId)
 					if err != nil {
 						println(err.Error())
-						time.Sleep(time.Second)
-						continue
+						return
 					}
-					break
-				}
-			}()
+					for i := 0; i < 1; i++ {
+						err = client.blockchain.SendSubs(tcHeight, client.TCAccount.privKey, blockStatus[tcHeight].resultValue, ctx)
+						if err != nil {
+							time.Sleep(time.Second)
+							continue
+						}
+						break
+					}
+				}(txId)
+
+			}
 		}
 
 		time.Sleep(time.Duration(client.timeout) * time.Second)
@@ -388,7 +427,13 @@ func (client *Client) commit(tcHeight uint64) (uint64, []byte, error) {
 	heightBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(heightBytes, tcHeight)
 
-	tx, err := transactions.New(client.pubKey, transactions.Commit, client.chainType, client.ghPrivKey, append(client.nebulaId, append(heightBytes, commit[:]...)...))
+	args := []byte{byte(len(client.nebulaId))}
+	args = append(args, client.nebulaId...)
+	args = append(args, heightBytes...)
+	args = append(args, commit[:]...)
+	args = append(args, client.TCAccount.pubKey[:]...)
+
+	tx, err := transactions.New(client.ghPubKey, transactions.Commit, client.chainType, client.ghPrivKey, args)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -411,11 +456,14 @@ func (client *Client) reveal(tcHeight uint64, price uint64, hash []byte) error {
 	binary.BigEndian.PutUint64(heightBytes, tcHeight)
 	var args []byte
 	args = append(args, hash...)
+	args = append(args, byte(len(client.nebulaId)))
 	args = append(args, client.nebulaId...)
 	args = append(args, heightBytes...)
+	args = append(args, byte(len(commitPriceBytes)))
 	args = append(args, commitPriceBytes...)
+	args = append(args, client.TCAccount.pubKey...)
 
-	tx, err := transactions.New(client.pubKey, transactions.Reveal, client.chainType, client.ghPrivKey, args)
+	tx, err := transactions.New(client.ghPubKey, transactions.Reveal, client.chainType, client.ghPrivKey, args)
 	if err != nil {
 		return err
 	}
@@ -463,12 +511,13 @@ func (client *Client) signResult(tcHeight uint64) (bool, uint64, []byte, error) 
 	heightBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(heightBytes, tcHeight)
 	var args []byte
+	args = append(args, byte(len(client.nebulaId)))
 	args = append(args, client.nebulaId...)
 	args = append(args, heightBytes...)
 	args = append(args, hash...)
 	args = append(args, sign...)
 
-	tx, err := transactions.New(client.pubKey, transactions.SignResult, client.chainType, client.ghPrivKey, args)
+	tx, err := transactions.New(client.ghPubKey, transactions.SignResult, client.chainType, client.ghPrivKey, args)
 	if err != nil {
 		return false, 0, nil, err
 	}

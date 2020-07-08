@@ -53,8 +53,8 @@ func (waves *Waves) SendResult(tcHeight uint64, privKey []byte, nebulaId []byte,
 	}
 	if state == nil {
 		funcArgs := new(proto.Arguments)
-		funcArgs.Append(proto.StringArgument{
-			Value: base58.Encode(hash),
+		funcArgs.Append(proto.BinaryArgument{
+			Value: hash,
 		})
 		realSignCount := 0
 		var signs []string
@@ -62,6 +62,7 @@ func (waves *Waves) SendResult(tcHeight uint64, privKey []byte, nebulaId []byte,
 		if err != nil {
 			return "", err
 		}
+
 		for _, oracle := range strings.Split(oracles.Value.(string), ",") {
 			pubKey := base58.Decode(oracle)
 			sign, err := ghClient.GetKey(keys.FormSignResultKey(nebulaId, tcHeight, pubKey))
@@ -81,6 +82,9 @@ func (waves *Waves) SendResult(tcHeight uint64, privKey []byte, nebulaId []byte,
 			return "", err
 		}
 
+		if realSignCount == 0 {
+			return "", nil
+		}
 		if realSignCount >= int(bft.Value.(float64)) {
 			secret, err := wavesCrypto.NewSecretKeyFromBytes(privKey)
 
@@ -131,7 +135,7 @@ func (waves *Waves) SendSubs(tcHeight uint64, privKey []byte, value uint64, ctx 
 	if err != nil {
 		return err
 	}
-	if state == nil {
+	if state != nil {
 		subContract, err := helperWaves.GetStateByAddressAndKey(waves.contractAddress, "subscriber_address")
 		if err != nil {
 			return err

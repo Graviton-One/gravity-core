@@ -40,15 +40,13 @@ func (tx *Transaction) SetStateCommit(currentBatch *badger.Txn) error {
 	if err != nil {
 		return err
 	}
-	nebula := args[0:32]
-	height := args[32:40]
-	commit := args[40:]
-	sender, err := hexutil.Decode(tx.SenderPubKey)
-	if err != nil {
-		return err
-	}
+	length := args[0]
+	nebula := args[1 : 1+length]
+	height := args[1+length : 9+length]
+	commit := args[9+length : 41+length]
+	pubKey := args[41+length:]
 
-	key := keys.FormCommitKey(nebula, binary.BigEndian.Uint64(height), sender)
+	key := keys.FormCommitKey(nebula, binary.BigEndian.Uint64(height), pubKey)
 	return currentBatch.Set([]byte(key), commit)
 }
 
@@ -59,9 +57,12 @@ func (tx *Transaction) SetStateReveal(currentBatch *badger.Txn) error {
 	}
 
 	commit := args[0:32]
-	nebula := args[32:64]
-	height := args[64:72]
-	reveal := args[72:]
+	length := int(args[32])
+	nebula := args[33 : 33+length]
+	height := args[33+length : 41+length]
+	lengthReveal := int(args[41+length])
+	reveal := args[42+length : lengthReveal+42+length]
+	//	pubKey := args[lengthReveal+41+length:]
 
 	key := keys.FormRevealKey(nebula, binary.BigEndian.Uint64(height), commit)
 	return currentBatch.Set([]byte(key), reveal)
@@ -73,8 +74,9 @@ func (tx *Transaction) SetStateAddOracleInNebula(currentBatch *badger.Txn) error
 		return err
 	}
 
-	nebulaAddress := args[0:32]
-	pubKey := args[32:]
+	length := args[0:1][0]
+	nebulaAddress := args[1 : int(length)+1]
+	pubKey := args[int(length)+1:]
 
 	key := []byte(keys.FormOraclesByNebulaKey(nebulaAddress))
 	item, err := currentBatch.Get(key)
@@ -82,17 +84,19 @@ func (tx *Transaction) SetStateAddOracleInNebula(currentBatch *badger.Txn) error
 		return err
 	}
 
+	var b []byte
 	oraclesByNebula := make(map[string]string)
-	b, err := item.ValueCopy(nil)
-	if err != nil {
-		return err
-	}
+	if item != nil {
+		b, err = item.ValueCopy(nil)
+		if err != nil {
+			return err
+		}
 
-	err = json.Unmarshal(b, &oraclesByNebula)
-	if err != nil {
-		return err
+		err = json.Unmarshal(b, &oraclesByNebula)
+		if err != nil {
+			return err
+		}
 	}
-
 	oraclesByNebula[hexutil.Encode(pubKey)] = tx.SenderPubKey
 
 	b, err = json.Marshal(&oraclesByNebula)
@@ -159,16 +163,43 @@ func (tx *Transaction) SetStateSignResult(currentBatch *badger.Txn) error {
 		return err
 	}
 
-	nebulaAddress := args[:32]
-	height := args[32:40]
+	length := args[0]
+	nebulaAddress := args[1 : 1+length]
+	height := args[1+length : 9+length]
 	signBytes := args[72:]
 
-	sender, err := hexutil.Decode(tx.SenderPubKey)
+	senderPubKeyBytes, err := hexutil.Decode(tx.SenderPubKey)
 	if err != nil {
 		return err
 	}
 
-	keySign := keys.FormSignResultKey(nebulaAddress, binary.BigEndian.Uint64(height), sender)
+	key := []byte(keys.FormOraclesByValidatorKey(senderPubKeyBytes))
+	oracles := make(map[account.ChainType][]byte)
+
+	item, err := currentBatch.Get(key)
+	if err != nil {
+		return err
+	}
+
+	b, err := item.ValueCopy(nil)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(b, &oracles)
+	if err != nil {
+		return err
+	}
+
+	var senderPubKey []byte
+	switch tx.ChainType {
+	case account.Ethereum:
+		senderPubKey = oracles[account.Ethereum]
+	case account.Waves:
+		senderPubKey = oracles[account.Waves]
+	}
+
+	keySign := keys.FormSignResultKey(nebulaAddress, binary.BigEndian.Uint64(height), senderPubKey)
 	return currentBatch.Set([]byte(keySign), signBytes)
 }
 

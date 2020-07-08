@@ -97,66 +97,8 @@ func New(waves *WavesConf, ethereum *EthereumConf, ghNode string, ctx context.Co
 	}, nil
 }
 
-func testVote(owner string, res []string, txn *badger.Txn) error {
-	a, err := hexutil.Decode(owner)
-	if err != nil {
-		println(err)
-	}
-	key := keys.FormVoteKey(a)
-
-	var votesModels []models.Vote
-
-	for _, vres := range res {
-		tagetValidator, _ := hexutil.Decode(vres)
-		votesModels = append(votesModels, models.Vote{
-			Score:  0.001,
-			Target: vres,
-		})
-		if _, err := txn.Get([]byte(keys.FormScoreKey(tagetValidator))); err == badger.ErrKeyNotFound {
-			txn.Set([]byte(keys.FormScoreKey(tagetValidator)), []byte{0, 0, 0, 0, 0, 0, 0, 0})
-		}
-	}
-
-	b, err := json.Marshal(votesModels)
-	if err != nil {
-		return err
-	}
-	txn.Set([]byte(key), b)
-
-	return nil
-}
-
 func (scheduler *Scheduler) HandleBlock(height int64, txn *badger.Txn) error {
 	go scheduler.setPrivKeys(txn)
-	//TODO
-
-	key := []byte(keys.FormOraclesByNebulaKey(scheduler.nebulae[account.Ethereum][0]))
-	item, err := txn.Get(key)
-	if err != nil && err != badger.ErrKeyNotFound {
-		return err
-	}
-	oraclesByNebula := make(map[string]string)
-	if item != nil {
-		b, err := item.ValueCopy(nil)
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal(b, &oraclesByNebula)
-		if err != nil {
-			return err
-		}
-	}
-
-	oraclesByNebula["0xD4a0E39737796c4Bd4Bb24243c9bf4fCd3CfA3da"] = "0xffff1bff7e8d034da2b043decc106789b55b84702bf2c2f2cf6c859e37dc30ec"
-	b, err := json.Marshal(&oraclesByNebula)
-	if err != nil {
-		return err
-	}
-	err = txn.Set(key, b)
-	if err != nil {
-		return err
-	}
-	//TODO
 	roundId := height / CalculateScoreInterval
 	if height%CalculateScoreInterval == 0 {
 		votes, err := scheduler.getVotes(txn)
@@ -871,7 +813,12 @@ func (scheduler *Scheduler) sendOraclesWaves(nebulaId []byte, round int64, txn *
 	}
 
 	for k, _ := range oracles {
-		newOracles = append(newOracles, fmt.Sprintf("%s", k))
+		v, err := hexutil.Decode(k)
+		if err != nil {
+			return err
+		}
+
+		newOracles = append(newOracles, base58.Encode(v))
 	}
 
 	emptyCount := OraclesCount - len(newOracles)
