@@ -6,6 +6,8 @@ import "./NModels.sol";
 import "../Mock/SubMock.sol";
 
 contract Nebula {
+    event NewPulse(uint256 height, bytes32 dataHash);
+
     mapping(uint256=>bool) public rounds;
 
     QueueLib.Queue public oracleQueue;
@@ -48,6 +50,8 @@ contract Nebula {
 
         require(count >= bftValue, "invalid bft count");
         pulses[block.number] = NModels.Pulse(dataHash);
+
+        emit NewPulse(block.number, dataHash);
     }
 
     function sendData(uint64 value, uint256 blockNumber, bytes32 subscriptionId) public {
