@@ -8,9 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/account"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/keys"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/score"
+	"proof-of-concept/common/account"
+	"proof-of-concept/common/keys"
+	"proof-of-concept/common/score"
 	"strings"
 	"time"
 

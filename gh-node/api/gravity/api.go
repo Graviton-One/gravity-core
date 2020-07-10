@@ -3,7 +3,7 @@ package gravity
 import (
 	"encoding/json"
 	"errors"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/transactions"
+	"proof-of-concept/common/transactions"
 
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 )

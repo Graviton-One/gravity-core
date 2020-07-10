@@ -3,9 +3,9 @@ package blockchain
 import (
 	"context"
 	"fmt"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/keys"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/api/gravity"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/helpers"
+	"proof-of-concept/common/keys"
+	"proof-of-concept/gh-node/api/gravity"
+	"proof-of-concept/gh-node/helpers"
 	"strings"
 	"time"
 
