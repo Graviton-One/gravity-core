@@ -2,7 +2,7 @@ package keys
 
 import (
 	"fmt"
-	"gravity-hub/common/account"
+	"github.com/Gravity-Hub-Org/proof-of-concept/common/account"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"

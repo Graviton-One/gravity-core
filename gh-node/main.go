@@ -4,8 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"gravity-hub/gh-node/config"
-	"gravity-hub/gh-node/signer"
+	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/config"
+	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/signer"
 	"time"
 )
 

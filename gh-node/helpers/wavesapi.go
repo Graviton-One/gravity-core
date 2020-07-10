@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"gravity-hub/gh-node/helpers/state"
+	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/helpers/state"
 	"io/ioutil"
 	"net/http"
 	"time"
-
-	"github.com/ventuary-lab/node-payout-manager/blockchain/transactions"
 )
 
 const (
@@ -46,13 +44,13 @@ func (node *Node) GetStateByAddressAndKey(address string, key string) (*state.St
 	return &states[0], nil
 }
 
-func (node *Node) GetTxById(id string) (transactions.Transaction, error) {
+func (node *Node) GetTxById(id string) (Transaction, error) {
 	rsBody, _, err := sendRequest("GET", node.nodeUrl+GetTxPath+"/"+id, nil, "")
 	if err != nil {
-		return transactions.Transaction{}, err
+		return Transaction{}, err
 	}
 
-	return transactions.Unmarshal(rsBody)
+	return Unmarshal(rsBody)
 }
 
 func (node *Node) IsUnconfirmedTx(id string) (bool, error) {

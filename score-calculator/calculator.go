@@ -1,8 +1,8 @@
 package score_calculator
 
 import (
-	"gravity-hub/score-calculator/models"
-	"gravity-hub/score-calculator/trustgraph"
+	"github.com/Gravity-Hub-Org/proof-of-concept/score-calculator/models"
+	"github.com/Gravity-Hub-Org/proof-of-concept/score-calculator/trustgraph"
 )
 
 func Calculate(actors []models.Actor, votes map[string][]models.Vote) (map[string]float32, error) {

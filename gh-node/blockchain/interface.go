@@ -2,7 +2,7 @@ package blockchain
 
 import (
 	"context"
-	"gravity-hub/gh-node/api/gravity"
+	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/api/gravity"
 )
 
 type IBlockchain interface {

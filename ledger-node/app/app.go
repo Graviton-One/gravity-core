@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gravity-hub/common/keys"
-	"gravity-hub/common/transactions"
-	"gravity-hub/ledger-node/scheduler"
+	"github.com/Gravity-Hub-Org/proof-of-concept/common/keys"
+	"github.com/Gravity-Hub-Org/proof-of-concept/common/transactions"
+	"github.com/Gravity-Hub-Org/proof-of-concept/ledger-node/scheduler"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
