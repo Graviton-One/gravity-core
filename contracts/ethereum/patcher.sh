@@ -1,9 +1,11 @@
+
 #!/bin/bash
 
 eth_address=''
 
 eth_port='8545'
 eth_network=''
+nebula=0
 
 replace_address_in_migration () {
     migration_name='2_initial_contracts.js'
@@ -35,9 +37,17 @@ update_truffle_config () {
     printf "$template" $eth_network > "truffle-config.js"
 }
 
+handle_nebula () {
+    if [[ $nebula != 0 ]]; then
+        echo "Nebula already provided"
+        exit 1
+    fi
+}
+
 while [ -n "$1" ]
 do
     case "$1" in
+        --nebula) nebula=$2; handle_nebula ;;
         --eth-address) eth_address=$2; replace_address_in_migration ;;
         --eth-network) eth_network=$2; update_truffle_config ;;
     esac 

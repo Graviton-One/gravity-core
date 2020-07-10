@@ -32,6 +32,7 @@ func main() {
 	}
 
 	client, err := signer.New(cfg, ctx)
+
 	if err != nil {
 		panic(err)
 	}
