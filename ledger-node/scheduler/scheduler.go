@@ -137,7 +137,7 @@ func (scheduler *Scheduler) HandleBlock(height int64, txn *badger.Txn) error {
 		}
 
 		for _, v := range scheduler.nebulae[account.Waves] {
-			err := scheduler.sendOraclesWaves(v, roundId, txn)
+		err := scheduler.sendOraclesWaves(v, roundId, txn)
 			if err != nil {
 				continue
 			}

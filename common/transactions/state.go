@@ -166,7 +166,7 @@ func (tx *Transaction) SetStateSignResult(currentBatch *badger.Txn) error {
 	length := args[0]
 	nebulaAddress := args[1 : 1+length]
 	height := args[1+length : 9+length]
-	signBytes := args[72:]
+	signBytes := args[9+32+length:]
 
 	senderPubKeyBytes, err := hexutil.Decode(tx.SenderPubKey)
 	if err != nil {

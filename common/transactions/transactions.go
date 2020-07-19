@@ -369,7 +369,7 @@ func (tx *Transaction) isValidSignResult(db *badger.DB) error {
 
 	switch tx.ChainType {
 	case account.Ethereum:
-		if !crypto.VerifySignature(senderPubKeyBytes, resultHash, oracles[account.Ethereum][0:64]) {
+		if !crypto.VerifySignature(oracles[account.Ethereum], resultHash, signBytes[:64]) {
 			return errors.New("invalid result hash sign")
 		}
 	case account.Waves:

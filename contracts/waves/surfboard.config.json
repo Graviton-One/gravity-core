@@ -3,7 +3,7 @@
     "test_directory": "test",
     "envs": {
         "custom": {
-            "API_BASE": "http://164.90.177.119:6869/",
+            "API_BASE": "http://164.90.191.250:6869/",
             "CHAIN_ID": "R",
             "SEED": "waves private node seed with waves tokens",
             "timeout": 60000
@@ -27,7 +27,7 @@
             "SEED": "X"
         }
     },
-    "defaultEnv": "custom",
+    "defaultEnv": "testnet",
     "mocha": {
         "timeout": 60000
     }

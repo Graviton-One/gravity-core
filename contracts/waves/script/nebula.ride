@@ -13,6 +13,13 @@ func getNumberByKey(key: String) = {
       } 
 }
 
+func getBytesByKey(key: String) = {
+    match (getBinary(this, key)) {
+        case v:ByteVector => v
+        case _ => base64'0'
+    }
+}
+
 func getStringByKey(key: String) = {
     match (getString(this, key)) {
         case v:String => v
@@ -58,9 +65,11 @@ func confirmData(hash: ByteVector, signs: String) = {
         + validateSign(hash, signList[3], oracles[3]) 
         + validateSign(hash, signList[4], oracles[4]) 
 
-    if count > bftCoefficient then {
-        throw("invalid bft count")
-    } else {
+    if (count > bftCoefficient)
+       then throw("invalid bft count")
+    else if(getBytesByKey(toString(height)) != base64'0') 
+        then throw("data is exist")
+    else {
         WriteSet([
             DataEntry(toString(height), hash)
         ])

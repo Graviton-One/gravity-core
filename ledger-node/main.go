@@ -134,7 +134,7 @@ func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
 		PrivKey: wavesPrivKey,
 		Client:  wavesClient,
 		Helper:  helpers.New(wavesClient.GetOptions().BaseUrl, ""),
-		ChainId: 'R',
+		ChainId: 'T',
 	}
 
 	ethPrivKey := &ecdsa.PrivateKey{

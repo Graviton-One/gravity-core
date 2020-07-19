@@ -49,7 +49,7 @@ func setConsuls(newConsuls: String, stringSigns: String, round: Int) = {
     else {  
         WriteSet([
             DataEntry(ConsulsKey, newConsuls),
-             DataEntry(LastRoundKey + "_" + toString(round), round)
+            DataEntry(LastRoundKey + "_" + toString(round), round)
         ])
     }
 }

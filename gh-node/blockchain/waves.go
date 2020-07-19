@@ -32,7 +32,7 @@ func NewWaves(contractAddress string, nodeUrl string, ctx context.Context) (*Wav
 	return &Waves{
 		client:          wavesClient,
 		contractAddress: contractAddress,
-		chainID:         'R',
+		chainID:         'T',
 	}, nil
 }
 

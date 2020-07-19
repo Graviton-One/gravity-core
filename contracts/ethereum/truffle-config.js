@@ -50,7 +50,7 @@ module.exports = {
         blockTime: 15
     },
     external: {
-      host: "172.21.0.1",     // Localhost (default: none)
+      host: "164.90.191.250",     // Localhost (default: none)
       port: 8545,            // Standard Ethereum port (default: none)
       network_id: "*",       // Any network (default: none)
       gas: 0,
