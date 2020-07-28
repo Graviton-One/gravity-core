@@ -8,17 +8,18 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/account"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/keys"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/transactions"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/api/gravity"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/blockchain"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/config"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/extractors"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/rpc"
 	"math/big"
 	"strings"
 	"time"
+
+	"github.com/Gravity-Tech/proof-of-concept/common/account"
+	"github.com/Gravity-Tech/proof-of-concept/common/keys"
+	"github.com/Gravity-Tech/proof-of-concept/common/transactions"
+	"github.com/Gravity-Tech/proof-of-concept/gh-node/api/gravity"
+	"github.com/Gravity-Tech/proof-of-concept/gh-node/blockchain"
+	"github.com/Gravity-Tech/proof-of-concept/gh-node/config"
+	"github.com/Gravity-Tech/proof-of-concept/gh-node/extractors"
+	"github.com/Gravity-Tech/proof-of-concept/gh-node/rpc"
 
 	"github.com/btcsuite/btcutil/base58"
 
@@ -31,20 +32,6 @@ import (
 	wavesplatform "github.com/wavesplatform/go-lib-crypto"
 	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
 )
-
-type TCAccount struct {
-	privKey []byte
-	pubKey  []byte
-}
-
-type Status struct {
-	commitPrice uint64
-	commitHash  []byte
-	resultValue uint64
-	resultHash  []byte
-	isSent      bool
-	isSentSub   bool
-}
 
 type Client struct {
 	nebulaId []byte

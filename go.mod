@@ -1,4 +1,4 @@
-module github.com/Gravity-Hub-Org/proof-of-concept
+module github.com/Gravity-Tech/proof-of-concept
 
 go 1.14
 

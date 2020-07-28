@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/helpers/state"
+	"github.com/Gravity-Tech/proof-of-concept/gh-node/helpers/state"
 	"io/ioutil"
 	"net/http"
 	"time"
