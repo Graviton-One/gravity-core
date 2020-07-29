@@ -215,7 +215,7 @@ func New(cfg config.Config, ctx context.Context) (*Client, error) {
 		nebulaId:   nebulaId,
 		ghPrivKey:  ghPrivKey,
 		ghClient:   ghClient,
-		extractor:  &extractors.BinanceExtractor{},
+		extractor:  &extractors.ExtractorClient{ HostURL: &cfg.ExtractorURL },
 		chainType:  chainType,
 		blockchain: targetBlockchain,
 		timeout:    cfg.Timeout,
