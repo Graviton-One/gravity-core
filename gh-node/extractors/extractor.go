@@ -17,7 +17,8 @@ type ExtractorClient struct {
 }
 
 func (client *ExtractorClient) wrapRequest (route string) *http.Request {
-	url, _:= url2.ParseRequestURI(route)
+	fullRoute := fmt.Sprintf("%v/%v", client.HostURL, route)
+	url, _:= url2.ParseRequestURI(fullRoute)
 
 	request := http.Request{
 		Method: "GET",
