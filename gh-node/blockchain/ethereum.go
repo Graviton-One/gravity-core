@@ -5,10 +5,11 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/Gravity-Tech/proof-of-concept/common/contracts"
-	"github.com/Gravity-Tech/proof-of-concept/common/keys"
-	"github.com/Gravity-Tech/proof-of-concept/gh-node/api/gravity"
 	"math/big"
+
+	"github.com/Gravity-Tech/gravity-core/common/contracts"
+	"github.com/Gravity-Tech/gravity-core/common/keys"
+	"github.com/Gravity-Tech/gravity-core/gh-node/api/gravity"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 

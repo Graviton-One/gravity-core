@@ -2,15 +2,17 @@ package app
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 
-	"github.com/Gravity-Tech/proof-of-concept/common/account"
+	"github.com/Gravity-Tech/gravity-core/ledger-node/query"
 
-	"github.com/Gravity-Tech/proof-of-concept/common/storage"
-	"github.com/Gravity-Tech/proof-of-concept/common/transactions"
-	"github.com/Gravity-Tech/proof-of-concept/ledger-node/scheduler"
+	"github.com/Gravity-Tech/gravity-core/common/state"
+
+	"github.com/Gravity-Tech/gravity-core/common/account"
+
+	"github.com/Gravity-Tech/gravity-core/common/storage"
+	"github.com/Gravity-Tech/gravity-core/common/transactions"
+	"github.com/Gravity-Tech/gravity-core/ledger-node/scheduler"
 
 	"github.com/wavesplatform/gowaves/pkg/client"
 
@@ -59,13 +61,12 @@ func (app *GHApplication) SetOption(req abcitypes.RequestSetOption) abcitypes.Re
 }
 
 func (app *GHApplication) DeliverTx(req abcitypes.RequestDeliverTx) abcitypes.ResponseDeliverTx {
-	err := app.isValid(req.Tx)
+	tx, err := transactions.UnmarshalJson(req.Tx)
 	if err != nil {
 		return abcitypes.ResponseDeliverTx{Code: Error}
 	}
 
-	tx, _ := transactions.UnmarshalJson(req.Tx)
-	err = tx.SetState(app.storage)
+	err = state.SetState(tx, app.storage, app.ethClient, app.wavesClient, app.ctx)
 	if err != nil {
 		return abcitypes.ResponseDeliverTx{Code: Error}
 	}
@@ -73,25 +74,7 @@ func (app *GHApplication) DeliverTx(req abcitypes.RequestDeliverTx) abcitypes.Re
 	return abcitypes.ResponseDeliverTx{Code: 0}
 }
 
-func (app *GHApplication) isValid(txBytes []byte) error {
-	tx, err := transactions.UnmarshalJson(txBytes)
-	if err != nil {
-		return errors.New("invalid parse tx")
-	}
-
-	err = tx.IsValid(app.ethClient, app.wavesClient, app.db, app.ctx)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (app *GHApplication) CheckTx(req abcitypes.RequestCheckTx) abcitypes.ResponseCheckTx {
-	err := app.isValid(req.Tx)
-	if err != nil {
-		return abcitypes.ResponseCheckTx{Code: Error, Info: err.Error()}
-	}
-
 	return abcitypes.ResponseCheckTx{Code: Success}
 }
 
@@ -105,60 +88,14 @@ func (app *GHApplication) Commit() abcitypes.ResponseCommit {
 
 func (app *GHApplication) Query(reqQuery abcitypes.RequestQuery) (resQuery abcitypes.ResponseQuery) {
 	var err error
-	switch reqQuery.Path {
-	case "key":
-		resQuery.Key = reqQuery.Data
-		err = app.db.View(func(txn *badger.Txn) error {
-			item, err := txn.Get(reqQuery.Data)
-			if err != nil && err != badger.ErrKeyNotFound {
-				return err
-			}
-			if err == badger.ErrKeyNotFound {
-				resQuery.Info = "does not exist"
-				resQuery.Code = Error
-				return nil
-			}
 
-			return item.Value(func(val []byte) error {
-				resQuery.Info = "exists"
-				resQuery.Value = val
-				return nil
-			})
-		})
-	case "prefix":
-		err = app.db.View(func(txn *badger.Txn) error {
-			it := txn.NewIterator(badger.DefaultIteratorOptions)
-			defer it.Close()
-			prefix := reqQuery.Data
-
-			values := make(map[string][]byte)
-			for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-				item := it.Item()
-				k := item.Key()
-				err := item.Value(func(v []byte) error {
-					values[string(k)] = v
-					return nil
-				})
-				if err != nil {
-					return err
-				}
-			}
-			result, err := json.Marshal(&values)
-			if err != nil {
-				return err
-			}
-
-			resQuery.Log = "exists"
-			resQuery.Value = result
-
-			return nil
-		})
-	}
-
+	b, err := query.Query(app.storage, reqQuery.Path)
 	if err != nil {
-		resQuery.Info = "invalid request"
 		resQuery.Code = Error
 	}
+
+	resQuery.Value = b
+
 	return
 }
 
@@ -177,7 +114,8 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 	}
 
 	for _, value := range req.Validators {
-		validatorPubKey := account.PubKey(value.PubKey.GetData())
+		var validatorPubKey account.PubKey
+		copy(validatorPubKey[:], value.PubKey.GetData())
 		err := app.storage.SetScore(validatorPubKey, uint64(value.Power))
 		if err != nil {
 			panic(err)
@@ -204,7 +142,8 @@ func (app *GHApplication) BeginBlock(req abcitypes.RequestBeginBlock) abcitypes.
 }
 
 func (app *GHApplication) EndBlock(req abcitypes.RequestEndBlock) abcitypes.ResponseEndBlock {
-	consuls, err := app.storage.GetConsuls()
+	//TODO LastHeight
+	consuls, err := app.storage.Consuls()
 	if err != nil {
 		panic(err)
 	}
@@ -217,7 +156,7 @@ func (app *GHApplication) EndBlock(req abcitypes.RequestEndBlock) abcitypes.Resp
 
 		pubKey := abcitypes.PubKey{
 			Type: "ed25519",
-			Data: consuls[i].Validator,
+			Data: consuls[i].Validator[:],
 		}
 
 		newValidators = append(newValidators, abcitypes.ValidatorUpdate{

@@ -2,21 +2,22 @@ package rpc
 
 import (
 	"encoding/json"
-	"github.com/Gravity-Tech/proof-of-concept/common/account"
-	"github.com/Gravity-Tech/proof-of-concept/common/transactions"
-	"github.com/Gravity-Tech/proof-of-concept/gh-node/api/gravity"
-	"github.com/Gravity-Tech/proof-of-concept/score-calculator/models"
 	"net/http"
+
+	"github.com/Gravity-Tech/gravity-core/common/account"
+	"github.com/Gravity-Tech/gravity-core/common/client"
+	"github.com/Gravity-Tech/gravity-core/common/transactions"
+	"github.com/Gravity-Tech/gravity-core/score-calculator/models"
 
 	tendermintCrypto "github.com/tendermint/tendermint/crypto/ed25519"
 )
 
 type ServerConfig struct {
 	Host      string
-	PubKey    []byte
+	PubKey    account.OraclesPubKey
 	PrivKey   tendermintCrypto.PrivKeyEd25519
 	ChainType account.ChainType
-	GhClient  *gravity.Client
+	GhClient  *client.Client
 }
 
 var cfg ServerConfig

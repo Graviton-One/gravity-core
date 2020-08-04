@@ -11,6 +11,7 @@ const (
 	Separator string = "_"
 
 	ConsulsKey           Key = "consuls"
+	LastHeightKey        Key = "last_height"
 	PrevConsulsKey       Key = "prev_consuls"
 	ConsulsSignKey       Key = "consuls_sing"
 	OraclesSignNebulaKey Key = "oracles_sign"
@@ -18,7 +19,6 @@ const (
 	OraclesByNebulaKey    Key = "oracles_nebula"
 	BftOraclesByNebulaKey Key = "bft_oracles_nebula"
 	OraclesByValidatorKey Key = "oracles"
-	ValidatorByOracleKey  Key = "validator"
 
 	BlockKey      Key = "block"
 	VoteKey       Key = "vote"

@@ -1,9 +1,9 @@
 package score_calculator
 
 import (
-	"github.com/Gravity-Tech/proof-of-concept/common/storage"
-	"github.com/Gravity-Tech/proof-of-concept/score-calculator/models"
-	"github.com/Gravity-Tech/proof-of-concept/score-calculator/trustgraph"
+	"github.com/Gravity-Tech/gravity-core/common/storage"
+	"github.com/Gravity-Tech/gravity-core/score-calculator/models"
+	"github.com/Gravity-Tech/gravity-core/score-calculator/trustgraph"
 )
 
 func Calculate(actors []models.Actor, votes map[string][]storage.Vote) (map[string]float32, error) {

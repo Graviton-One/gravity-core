@@ -5,10 +5,6 @@ import (
 	"crypto/ecdsa"
 	"flag"
 	"fmt"
-	"github.com/Gravity-Tech/proof-of-concept/common/account"
-	"github.com/Gravity-Tech/proof-of-concept/gh-node/helpers"
-	"github.com/Gravity-Tech/proof-of-concept/ledger-node/app"
-	"github.com/Gravity-Tech/proof-of-concept/ledger-node/scheduler"
 	"math/big"
 	"os"
 	"os/signal"
@@ -16,6 +12,11 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/Gravity-Tech/gravity-core/common/account"
+	"github.com/Gravity-Tech/gravity-core/gh-node/helpers"
+	"github.com/Gravity-Tech/gravity-core/ledger-node/app"
+	"github.com/Gravity-Tech/gravity-core/ledger-node/scheduler"
 
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 

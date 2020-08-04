@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/Gravity-Tech/proof-of-concept/gh-node/helpers/state"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/Gravity-Tech/gravity-core/gh-node/helpers/state"
 )
 
 const (

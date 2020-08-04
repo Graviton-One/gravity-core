@@ -3,7 +3,7 @@ package storage
 import (
 	"encoding/json"
 
-	"github.com/Gravity-Tech/proof-of-concept/common/account"
+	"github.com/Gravity-Tech/gravity-core/common/account"
 )
 
 type Consul struct {

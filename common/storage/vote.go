@@ -5,7 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	"github.com/Gravity-Tech/proof-of-concept/common/account"
+	"github.com/Gravity-Tech/gravity-core/common/account"
 )
 
 type Vote struct {

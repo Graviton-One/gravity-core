@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/Gravity-Tech/proof-of-concept/common/account"
+	"github.com/Gravity-Tech/gravity-core/common/account"
 
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -31,7 +31,6 @@ type ID [32]byte
 type TxFunc string
 type ArgType string
 type Args struct {
-	Type  ArgType
 	Value interface{}
 }
 
@@ -44,7 +43,7 @@ type Transaction struct {
 	Args         []Args
 }
 
-func New(pubKey [32]byte, funcName TxFunc, privKey tendermintCrypto.PrivKeyEd25519, args []Args) (*Transaction, error) {
+func New(pubKey account.PubKey, funcName TxFunc, privKey tendermintCrypto.PrivKeyEd25519, args []Args) (*Transaction, error) {
 	tx := &Transaction{
 		SenderPubKey: pubKey,
 		Args:         args,
@@ -83,14 +82,14 @@ func (tx *Transaction) Bytes() []byte {
 
 	for _, v := range tx.Args {
 		var value []byte
-		switch v.Type {
-		case StringType:
+		switch v.Value.(type) {
+		case string:
 			value = []byte(v.Value.(string))
-		case IntType:
+		case int64:
 			var b [8]byte
 			binary.BigEndian.PutUint64(b[:], tx.Timestamp)
 			value = b[:]
-		case BinaryType:
+		case []byte:
 			value = v.Value.([]byte)
 		}
 		result = append(result, value...)

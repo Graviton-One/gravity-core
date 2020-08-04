@@ -7,13 +7,13 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/Gravity-Tech/proof-of-concept/common/transactions"
+	"github.com/Gravity-Tech/gravity-core/common/transactions"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/wavesplatform/gowaves/pkg/client"
 
-	"github.com/Gravity-Tech/proof-of-concept/common/account"
-	"github.com/Gravity-Tech/proof-of-concept/common/storage"
+	"github.com/Gravity-Tech/gravity-core/common/account"
+	"github.com/Gravity-Tech/gravity-core/common/storage"
 
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -44,39 +44,44 @@ var (
 	ErrInvalidSubRound   = errors.New("invalid sub round")
 )
 
-func calculateSubRound(height int64) SubRound {
+func CalculateSubRound(height uint64) SubRound {
 	return SubRound(height % (SubRoundCount * SubRoundDuration) / SubRoundDuration)
 }
 
-func SetState(tx *transactions.Transaction, storage *storage.Storage, height int64, ethClient *ethclient.Client, wavesClient *client.Client, ctx context.Context) error {
+func SetState(tx *transactions.Transaction, store *storage.Storage, ethClient *ethclient.Client, wavesClient *client.Client, ctx context.Context) error {
 	if isValidSigns(tx) {
 		return ErrInvalidSign
 	}
 
+	height, err := store.LastHeight()
+	if err != nil {
+		return err
+	}
+
 	switch tx.Func {
 	case transactions.Commit:
-		if calculateSubRound(height) != CommitSubRound {
+		if CalculateSubRound(height) != CommitSubRound {
 			return ErrInvalidSubRound
 		}
-		return commit(storage, tx)
+		return commit(store, tx)
 	case transactions.Reveal:
-		if calculateSubRound(height) != RevealSubRound {
+		if CalculateSubRound(height) != RevealSubRound {
 			return ErrInvalidSubRound
 		}
-		return reveal(storage, tx)
+		return reveal(store, tx)
 	case transactions.Result:
-		if calculateSubRound(height) != ResultSubRound {
+		if CalculateSubRound(height) != ResultSubRound {
 			return ErrInvalidSubRound
 		}
-		return result(storage, tx)
+		return result(store, tx)
 	case transactions.AddOracleInNebula:
-		return addOracleInNebula(storage, tx)
+		return addOracleInNebula(store, tx)
 	case transactions.AddOracle:
-		return addOracle(storage, tx)
+		return addOracle(store, tx)
 	case transactions.NewRound:
-		return newRound(storage, tx, height, ethClient, wavesClient, ctx)
+		return newRound(store, tx, height, ethClient, wavesClient, ctx)
 	case transactions.Vote:
-		return vote(storage, tx)
+		return vote(store, tx)
 	default:
 		return ErrFuncNotFound
 	}
@@ -86,7 +91,7 @@ func commit(store *storage.Storage, tx *transactions.Transaction) error {
 	nebula := tx.Args[0].Value.([]byte)
 	height := tx.Args[1].Value.(int64)
 	commit := tx.Args[2].Value.([]byte)
-	pubKey := tx.Args[3].Value.([]byte)
+	pubKey := tx.Args[3].Value.(account.OraclesPubKey)
 
 	_, err := store.CommitHash(nebula, height, pubKey)
 	if err == storage.ErrKeyNotFound {
@@ -108,7 +113,7 @@ func reveal(store *storage.Storage, tx *transactions.Transaction) error {
 	nebula := tx.Args[1].Value.([]byte)
 	height := tx.Args[2].Value.(int64)
 	reveal := tx.Args[3].Value.([]byte)
-	pubKey := tx.Args[4].Value.([]byte)
+	pubKey := tx.Args[4].Value.(account.OraclesPubKey)
 
 	_, err := store.Reveal(nebula, height, commit)
 	if err == storage.ErrKeyNotFound {
@@ -208,7 +213,7 @@ func result(store *storage.Storage, tx *transactions.Transaction) error {
 	return store.SetResult(nebulaAddress, height, oracles[chainType], signBytes)
 }
 
-func newRound(store *storage.Storage, tx *transactions.Transaction, ledgerHeight int64, ethClient *ethclient.Client, wavesClient *client.Client, ctx context.Context) error {
+func newRound(store *storage.Storage, tx *transactions.Transaction, ledgerHeight uint64, ethClient *ethclient.Client, wavesClient *client.Client, ctx context.Context) error {
 	chainType := account.ChainType(tx.Args[0].Value.(byte))
 	tcHeight := tx.Args[1].Value.(int64)
 

@@ -3,7 +3,7 @@ package storage
 import (
 	"encoding/binary"
 
-	"github.com/Gravity-Tech/proof-of-concept/common/account"
+	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
@@ -17,7 +17,7 @@ func (storage *Storage) Score(validatorAddress account.PubKey) (uint64, error) {
 		return 0, err
 	}
 
-	return binary.BigEndian.Uint64(b), err
+	return binary.BigEndian.Uint64(b), nil
 }
 
 func (storage *Storage) SetScore(validatorAddress account.PubKey, score uint64) error {
