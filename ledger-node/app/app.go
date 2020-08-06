@@ -114,7 +114,7 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 	}
 
 	for _, value := range req.Validators {
-		var validatorPubKey account.PubKey
+		var validatorPubKey account.ValidatorPubKey
 		copy(validatorPubKey[:], value.PubKey.GetData())
 		err := app.storage.SetScore(validatorPubKey, uint64(value.Power))
 		if err != nil {

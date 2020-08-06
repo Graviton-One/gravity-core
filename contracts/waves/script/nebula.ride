@@ -5,6 +5,9 @@
 #-------------------Constants---------------------------
 let WAVES = "WAVES"
 
+let IntType = "int64"
+let StringType = "string"
+let BytesType = "bytes"
 #-------------------Base functions----------------------
 func getNumberByKey(key: String) = {
     match (getInteger(this, key)) {
@@ -41,13 +44,14 @@ let SubscriberAddressKey = "subscriber_address"
 let GravityContractKey = "gravity_contract"
 let BftCoefficientKey = "bft_coefficient"
 let LasrRoundKey = "last_round"
-
+let TypeKey = "type"
 #-------------------Global vars-------------------------
 let oracles = getStringByKey(OraclesKey).split(",")
 let bftCoefficient = getNumberByKey(BftCoefficientKey)
 let gracityContract = addressFromStringValue(getStringByKey(GravityContractKey))
 let consuls = getStringByAddressAndKey(gracityContract, ConsulsKey).split(",")
 let subscriberAddress = getStringByKey(SubscriberAddressKey)
+let type = getStringByKey(TypeKey)
 
 func validateSign(hash: ByteVector, sign: String, oracle: String) = {
     if (sign != "nil") then 
@@ -56,7 +60,7 @@ func validateSign(hash: ByteVector, sign: String, oracle: String) = {
 }
 #-------------------Callable----------------------------
 @Callable(i)
-func confirmData(hash: ByteVector, signs: String) = {
+func sendHashValue(hash: ByteVector, signs: String) = {
     let signList = signs.split(",")
     let count = 
         validateSign(hash, signList[0], oracles[0]) 
@@ -78,7 +82,7 @@ func confirmData(hash: ByteVector, signs: String) = {
 
 
 @Callable(i)
-func setSortedOracles(newSortedOracles: String, stringSigns: String, round: Int) = {
+func updateOracles(newSortedOracles: String, stringSigns: String, round: Int) = {
     let signs = stringSigns.split(",")
     let count = validateSign(toBytes(newSortedOracles), signs[0], consuls[0]) +
                 validateSign(toBytes(newSortedOracles), signs[1], consuls[1]) +
@@ -98,25 +102,51 @@ func setSortedOracles(newSortedOracles: String, stringSigns: String, round: Int)
 
 
 @Verifier(i)
-func sendData() = {
+func sendValueToSub() = {
     match (i) {
-        case in:InvokeScriptTransaction => 
-            let v = match (in.args[0]) {
-                case v:Int => v
-                case _ => throw("invalid args[0] type")
-            }
-            let vHeight = match (in.args[1]) {
+        case invokeTx:InvokeScriptTransaction => 
+            let vHeight = match (invokeTx.args[1]) {
                 case vHeight:Int => vHeight
-                case _ => throw("invalid args[1] type")
+                case _ => throw("invalid height type")
             }
-            if in.dApp != addressFromStringValue(subscriberAddress)
+            let vBytes =
+                if (type == IntType) then { 
+                    let v = match (invokeTx.args[0]) {
+                        case v:Int => v
+                        case _ => throw("invalid value type")
+                    }
+                    toBytes(v)
+                } else if (type == StringType) then { 
+                    let v = match (invokeTx.args[0]) {
+                        case v:String => v
+                        case _ => throw("invalid value type")
+                    }
+                    toBytes(v)
+                } else if (type == BytesType) then { 
+                    let v = match (invokeTx.args[0]) {
+                        case v:ByteVector => v
+                        case _ => throw("invalid value type")
+                    }
+                    v
+                } else 
+                    throw("invalid value type")
+
+            
+           
+            
+            if (invokeTx.function == "attachValue") 
+                then throw("invalid args size")
+            else if (invokeTx.args.size() != 2) 
+                then throw("invalid args size")
+            else if (invokeTx.dApp != addressFromStringValue(subscriberAddress))
                 then throw("invalid dapp address")
-            else if getStringByKey(toString(vHeight)) == ""
+            else if (getStringByKey(toString(vHeight)) == "")
                 then throw("invalid height")
-            else if(keccak256(toBytes(v)) != fromBase58String(getStringByKey(toString(vHeight))))
-                then throw("invalid keccak256(value) " + toString(v))
-            else 
+            else if(keccak256(vBytes) != fromBase58String(getStringByKey(toString(vHeight))))
+                    then throw("invalid keccak256(value)")
+            else {
                 true
-        case _ => true
+            }
+        case _ => true #TODO
       }
 }

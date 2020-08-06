@@ -59,7 +59,7 @@ func (ghClient *Client) SendTx(transaction *transactions.Transaction) error {
 	return err
 }
 
-func (client *Client) OraclesByValidator(pubKey account.PubKey) (storage.OraclesByTypeMap, error) {
+func (client *Client) OraclesByValidator(pubKey account.ValidatorPubKey) (storage.OraclesByTypeMap, error) {
 	rq := query.OraclesByValidatorRq{
 		PubKey: hexutil.Encode(pubKey[:]),
 	}

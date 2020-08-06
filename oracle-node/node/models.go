@@ -1,4 +1,4 @@
-package signer
+package node
 
 import "github.com/Gravity-Tech/gravity-core/common/account"
 
@@ -8,9 +8,9 @@ type TCAccount struct {
 }
 
 type RoundState struct {
-	data        []byte
+	data        interface{}
 	commitHash  []byte
-	resultValue []byte
+	resultValue interface{}
 	resultHash  []byte
 	isSent      bool
 	isSentSub   bool

@@ -1,7 +1,6 @@
 package extractors
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -10,7 +9,7 @@ import (
 
 type BinanceExtractor struct{}
 
-func (p *BinanceExtractor) GetData() ([]byte, error) {
+func (p *BinanceExtractor) Extract() (interface{}, error) {
 	priceWavesUsdt, err := p.priceNowByPair("WAVESUSDT")
 	if err != nil {
 		return nil, err
@@ -26,30 +25,24 @@ func (p *BinanceExtractor) GetData() ([]byte, error) {
 		return nil, err
 	}
 
-	price := (priceWavesUsdt + (priceWavesBtc * priceBtcUsdt)) / 2
+	price := int64(((priceWavesUsdt + (priceWavesBtc * priceBtcUsdt)) / 2) * 100)
 
-	var b []byte
-	binary.BigEndian.PutUint64(b, uint64(price))
-
-	return b, nil
+	return price, nil
 }
 
-func (p *BinanceExtractor) Aggregate(values [][]byte) ([]byte, error) {
-	var intValues []uint64
+func (p *BinanceExtractor) Aggregate(values []interface{}) (interface{}, error) {
+	var intValues []int64
 	for _, b := range values {
-		intValues = append(intValues, binary.BigEndian.Uint64(b))
+		intValues = append(intValues, b.(int64))
 	}
 
-	var result uint64
+	var result int64
 	for _, v := range intValues {
 		result += v
 	}
-	result = result / uint64(len(intValues))
+	result = result / int64(len(intValues))
 
-	var b []byte
-	binary.BigEndian.PutUint64(b, uint64(price))
-
-	return b, nil //TODO invalid convert to byte (contracts)
+	return result, nil
 }
 
 func (p *BinanceExtractor) priceNowByPair(pair string) (float64, error) {

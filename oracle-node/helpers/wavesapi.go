@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Gravity-Tech/gravity-core/gh-node/helpers/state"
+	"github.com/Gravity-Tech/gravity-core/oracle-node/helpers/state"
 )
 
 const (

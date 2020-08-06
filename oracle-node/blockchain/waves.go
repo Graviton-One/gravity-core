@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/Gravity-Tech/gravity-core/common/keys"
-	"github.com/Gravity-Tech/gravity-core/gh-node/api/gravity"
-	"github.com/Gravity-Tech/gravity-core/gh-node/helpers"
+	"github.com/Gravity-Tech/gravity-core/oracle-node/api/gravity"
+	"github.com/Gravity-Tech/gravity-core/oracle-node/helpers"
 
 	"github.com/btcsuite/btcutil/base58"
 	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"

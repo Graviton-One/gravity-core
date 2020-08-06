@@ -11,7 +11,7 @@ import (
 type OraclesByTypeMap map[account.ChainType]account.OraclesPubKey
 type OraclesMap map[account.OraclesPubKey]bool
 
-func formOraclesByValidatorKey(validator account.PubKey) []byte {
+func formOraclesByValidatorKey(validator account.ValidatorPubKey) []byte {
 	return formKey(string(OraclesByValidatorKey), hexutil.Encode(validator[:]))
 }
 
@@ -38,7 +38,7 @@ func (storage *Storage) SetOraclesByNebula(nebulaAddress []byte, oracles Oracles
 	return storage.setValue(formOraclesByNebulaKey(nebulaAddress), oracles)
 }
 
-func (storage *Storage) OraclesByValidator(validator account.PubKey) (OraclesByTypeMap, error) {
+func (storage *Storage) OraclesByValidator(validator account.ValidatorPubKey) (OraclesByTypeMap, error) {
 	b, err := storage.getValue(formOraclesByValidatorKey(validator))
 	if err != nil {
 		return nil, err
@@ -53,6 +53,6 @@ func (storage *Storage) OraclesByValidator(validator account.PubKey) (OraclesByT
 	return oracles, err
 }
 
-func (storage *Storage) SetOraclesByValidator(validator account.PubKey, oracles OraclesByTypeMap) error {
+func (storage *Storage) SetOraclesByValidator(validator account.ValidatorPubKey, oracles OraclesByTypeMap) error {
 	return storage.setValue(formOraclesByValidatorKey(validator), oracles)
 }

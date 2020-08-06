@@ -1,9 +1,10 @@
-package signer
+package node
 
 import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -14,11 +15,11 @@ import (
 	"github.com/Gravity-Tech/gravity-core/common/client"
 	"github.com/Gravity-Tech/gravity-core/common/keys"
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
-	"github.com/Gravity-Tech/gravity-core/gh-node/api/gravity"
-	"github.com/Gravity-Tech/gravity-core/gh-node/blockchain"
-	"github.com/Gravity-Tech/gravity-core/gh-node/config"
-	"github.com/Gravity-Tech/gravity-core/gh-node/extractors"
-	"github.com/Gravity-Tech/gravity-core/gh-node/rpc"
+	"github.com/Gravity-Tech/gravity-core/oracle-node/api/gravity"
+	"github.com/Gravity-Tech/gravity-core/oracle-node/blockchain"
+	"github.com/Gravity-Tech/gravity-core/oracle-node/config"
+	"github.com/Gravity-Tech/gravity-core/oracle-node/extractors"
+	"github.com/Gravity-Tech/gravity-core/oracle-node/rpc"
 
 	"github.com/btcsuite/btcutil/base58"
 
@@ -28,16 +29,25 @@ import (
 	tendermintCrypto "github.com/tendermint/tendermint/crypto/ed25519"
 )
 
+const (
+	Int64Type  ExtractorType = "int64"
+	StringType ExtractorType = "string"
+	BytesType  ExtractorType = "bytes"
+)
+
+type ExtractorType string
+
 type Node struct {
 	nebulaId []byte
 	TCAccount
-	ghPrivKey  tendermintCrypto.PrivKeyEd25519
-	ghPubKey   account.PubKey
-	ghClient   *client.Client
-	extractor  extractors.PriceExtractor
-	timeout    int
-	chainType  account.ChainType
-	blockchain blockchain.IBlockchain
+	ghPrivKey     tendermintCrypto.PrivKeyEd25519
+	ghPubKey      account.ValidatorPubKey
+	ghClient      *client.Client
+	extractor     extractors.Extractor
+	timeout       int
+	chainType     account.ChainType
+	blockchain    blockchain.IBlockchain
+	extractorType ExtractorType
 }
 
 func New(cfg config.Config, ctx context.Context) (*Node, error) {
@@ -84,7 +94,7 @@ func New(cfg config.Config, ctx context.Context) (*Node, error) {
 	ghPrivKey := tendermintCrypto.PrivKeyEd25519{}
 	copy(ghPrivKey[:], ghPrivKeyBytes)
 
-	var ghPubKey account.PubKey
+	var ghPubKey account.ValidatorPubKey
 	copy(ghPubKey[:], ghPrivKey.PubKey().Bytes()[5:])
 
 	ghClient, err := client.New(cfg.GHNodeURL)
@@ -105,14 +115,15 @@ func New(cfg config.Config, ctx context.Context) (*Node, error) {
 			pubKey:  tcPubKey,
 			privKey: tcPrivKey,
 		},
-		nebulaId:   nebulaId,
-		ghPrivKey:  ghPrivKey,
-		ghClient:   ghClient,
-		extractor:  &extractors.BinanceExtractor{},
-		chainType:  chainType,
-		blockchain: targetBlockchain,
-		timeout:    cfg.Timeout,
-		ghPubKey:   ghPubKey,
+		nebulaId:      nebulaId,
+		ghPrivKey:     ghPrivKey,
+		ghClient:      ghClient,
+		extractor:     &extractors.BinanceExtractor{},
+		chainType:     chainType,
+		blockchain:    targetBlockchain,
+		timeout:       cfg.Timeout,
+		ghPubKey:      ghPubKey,
+		extractorType: ExtractorType(cfg.ExtractorType),
 	}, nil
 }
 
@@ -245,11 +256,10 @@ func (node *Node) Start(ctx context.Context) error {
 				return err
 			}
 
-			data, err := node.extractor.GetData()
+			data, err := node.extractor.Extract()
 			if err != nil {
 				return err
 			}
-
 			commit, err := node.commit(data, tcHeight)
 			if err != nil {
 				return err
@@ -364,9 +374,10 @@ func (node *Node) Start(ctx context.Context) error {
 	}
 }
 
-func (node *Node) commit(data []byte, tcHeight uint64) ([]byte, error) {
-	commit := crypto.Keccak256(data)
-	fmt.Printf("Commit: %s - %s \n", hexutil.Encode(data), hexutil.Encode(commit[:]))
+func (node *Node) commit(data interface{}, tcHeight uint64) ([]byte, error) {
+	dataBytes := toBytes(data)
+	commit := crypto.Keccak256(dataBytes)
+	fmt.Printf("Commit: %s - %s \n", hexutil.Encode(dataBytes), hexutil.Encode(commit[:]))
 
 	args := []transactions.Args{
 		{
@@ -397,8 +408,9 @@ func (node *Node) commit(data []byte, tcHeight uint64) ([]byte, error) {
 
 	return commit, nil
 }
-func (node *Node) reveal(tcHeight uint64, reveal []byte, commit []byte) error {
-	fmt.Printf("Reveal: %s  - %s \n", hexutil.Encode(reveal), hexutil.Encode(commit))
+func (node *Node) reveal(tcHeight uint64, reveal interface{}, commit []byte) error {
+	dataBytes := toBytes(reveal)
+	fmt.Printf("Reveal: %s  - %s \n", hexutil.Encode(dataBytes), hexutil.Encode(commit))
 
 	args := []transactions.Args{
 		{
@@ -431,19 +443,23 @@ func (node *Node) reveal(tcHeight uint64, reveal []byte, commit []byte) error {
 
 	return nil
 }
-func (node *Node) signResult(tcHeight uint64) (bool, []byte, []byte, error) {
+func (node *Node) signResult(tcHeight uint64) (bool, interface{}, []byte, error) {
 	//TODO Get all reveals
-	var values [][]byte
+	var values []interface{}
+	var bytesValues [][]byte
+	for _, v := range bytesValues {
+		values = append(values, fromBytes(v, node.extractorType))
+	}
 
 	result, err := node.extractor.Aggregate(values)
 	if err != nil {
 		return false, nil, nil, err
 	}
 
-	hash := crypto.Keccak256(result)
+	hash := crypto.Keccak256(toBytes(result))
 	sign, err := account.SignWithTC(node.TCAccount.privKey, hash, node.chainType)
 	if err != nil {
-		panic(err)
+		return false, nil, nil, err
 	}
 	fmt.Printf("Result hash: %s \n", hexutil.Encode(hash))
 
@@ -477,4 +493,30 @@ func (node *Node) signResult(tcHeight uint64) (bool, []byte, []byte, error) {
 
 	fmt.Printf("Sign result txId: %s\n", tx.Id)
 	return true, result, hash, nil
+}
+
+func toBytes(value interface{}) []byte {
+	switch v := value.(type) {
+	case int64:
+		var b []byte
+		binary.BigEndian.PutUint64(b, uint64(v))
+		return b
+	case string:
+		return []byte(v)
+	case []byte:
+		return v
+	}
+	return nil
+}
+func fromBytes(value []byte, extractorType ExtractorType) interface{} {
+	switch extractorType {
+	case Int64Type:
+		return binary.BigEndian.Uint64(value)
+	case StringType:
+		return string(value)
+	case BytesType:
+		return value
+	}
+
+	return nil
 }

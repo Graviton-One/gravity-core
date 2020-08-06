@@ -14,9 +14,9 @@ import (
 	"syscall"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
-	"github.com/Gravity-Tech/gravity-core/gh-node/helpers"
 	"github.com/Gravity-Tech/gravity-core/ledger-node/app"
 	"github.com/Gravity-Tech/gravity-core/ledger-node/scheduler"
+	"github.com/Gravity-Tech/gravity-core/oracle-node/helpers"
 
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 

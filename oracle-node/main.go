@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Gravity-Tech/gravity-core/gh-node/config"
-	"github.com/Gravity-Tech/gravity-core/gh-node/signer"
+	"github.com/Gravity-Tech/gravity-core/oracle-node/config"
+	"github.com/Gravity-Tech/gravity-core/oracle-node/node"
 )
 
 const (
@@ -32,7 +32,7 @@ func main() {
 		panic(err)
 	}
 
-	client, err := signer.New(cfg, ctx)
+	client, err := node.New(cfg, ctx)
 
 	if err != nil {
 		panic(err)

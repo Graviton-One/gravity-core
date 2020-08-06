@@ -3,7 +3,6 @@ package scheduler
 import (
 	"context"
 	"crypto/ecdsa"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -12,15 +11,13 @@ import (
 	"time"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
+	"github.com/Gravity-Tech/gravity-core/common/client"
 	"github.com/Gravity-Tech/gravity-core/common/contracts"
 	"github.com/Gravity-Tech/gravity-core/common/keys"
-	"github.com/Gravity-Tech/gravity-core/common/score"
 	"github.com/Gravity-Tech/gravity-core/common/storage"
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
-	"github.com/Gravity-Tech/gravity-core/gh-node/api/gravity"
-	"github.com/Gravity-Tech/gravity-core/gh-node/helpers"
-	score_calculator "github.com/Gravity-Tech/gravity-core/score-calculator"
-	"github.com/Gravity-Tech/gravity-core/score-calculator/models"
+	"github.com/Gravity-Tech/gravity-core/oracle-node/helpers"
+	calculator "github.com/Gravity-Tech/gravity-core/score-calculator"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
@@ -46,16 +43,16 @@ import (
 
 const (
 	CalculateScoreInterval = 20
-	OraclesCount           = 5
+	ValidatorCount         = 5
 )
 
-type Scores struct {
-	Validator string
+type Score struct {
+	Validator account.ValidatorPubKey
 	Value     uint64
 }
 type LedgerValidator struct {
 	PrivKey ed25519.PrivKeyEd25519
-	PubKey  ed25519.PubKeyEd25519
+	PubKey  account.ValidatorPubKey
 }
 type WavesConf struct {
 	PrivKey []byte
@@ -99,31 +96,28 @@ func New(waves *WavesConf, ethereum *EthereumConf, ghNode string, ctx context.Co
 	}, nil
 }
 
-func (scheduler *Scheduler) HandleBlock(height int64, storage *storage.Storage) error {
-	go scheduler.setPrivKeys(txn)
+func (scheduler *Scheduler) HandleBlock(height int64, store *storage.Storage) error {
+	go scheduler.setPrivKeys(store, account.Ethereum) //TODO: refactoring
+	go scheduler.setPrivKeys(store, account.Waves)    //TODO: refactoring
+
 	roundId := height / CalculateScoreInterval
 	if height%CalculateScoreInterval == 0 {
-		votes, err := scheduler.getVotes(txn)
+		newScores, err := scheduler.calculate(store)
 		if err != nil {
 			return err
 		}
 
-		scoresValue, err := scheduler.calculate(votes, txn)
-		if err != nil {
-			return err
+		for k, v := range newScores {
+			store.SetScore(k, v)
 		}
 
-		err = scheduler.saveScores(scoresValue, txn)
-		if err != nil {
-			return err
-		}
 	} else if height%CalculateScoreInterval < CalculateScoreInterval/2 {
-		err := scheduler.signResult(roundId, OraclesCount, scheduler.nebulae[account.Waves], account.Waves, txn)
+		err := scheduler.signResult(roundId, scheduler.nebulae[account.Waves], account.Waves, txn)
 		if err != nil {
 			return err
 		}
 
-		err = scheduler.signResult(roundId, OraclesCount, scheduler.nebulae[account.Ethereum], account.Ethereum, txn)
+		err = scheduler.signResult(roundId, scheduler.nebulae[account.Ethereum], account.Ethereum, txn)
 		if err != nil {
 			return err
 		}
@@ -156,23 +150,11 @@ func (scheduler *Scheduler) HandleBlock(height int64, storage *storage.Storage) 
 	return nil
 }
 
-func (scheduler *Scheduler) setPrivKeys(txn *badger.Txn) error {
-	item, err := txn.Get([]byte(keys.FormOraclesByValidatorKey(scheduler.Ledger.PubKey[:])))
-	if err != nil && err != badger.ErrKeyNotFound {
+func (scheduler *Scheduler) setPrivKeys(storage *storage.Storage, chainType account.ChainType) error {
+	//TODO: refactoring
+	oracles, err := storage.OraclesByValidator(scheduler.Ledger.PubKey)
+	if err != nil {
 		return err
-	}
-
-	var oracles map[account.ChainType][]byte
-	if item != nil {
-		b, err := item.ValueCopy(nil)
-		if err != nil {
-			return err
-		}
-
-		err = json.Unmarshal(b, &oracles)
-		if err != nil {
-			return err
-		}
 	}
 
 	var tx *transactions.Transaction
@@ -188,25 +170,7 @@ func (scheduler *Scheduler) setPrivKeys(txn *badger.Txn) error {
 		if err != nil {
 			return err
 		}
-	}
-	if tx != nil {
-		client, err := gravity.NewClient(scheduler.GhNode)
-		if err != nil {
-			panic(err)
-		}
-		_, err = client.HttpClient.NetInfo()
-		if err != nil {
-			return nil
-		}
-
-		err = client.SendTx(tx)
-		if err != nil {
-			return err
-		}
-	}
-
-	tx = nil
-	if _, ok := oracles[account.Ethereum]; !ok {
+	} else if _, ok := oracles[account.Ethereum]; !ok {
 		args := []byte{byte(account.Ethereum)}
 
 		tx, err = transactions.New(scheduler.Ledger.PubKey[:], transactions.AddOracle, account.Ethereum,
@@ -215,8 +179,9 @@ func (scheduler *Scheduler) setPrivKeys(txn *badger.Txn) error {
 			return err
 		}
 	}
+
 	if tx != nil {
-		client, err := gravity.NewClient(scheduler.GhNode)
+		client, err := client.New(scheduler.GhNode)
 		if err != nil {
 			panic(err)
 		}
@@ -234,152 +199,85 @@ func (scheduler *Scheduler) setPrivKeys(txn *badger.Txn) error {
 	return nil
 }
 
-func (scheduler *Scheduler) signResult(roundId int64, validatorCount int, nebulaeIds [][]byte, chainType account.ChainType, txn *badger.Txn) error {
-	consulsByRoundKey := keys.FormConsulsSignKey(scheduler.Ledger.PubKey[:], chainType, roundId)
-	_, err := txn.Get([]byte(consulsByRoundKey))
-	if err != nil && err != badger.ErrKeyNotFound {
+func (scheduler *Scheduler) signResult(roundId int64, nebulaeIds [][]byte, chainType account.ChainType, store *storage.Storage) error {
+	_, err := store.ConsulSign(scheduler.Ledger.PubKey, chainType, roundId)
+	if err == badger.ErrKeyNotFound {
+		return nil
+	} else if err != nil {
 		return err
 	}
 
-	var scores []Scores
-	prefix := []byte(keys.ScoreKey)
-	it := txn.NewIterator(badger.DefaultIteratorOptions)
-	defer it.Close()
-	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-		item := it.Item()
-		k := item.Key()
-		err := item.Value(func(v []byte) error {
-			validator := strings.Split(string(k), keys.Separator)[1]
-
-			scores = append(scores, Scores{
-				Value:     binary.BigEndian.Uint64(v),
-				Validator: validator,
-			})
-			return nil
-		})
-		if err != nil {
-			return err
-		}
+	scores, err := store.Scores()
+	if err != nil {
+		return err
 	}
-	sort.SliceStable(scores, func(i, j int) bool {
-		return scores[i].Value > scores[j].Value
+
+	var sortedScores []storage.Consul
+	for k, v := range scores {
+		sortedScores = append(sortedScores, storage.Consul{
+			Validator: k,
+			Value:     v,
+		})
+	}
+
+	sort.SliceStable(sortedScores, func(i, j int) bool {
+		return sortedScores[i].Value > sortedScores[j].Value
 	})
 
-	if err == badger.ErrKeyNotFound {
-		var newConsuls []Scores
-		for i := 0; i < len(scores); i++ {
-			newConsuls = append(newConsuls, scores[i])
-			if len(newConsuls) >= validatorCount {
-				break
-			}
+	var sign []byte
+	var newConsuls []storage.Consul
+	for _, v := range sortedScores {
+		newConsuls = append(newConsuls, v)
+		if len(newConsuls) >= ValidatorCount {
+			break
 		}
-
-		key := []byte(keys.FormConsulsKey())
-		b, err := json.Marshal(newConsuls)
-		if err != nil {
-			return err
-		}
-		err = txn.Set(key, b)
-		if err != nil {
-			return err
-		}
-
-		prevConsuls, err := txn.Get(key)
-		if err != nil && err != badger.ErrKeyNotFound {
-			return err
-		}
-
-		if prevConsuls != nil {
-			b, err := prevConsuls.ValueCopy(nil)
-			key = []byte(keys.FormPrevConsulsKey())
-			err = txn.Set(key, b)
-			if err != nil {
-				return err
-			}
-		}
-
-		var sign []byte
-		switch chainType {
-		case account.Ethereum:
-			var validators []common.Address
-			for _, v := range newConsuls {
-				b, err := hexutil.Decode(v.Validator)
-				if err != nil {
-					return err
-				}
-
-				item, err := txn.Get([]byte(keys.FormOraclesByValidatorKey(b)))
-				if err != nil && err != badger.ErrKeyNotFound {
-					return err
-				}
-
-				if item == nil {
-					continue
-				}
-				b, err = item.ValueCopy(nil)
-				if err != nil {
-					return err
-				}
-
-				var oracles map[account.ChainType][]byte
-				err = json.Unmarshal(b, &oracles)
-				if err != nil {
-					return err
-				}
-
-				validators = append(validators, common.BytesToAddress(oracles[account.Ethereum]))
-			}
-
-			hash, err := scheduler.gravityEthereum.HashNewConsuls(nil, validators)
-			if err != nil {
-				return err
-			}
-			sign, err = account.SignWithTCPriv(scheduler.Ethereum.PrivKeyBytes, hash[:], account.Ethereum)
-			if err != nil {
-				return err
-			}
-		case account.Waves:
-			var validators []string
-			for _, v := range newConsuls {
-				b, err := hexutil.Decode(v.Validator)
-				if err != nil {
-					return err
-				}
-
-				item, err := txn.Get([]byte(keys.FormOraclesByValidatorKey(b)))
-				if err != nil && err != badger.ErrKeyNotFound {
-					return err
-				}
-
-				if item == nil {
-					continue
-				}
-
-				b, err = item.ValueCopy(nil)
-				if err != nil {
-					return err
-				}
-
-				var oracles map[account.ChainType][]byte
-				err = json.Unmarshal(b, &oracles)
-				if err != nil {
-					return err
-				}
-
-				validators = append(validators, base58.Encode(oracles[account.Waves]))
-			}
-			sign, err = account.SignWithTCPriv(scheduler.Waves.PrivKey, []byte(strings.Join(validators, ",")), account.Waves)
-			if err != nil {
-				return err
-			}
-		}
-
-		err = txn.Set([]byte(consulsByRoundKey), sign)
-		if err != nil {
-			return err
-		}
-
 	}
+
+	switch chainType {
+	case account.Ethereum:
+		var validators []common.Address
+		for _, v := range newConsuls {
+			oracles, err := store.OraclesByValidator(v.Validator)
+			if err != nil {
+				return err
+			}
+
+			oraclePubKey := oracles[account.Ethereum]
+			validators = append(validators, common.BytesToAddress(oraclePubKey.ToBytes(account.Ethereum)))
+		}
+
+		hash, err := scheduler.gravityEthereum.HashNewConsuls(nil, validators)
+		if err != nil {
+			return err
+		}
+
+		sign, err = account.SignWithTC(scheduler.Ethereum.PrivKeyBytes, hash[:], account.Ethereum)
+		if err != nil {
+			return err
+		}
+	case account.Waves:
+		var validators []string
+		for _, v := range newConsuls {
+			oracles, err := store.OraclesByValidator(v.Validator)
+			if err != nil {
+				return err
+			}
+
+			oraclePubKey := oracles[account.Waves]
+			validators = append(validators, base58.Encode(oraclePubKey.ToBytes(account.Waves)))
+		}
+
+		sign, err = account.SignWithTC(scheduler.Waves.PrivKey, []byte(strings.Join(validators, ",")), account.Waves)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = store.SetConsuls(newConsuls)
+	if err != nil {
+		return err
+	}
+	store.Set
 
 	for _, nebulaId := range nebulaeIds {
 		oraclesByRoundKey := keys.FormOraclesSignNebulaKey(scheduler.Ledger.PubKey[:], nebulaId, roundId)
@@ -390,24 +288,10 @@ func (scheduler *Scheduler) signResult(roundId int64, validatorCount int, nebula
 			continue
 		}
 
-		key := []byte(keys.FormOraclesByNebulaKey(nebulaId))
-		item, err := txn.Get(key)
+		oraclesByNebula, err := storage.OraclesByNebula(nebulaId)
 		if err != nil {
 			continue
 		}
-
-		oraclesByNebula := make(map[string]string)
-		if item != nil {
-			b, err := item.ValueCopy(nil)
-			if err != nil {
-				continue
-			}
-			err = json.Unmarshal(b, &oraclesByNebula)
-			if err != nil {
-				continue
-			}
-		}
-
 		oraclesByValidators := make(map[string]string)
 		//Revert map
 		for k, v := range oraclesByNebula {
@@ -1021,84 +905,21 @@ func (scheduler *Scheduler) sendOraclesEthereum(nebulaId []byte, round int64, tx
 
 }
 
-func (scheduler *Scheduler) getVotes(txn *badger.Txn) (map[string][]byte, error) {
-	it := txn.NewIterator(badger.DefaultIteratorOptions)
-	defer it.Close()
-
-	prefix := []byte(keys.VoteKey)
-	votes := make(map[string][]byte)
-	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-		item := it.Item()
-		k := item.Key()
-		err := item.Value(func(v []byte) error {
-			votes[string(k)] = v
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return votes, nil
-}
-
-func (scheduler *Scheduler) calculate(votes map[string][]byte, txn *badger.Txn) (map[string]float32, error) {
-	voteMap := make(map[string][]models.Vote)
-	var actors []models.Actor
-	it := txn.NewIterator(badger.DefaultIteratorOptions)
-	defer it.Close()
-
-	prefix := []byte(keys.ScoreKey)
-	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-		item := it.Item()
-		k := item.Key()
-		err := item.Value(func(v []byte) error {
-			scoreUInt := v
-
-			initScore := score.UInt64ToFloat32Score(binary.BigEndian.Uint64(scoreUInt))
-			actors = append(actors, models.Actor{Name: strings.Split(string(k), keys.Separator)[1], InitScore: initScore})
-
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	for key, value := range votes {
-		var voteByValidator []models.Vote
-
-		err := json.Unmarshal(value, &voteByValidator)
-		if err != nil {
-			return nil, err
-		}
-
-		validator := strings.Split(key, keys.Separator)[1]
-		voteMap[validator] = voteByValidator
-	}
-
-	scores, err := score_calculator.Calculate(actors, voteMap)
+func (scheduler *Scheduler) calculate(store *storage.Storage) (storage.ScoresByValidatorMap, error) {
+	voteMap, err := store.Votes()
 	if err != nil {
 		return nil, err
 	}
 
-	return scores, nil
-}
-
-func (scheduler *Scheduler) saveScores(scoresValue map[string]float32, txn *badger.Txn) error {
-	for key, value := range scoresValue {
-		initScore := score.Float32ToUInt64Score(value)
-		validatorAddress, err := hexutil.Decode(key)
-		if err != nil {
-			return err
-		}
-		var scoreBytes [8]byte
-		binary.BigEndian.PutUint64(scoreBytes[:], initScore)
-		err = txn.Set([]byte(keys.FormScoreKey(validatorAddress)), scoreBytes[:])
-		if err != nil {
-			return err
-		}
+	scores, err := store.Scores()
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	newScores, err := calculator.Calculate(scores, voteMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return newScores, nil
 }

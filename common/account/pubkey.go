@@ -11,8 +11,8 @@ import (
 	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
 )
 
-type PubKey [32]byte        //TODO length
-type OraclesPubKey [33]byte //TODO length
+type ValidatorPubKey [32]byte //TODO length
+type OraclesPubKey [33]byte   //TODO length
 
 func HexToPrivKey(value string, chainType ChainType) (privKey []byte, pubKey OraclesPubKey, err error) {
 	var pubKeyBytes []byte
@@ -70,12 +70,12 @@ func (pubKey *OraclesPubKey) ToBytes(chainType ChainType) []byte {
 	return v
 }
 
-func HexToPubKey(hex string) (PubKey, error) {
+func HexToPubKey(hex string) (ValidatorPubKey, error) {
 	b, err := hexutil.Decode(hex)
 	if err != nil {
-		return PubKey{}, err
+		return ValidatorPubKey{}, err
 	}
-	pubKey := PubKey{}
+	pubKey := ValidatorPubKey{}
 	copy(pubKey[:], b)
 	return pubKey, nil
 }

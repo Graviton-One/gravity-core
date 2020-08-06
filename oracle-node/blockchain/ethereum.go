@@ -7,9 +7,15 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/core/types"
+
+	"github.com/Gravity-Tech/gravity-core/common/contracts/sender"
+
+	"github.com/Gravity-Tech/gravity-core/common/account"
+
+	"github.com/Gravity-Tech/gravity-core/common/client"
+
 	"github.com/Gravity-Tech/gravity-core/common/contracts"
-	"github.com/Gravity-Tech/gravity-core/common/keys"
-	"github.com/Gravity-Tech/gravity-core/gh-node/api/gravity"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -22,6 +28,13 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+const (
+	Int64  SubType = 0
+	String SubType = 1
+	Bytes  SubType = 2
+)
+
+type SubType uint8
 type Ethereum struct {
 	ethClient *ethclient.Client
 	nebula    *contracts.Nebula
@@ -59,7 +72,7 @@ func (ethereum *Ethereum) GetHeight(ctx context.Context) (uint64, error) {
 	return tcHeightRq.NumberU64(), nil
 }
 
-func (ethereum *Ethereum) SendResult(tcHeight uint64, privKey []byte, nebulaId []byte, ghClient *gravity.Client, validators [][]byte, hash []byte, ctx context.Context) (string, error) {
+func (ethereum *Ethereum) SendResult(tcHeight uint64, privKey []byte, nebulaId []byte, ghClient *client.Client, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
 	data, err := ethereum.nebula.Pulses(nil, big.NewInt(int64(tcHeight)))
 	if err != nil {
 		return "", err
@@ -81,7 +94,7 @@ func (ethereum *Ethereum) SendResult(tcHeight uint64, privKey []byte, nebulaId [
 		var s [5][32]byte
 		var v [5]uint8
 		for _, validator := range validators {
-			pubKey, err := crypto.DecompressPubkey(validator)
+			pubKey, err := crypto.DecompressPubkey(validator.ToBytes(account.Ethereum))
 			if err != nil {
 				return "", err
 			}
@@ -99,7 +112,7 @@ func (ethereum *Ethereum) SendResult(tcHeight uint64, privKey []byte, nebulaId [
 				continue
 			}
 
-			sign, err := ghClient.GetKey(keys.FormSignResultKey(nebulaId, tcHeight, validator))
+			sign, err := ghClient.Result(account.Ethereum, nebulaId, int64(tcHeight), validator)
 			if err != nil {
 				r[position] = [32]byte{}
 				s[position] = [32]byte{}
@@ -126,7 +139,7 @@ func (ethereum *Ethereum) SendResult(tcHeight uint64, privKey []byte, nebulaId [
 			transactOpt := bind.NewKeyedTransactor(ethPrivKey)
 			var resultBytes32 [32]byte
 			copy(resultBytes32[:], hash)
-			tx, err := ethereum.nebula.ConfirmData(transactOpt, resultBytes32, v[:], r[:], s[:])
+			tx, err := ethereum.nebula.SendHashValue(transactOpt, resultBytes32, v[:], r[:], s[:])
 			if err != nil {
 				return "", err
 			}
@@ -139,8 +152,8 @@ func (ethereum *Ethereum) SendResult(tcHeight uint64, privKey []byte, nebulaId [
 	return "", nil
 }
 
-func (ethereum *Ethereum) SendSubs(tcHeight uint64, privKey []byte, value uint64, ctx context.Context) error {
-	ids, err := ethereum.nebula.GetSubscriptionIds(nil)
+func (ethereum *Ethereum) SendSubs(tcHeight uint64, privKey []byte, value interface{}, ctx context.Context) error {
+	ids, err := ethereum.nebula.GetSubscribersIds(nil)
 	if err != nil {
 		return err
 	}
@@ -155,10 +168,50 @@ func (ethereum *Ethereum) SendSubs(tcHeight uint64, privKey []byte, value uint64
 		ethPrivKey.D.SetBytes(privKey)
 		ethPrivKey.PublicKey.X, ethPrivKey.PublicKey.Y = ethPrivKey.PublicKey.Curve.ScalarBaseMult(privKey)
 
-		transactOpt := bind.NewKeyedTransactor(ethPrivKey)
-		tx, err := ethereum.nebula.SendData(transactOpt, value, big.NewInt(int64(tcHeight)), id)
+		t, err := ethereum.nebula.DataType(nil)
 		if err != nil {
 			return err
+		}
+
+		transactOpt := bind.NewKeyedTransactor(ethPrivKey)
+		subSenderAddress, err := ethereum.nebula.SenderToSubs(nil)
+		if err != nil {
+			return err
+		}
+
+		var tx *types.Transaction
+		var err error
+		switch SubType(t) {
+		case Int64:
+			subsSenderContract, err := sender.NewSubsSenderInt(subSenderAddress, ethereum.ethClient)
+			if err != nil {
+				return err
+			}
+
+			tx, err = subsSenderContract.SendValueToSub(transactOpt, value.(int64), big.NewInt(int64(tcHeight)), id)
+			if err != nil {
+				return err
+			}
+		case String:
+			subsSenderContract, err := sender.NewSubsSenderString(subSenderAddress, ethereum.ethClient)
+			if err != nil {
+				return err
+			}
+
+			tx, err = subsSenderContract.SendValueToSub(transactOpt, value.(string), big.NewInt(int64(tcHeight)), id)
+			if err != nil {
+				return err
+			}
+		case Bytes:
+			subsSenderContract, err := sender.NewSubsSenderBytes(subSenderAddress, ethereum.ethClient)
+			if err != nil {
+				return err
+			}
+
+			tx, err = subsSenderContract.SendValueToSub(transactOpt, value.([]byte), big.NewInt(int64(tcHeight)), id)
+			if err != nil {
+				return err
+			}
 		}
 
 		fmt.Printf("Sub send tx: %s \n", tx.Hash().String())

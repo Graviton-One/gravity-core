@@ -36,14 +36,14 @@ type Args struct {
 
 type Transaction struct {
 	Id           ID
-	SenderPubKey account.PubKey
+	SenderPubKey account.ValidatorPubKey
 	Signature    [72]byte
 	Func         TxFunc
 	Timestamp    uint64
 	Args         []Args
 }
 
-func New(pubKey account.PubKey, funcName TxFunc, privKey tendermintCrypto.PrivKeyEd25519, args []Args) (*Transaction, error) {
+func New(pubKey account.ValidatorPubKey, funcName TxFunc, privKey tendermintCrypto.PrivKeyEd25519, args []Args) (*Transaction, error) {
 	tx := &Transaction{
 		SenderPubKey: pubKey,
 		Args:         args,
