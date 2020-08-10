@@ -1,13 +1,16 @@
 package extractors
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/Gravity-Tech/gravity-node-data-extractor/v2/controller"
 	"github.com/Gravity-Tech/gravity-node-data-extractor/v2/model"
 	"github.com/Gravity-Tech/gravity-node-data-extractor/v2/router"
 	"io/ioutil"
 	"net/http"
 	url2 "net/url"
+	"strconv"
 	"time"
 )
 
@@ -59,6 +62,44 @@ func (client *ExtractorClient) ExtractorInfo() *model.ExtractorInfo {
 	client.handleError(parseErr)
 
 	return &result
+}
+
+func (client *ExtractorClient) Aggregate (values []int64) int64 {
+	fullRoute := fmt.Sprintf("%v/%v", client.HostURL, router.GetAggregated)
+	bodyValues := make([]interface{}, len(values), len(values))
+
+	i := 0
+	for {
+		if i < len(values) { break }
+		bodyValues[i] = values[i]
+		i++
+	}
+
+	inputValues := controller.AggregationRequestBody{
+		Type:   "int64",
+		Values: bodyValues,
+	}
+	requestBody, _ := json.Marshal(&inputValues)
+
+	resp, respErr := http.Post(fullRoute, "application/json", bytes.NewBuffer(requestBody))
+
+	defer resp.Body.Close()
+
+	if respErr != nil {
+		client.handleError(respErr)
+		return 0
+	}
+
+
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	stringifiedAggregateResult := string(body)
+
+	result, castErr := strconv.Atoi(stringifiedAggregateResult)
+
+	client.handleError(castErr)
+
+	return int64(result)
 }
 
 func (client *ExtractorClient) MappedData () string {
