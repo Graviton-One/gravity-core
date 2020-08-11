@@ -59,8 +59,8 @@ func (ghClient *Client) SendTx(transaction *transactions.Transaction) error {
 	return err
 }
 
-func (client *Client) OraclesByValidator(pubKey account.ValidatorPubKey) (storage.OraclesByTypeMap, error) {
-	rq := query.OraclesByValidatorRq{
+func (client *Client) OraclesByValidator(pubKey account.ConsulPubKey) (storage.OraclesByTypeMap, error) {
+	rq := query.ByValidatorRq{
 		PubKey: hexutil.Encode(pubKey[:]),
 	}
 
@@ -82,10 +82,10 @@ func (client *Client) OraclesByValidator(pubKey account.ValidatorPubKey) (storag
 	return oracles, nil
 }
 
-func (client *Client) OraclesByNebula(nebulaAddress []byte, chainType account.ChainType) (storage.OraclesMap, error) {
-	rq := query.OraclesByNebulaRq{
+func (client *Client) OraclesByNebula(nebulaId account.NebulaId, chainType account.ChainType) (storage.OraclesMap, error) {
+	rq := query.ByNebulaRq{
 		ChainType:     chainType,
-		NebulaAddress: hexutil.Encode(nebulaAddress),
+		NebulaAddress: hexutil.Encode(nebulaId),
 	}
 
 	rs, err := client.do(query.OracleByNebulaPath, rq)
@@ -94,6 +94,54 @@ func (client *Client) OraclesByNebula(nebulaAddress []byte, chainType account.Ch
 	}
 
 	oracles := make(storage.OraclesMap)
+	if err == ErrValueNotFound {
+		return oracles, nil
+	}
+
+	err = json.Unmarshal(rs, &oracles)
+	if err != nil {
+		return nil, err
+	}
+
+	return oracles, nil
+}
+
+func (client *Client) BftOraclesByNebula(chainType account.ChainType, nebulaId account.NebulaId) (storage.OraclesMap, error) {
+	rq := query.ByNebulaRq{
+		ChainType:     chainType,
+		NebulaAddress: hexutil.Encode(nebulaId),
+	}
+
+	rs, err := client.do(query.OracleByNebulaPath, rq)
+	if err != nil || err != ErrValueNotFound {
+		return nil, err
+	}
+
+	oracles := make(storage.OraclesMap)
+	if err == ErrValueNotFound {
+		return oracles, nil
+	}
+
+	err = json.Unmarshal(rs, &oracles)
+	if err != nil {
+		return nil, err
+	}
+
+	return oracles, nil
+}
+func (client *Client) Results(height uint64, chainType account.ChainType, nebulaId account.NebulaId) ([][]byte, error) {
+	rq := query.ResultsRq{
+		Height:        height,
+		ChainType:     chainType,
+		NebulaAddress: hexutil.Encode(nebulaId),
+	}
+
+	rs, err := client.do(query.OracleByNebulaPath, rq)
+	if err != nil || err != ErrValueNotFound {
+		return nil, err
+	}
+
+	var oracles [][]byte
 	if err == ErrValueNotFound {
 		return oracles, nil
 	}

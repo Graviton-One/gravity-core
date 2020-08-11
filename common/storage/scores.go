@@ -7,35 +7,33 @@ import (
 	"github.com/dgraph-io/badger"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
-	"github.com/Gravity-Tech/gravity-core/common/keys"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
-type ScoresByValidatorMap map[account.ValidatorPubKey]uint64
+type ScoresByConsulMap map[account.ConsulPubKey]uint64
 
-func formScoreKey(validatorAddress account.ValidatorPubKey) []byte {
-	return formKey(string(ScoreKey), hexutil.Encode(validatorAddress[:]))
+func formScoreKey(pubKey account.ConsulPubKey) []byte {
+	return formKey(string(ScoreKey), hexutil.Encode(pubKey[:]))
 }
-func parseScoreKey(value []byte) account.ValidatorPubKey {
+func parseScoreKey(value []byte) account.ConsulPubKey {
 	b := []byte(strings.Split(string(value), Separator)[1])
-	var pubKey account.ValidatorPubKey
+	var pubKey account.ConsulPubKey
 	copy(pubKey[:], b[:])
 	return pubKey
 }
 
-func (storage *Storage) Score(validatorAddress account.ValidatorPubKey) (uint64, error) {
-	b, err := storage.getValue(formScoreKey(validatorAddress))
+func (storage *Storage) Score(pubKey account.ConsulPubKey) (uint64, error) {
+	b, err := storage.getValue(formScoreKey(pubKey))
 	if err != nil {
 		return 0, err
 	}
 
 	return binary.BigEndian.Uint64(b), nil
 }
-
-func (storage *Storage) SetScore(validatorAddress account.ValidatorPubKey, score uint64) error {
+func (storage *Storage) SetScore(pubKey account.ConsulPubKey, score uint64) error {
 	var b [8]byte
 	binary.BigEndian.PutUint64(b[:], score)
-	err := storage.setValue(formScoreKey(validatorAddress), b[:])
+	err := storage.setValue(formScoreKey(pubKey), b[:])
 	if err != nil {
 		return err
 	}
@@ -43,12 +41,12 @@ func (storage *Storage) SetScore(validatorAddress account.ValidatorPubKey, score
 	return err
 }
 
-func (storage *Storage) Scores() (ScoresByValidatorMap, error) {
+func (storage *Storage) Scores() (ScoresByConsulMap, error) {
 	it := storage.txn.NewIterator(badger.DefaultIteratorOptions)
 	defer it.Close()
 
-	prefix := []byte(keys.ScoreKey)
-	scores := make(ScoresByValidatorMap)
+	prefix := []byte(ScoreKey)
+	scores := make(ScoresByConsulMap)
 	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 		item := it.Item()
 		k := item.Key()

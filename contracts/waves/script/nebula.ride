@@ -5,9 +5,9 @@
 #-------------------Constants---------------------------
 let WAVES = "WAVES"
 
-let IntType = "int64"
-let StringType = "string"
-let BytesType = "bytes"
+let IntType = 0
+let StringType = 1
+let BytesType = 2
 #-------------------Base functions----------------------
 func getNumberByKey(key: String) = {
     match (getInteger(this, key)) {

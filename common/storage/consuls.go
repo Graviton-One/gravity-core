@@ -10,11 +10,11 @@ import (
 )
 
 type Consul struct {
-	Validator account.ValidatorPubKey
-	Value     uint64
+	PubKey account.ConsulPubKey
+	Value  uint64
 }
 
-func formConsulSignKey(validatorAddress account.ValidatorPubKey, chainType account.ChainType, roundId int64) []byte {
+func formSignConsulsResultByConsulKey(pubKey account.ConsulPubKey, chainType account.ChainType, roundId int64) []byte {
 	prefix := ""
 	switch chainType {
 	case account.Waves:
@@ -22,7 +22,7 @@ func formConsulSignKey(validatorAddress account.ValidatorPubKey, chainType accou
 	case account.Ethereum:
 		prefix = "ethereum"
 	}
-	return formKey(string(ConsulsSignKey), hexutil.Encode(validatorAddress[:]), prefix, fmt.Sprintf("%d", roundId))
+	return formKey(string(SignConsulsResultByConsulKey), hexutil.Encode(pubKey[:]), prefix, fmt.Sprintf("%d", roundId))
 }
 
 func (storage *Storage) Consuls() ([]Consul, error) {
@@ -46,13 +46,37 @@ func (storage *Storage) Consuls() ([]Consul, error) {
 
 	return consuls, err
 }
-
 func (storage *Storage) SetConsuls(consuls []Consul) error {
 	return storage.setValue([]byte(ConsulsKey), consuls)
 }
 
-func (storage *Storage) ConsulSign(validatorAddress account.ValidatorPubKey, chainType account.ChainType, roundId int64) ([]byte, error) {
-	key := formConsulSignKey(validatorAddress, chainType, roundId)
+func (storage *Storage) PrevConsuls() ([]Consul, error) {
+	var consuls []Consul
+
+	key := []byte(PrevConsulsKey)
+	item, err := storage.txn.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	b, err := item.ValueCopy(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(b, &consuls)
+	if err != nil {
+		return nil, err
+	}
+
+	return consuls, err
+}
+func (storage *Storage) SetPrevConsuls(consuls []Consul) error {
+	return storage.setValue([]byte(PrevConsulsKey), consuls)
+}
+
+func (storage *Storage) SignConsulsResultByConsul(consulPubKey account.ConsulPubKey, chainType account.ChainType, roundId int64) ([]byte, error) {
+	key := formSignConsulsResultByConsulKey(consulPubKey, chainType, roundId)
 	item, err := storage.txn.Get(key)
 	if err != nil {
 		return nil, err
@@ -65,7 +89,6 @@ func (storage *Storage) ConsulSign(validatorAddress account.ValidatorPubKey, cha
 
 	return b, err
 }
-
-func (storage *Storage) SetConsulSign(validatorAddress account.ValidatorPubKey, chainType account.ChainType, roundId int64, sign []byte) error {
-	return storage.setValue(formConsulSignKey(validatorAddress, chainType, roundId), sign)
+func (storage *Storage) SetSignConsulsResult(consulsPubKey account.ConsulPubKey, chainType account.ChainType, roundId int64, sign []byte) error {
+	return storage.setValue(formSignConsulsResultByConsulKey(consulsPubKey, chainType, roundId), sign)
 }

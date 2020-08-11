@@ -164,7 +164,7 @@ func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
 	copy(ledgerPubKey[:], lPubKey.Bytes()[5:])
 	ledger := &scheduler.LedgerValidator{
 		PrivKey: ledgerPrivKey,
-		PubKey:  ledgerPubKey,
+		PubKey:  account.ConsulPubKey(ledgerPubKey),
 	}
 	nebulae := make(map[account.ChainType][][]byte)
 	nebulaeCfg := viper.GetStringMap("nebulae")

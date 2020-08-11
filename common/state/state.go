@@ -178,7 +178,7 @@ func addOracle(store *storage.Storage, tx *transactions.Transaction) error {
 	chainType := account.ChainType(tx.Args[0].Value.(byte))
 	pubKey := tx.Args[1].Value.([]byte)
 
-	oracles, err := store.OraclesByValidator(tx.SenderPubKey)
+	oracles, err := store.OraclesByConsul(tx.SenderPubKey)
 	if err != nil && err != storage.ErrKeyNotFound {
 		return err
 	}
@@ -191,7 +191,7 @@ func addOracle(store *storage.Storage, tx *transactions.Transaction) error {
 
 	oracles[chainType] = oraclePubKey
 
-	err = store.SetOraclesByValidator(tx.SenderPubKey, oracles)
+	err = store.SetOraclesByConsul(tx.SenderPubKey, oracles)
 	if err != nil {
 		return err
 	}
@@ -205,7 +205,7 @@ func result(store *storage.Storage, tx *transactions.Transaction) error {
 	signBytes := tx.Args[2].Value.([]byte)
 	chainType := account.ChainType(tx.Args[3].Value.(byte))
 
-	oracles, err := store.OraclesByValidator(tx.SenderPubKey)
+	oracles, err := store.OraclesByConsul(tx.SenderPubKey)
 	if err != nil {
 		return err
 	}

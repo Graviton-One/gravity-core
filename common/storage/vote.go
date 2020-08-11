@@ -9,28 +9,27 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
-	"github.com/Gravity-Tech/gravity-core/common/keys"
 )
 
 type Vote struct {
-	Target account.ValidatorPubKey
+	PubKey account.ConsulPubKey
 	Score  uint64
 }
 
-type VoteByValidatorMap map[account.ValidatorPubKey][]Vote
+type VoteByConsulMap map[account.ConsulPubKey][]Vote
 
-func formVoteKey(validator account.ValidatorPubKey) []byte {
-	return formKey(string(VoteKey), hexutil.Encode(validator[:]))
+func formVoteKey(pubKey account.ConsulPubKey) []byte {
+	return formKey(string(VoteKey), hexutil.Encode(pubKey[:]))
 }
-func parseVoteKey(value []byte) account.ValidatorPubKey {
+func parseVoteKey(value []byte) account.ConsulPubKey {
 	b := []byte(strings.Split(string(value), Separator)[1])
-	var pubKey account.ValidatorPubKey
+	var pubKey account.ConsulPubKey
 	copy(pubKey[:], b[:])
 	return pubKey
 }
 
-func (storage *Storage) Vote(validator account.ValidatorPubKey) ([]Vote, error) {
-	b, err := storage.getValue(formVoteKey(validator))
+func (storage *Storage) Vote(pubKey account.ConsulPubKey) ([]Vote, error) {
+	b, err := storage.getValue(formVoteKey(pubKey))
 	if err != nil {
 		return nil, err
 	}
@@ -42,17 +41,16 @@ func (storage *Storage) Vote(validator account.ValidatorPubKey) ([]Vote, error) 
 	}
 	return votes, err
 }
-
-func (storage *Storage) SetVote(validator account.ValidatorPubKey, votes []Vote) error {
-	return storage.setValue(formVoteKey(validator), votes)
+func (storage *Storage) SetVote(pubKey account.ConsulPubKey, votes []Vote) error {
+	return storage.setValue(formVoteKey(pubKey), votes)
 }
 
-func (storage *Storage) Votes() (VoteByValidatorMap, error) {
+func (storage *Storage) Votes() (VoteByConsulMap, error) {
 	it := storage.txn.NewIterator(badger.DefaultIteratorOptions)
 	defer it.Close()
 
-	prefix := []byte(keys.VoteKey)
-	votes := make(VoteByValidatorMap)
+	prefix := []byte(VoteKey)
+	votes := make(VoteByConsulMap)
 	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 		item := it.Item()
 		k := item.Key()

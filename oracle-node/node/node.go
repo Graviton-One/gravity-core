@@ -1,11 +1,9 @@
 package node
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -13,9 +11,7 @@ import (
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/client"
-	"github.com/Gravity-Tech/gravity-core/common/keys"
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
-	"github.com/Gravity-Tech/gravity-core/oracle-node/api/gravity"
 	"github.com/Gravity-Tech/gravity-core/oracle-node/blockchain"
 	"github.com/Gravity-Tech/gravity-core/oracle-node/config"
 	"github.com/Gravity-Tech/gravity-core/oracle-node/extractors"
@@ -38,10 +34,10 @@ const (
 type ExtractorType string
 
 type Node struct {
-	nebulaId []byte
+	nebulaId account.NebulaId
 	TCAccount
 	ghPrivKey     tendermintCrypto.PrivKeyEd25519
-	ghPubKey      account.ValidatorPubKey
+	ghPubKey      account.ConsulPubKey
 	ghClient      *client.Client
 	extractor     extractors.Extractor
 	timeout       int
@@ -56,7 +52,7 @@ func New(cfg config.Config, ctx context.Context) (*Node, error) {
 		return nil, err
 	}
 
-	var nebulaId []byte
+	var nebulaId account.NebulaId
 	switch chainType {
 	case account.Waves:
 		nebulaId = base58.Decode(cfg.NebulaId)
@@ -94,7 +90,7 @@ func New(cfg config.Config, ctx context.Context) (*Node, error) {
 	ghPrivKey := tendermintCrypto.PrivKeyEd25519{}
 	copy(ghPrivKey[:], ghPrivKeyBytes)
 
-	var ghPubKey account.ValidatorPubKey
+	var ghPubKey account.ConsulPubKey
 	copy(ghPubKey[:], ghPrivKey.PubKey().Bytes()[5:])
 
 	ghClient, err := client.New(cfg.GHNodeURL)
@@ -301,27 +297,17 @@ func (node *Node) Start(ctx context.Context) error {
 			roundState[tcHeight].resultValue = value
 			roundState[tcHeight].resultHash = hash
 		default:
-			var oracles [][]byte
+			var oracles []account.OraclesPubKey
 			var myRound uint64
 
-			item, err := client.ghClient.GetKey(keys.FormBftOraclesByNebulaKey(client.nebulaId)) //TODO
-			if err != nil && err != gravity.KeyNotFound {
-				return err
-			}
-			oraclesMap := make(map[string]string)
-			err = json.Unmarshal(item, &oraclesMap)
+			oraclesMap, err := node.ghClient.BftOraclesByNebula(node.chainType, node.nebulaId)
 			if err != nil {
 				return err
 			}
-
 			var count uint64
-			for k, _ := range oraclesMap {
-				v, err := hexutil.Decode(k)
-				if err != nil {
-					continue
-				}
-				oracles = append(oracles, v)
-				if bytes.Equal(v, node.TCAccount.pubKey[:]) {
+			for oracle, _ := range oraclesMap {
+				oracles = append(oracles, oracle)
+				if node.TCAccount.pubKey == oracle {
 					myRound = count
 				}
 				count++
@@ -345,10 +331,11 @@ func (node *Node) Start(ctx context.Context) error {
 				continue
 			}
 
-			txId, err := node.blockchain.SendResult(tcHeight, node.TCAccount.privKey, node.nebulaId, node.ghClient, oracles, roundState[tcHeight].resultHash, ctx)
+			txId, err := node.blockchain.SendResult(node.ghClient, tcHeight, node.TCAccount.privKey, node.nebulaId, oracles, roundState[tcHeight].resultHash, ctx)
 			if err != nil {
 				return err
 			}
+
 			roundState[tcHeight].isSent = true
 
 			if txId == "" {
@@ -444,9 +431,12 @@ func (node *Node) reveal(tcHeight uint64, reveal interface{}, commit []byte) err
 	return nil
 }
 func (node *Node) signResult(tcHeight uint64) (bool, interface{}, []byte, error) {
-	//TODO Get all reveals
 	var values []interface{}
-	var bytesValues [][]byte
+	bytesValues, err := node.ghClient.Results(tcHeight, node.chainType, node.nebulaId)
+	if err != nil {
+		return false, nil, nil, err
+	}
+
 	for _, v := range bytesValues {
 		values = append(values, fromBytes(v, node.extractorType))
 	}
@@ -480,7 +470,6 @@ func (node *Node) signResult(tcHeight uint64) (bool, interface{}, []byte, error)
 			Value: node.TCAccount.pubKey,
 		},
 	}
-
 	tx, err := transactions.New(node.ghPubKey, transactions.Result, node.ghPrivKey, args)
 	if err != nil {
 		return false, nil, nil, err

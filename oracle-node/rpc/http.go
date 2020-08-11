@@ -1,13 +1,10 @@
 package rpc
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/client"
-	"github.com/Gravity-Tech/gravity-core/common/transactions"
-	"github.com/Gravity-Tech/gravity-core/score-calculator/models"
 
 	tendermintCrypto "github.com/tendermint/tendermint/crypto/ed25519"
 )
@@ -24,11 +21,12 @@ var cfg ServerConfig
 
 func ListenRpcServer(config ServerConfig) error {
 	cfg = config
-	http.HandleFunc("/vote", vote)
+	//	http.HandleFunc("/vote", vote)
 	err := http.ListenAndServe(cfg.Host, nil)
 	return err
 }
 
+/*
 func vote(w http.ResponseWriter, r *http.Request) {
 	var request []models.Vote
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -49,4 +47,4 @@ func vote(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-}
+}*/

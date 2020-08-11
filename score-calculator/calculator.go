@@ -18,14 +18,14 @@ func Float32ToUInt64Score(score float32) uint64 {
 }
 
 type Actor struct {
-	Name      account.ValidatorPubKey
+	Name      account.ConsulPubKey
 	InitScore uint64
 }
 
-func Calculate(initScores storage.ScoresByValidatorMap, votes storage.VoteByValidatorMap) (storage.ScoresByValidatorMap, error) {
+func Calculate(initScores storage.ScoresByConsulMap, votes storage.VoteByConsulMap) (storage.ScoresByConsulMap, error) {
 	group := trustgraph.NewGroup()
-	idByValidator := make(map[account.ValidatorPubKey]int)
-	validatorById := make(map[int]account.ValidatorPubKey)
+	idByValidator := make(map[account.ConsulPubKey]int)
+	validatorById := make(map[int]account.ConsulPubKey)
 	count := 0
 	for k, v := range initScores {
 		idByValidator[k] = count
@@ -38,16 +38,16 @@ func Calculate(initScores storage.ScoresByValidatorMap, votes storage.VoteByVali
 	}
 
 	for k, _ := range initScores {
-		existVote := make(map[account.ValidatorPubKey]bool)
+		existVote := make(map[account.ConsulPubKey]bool)
 		for _, scoreV := range votes[k] {
-			if k == scoreV.Target {
+			if k == scoreV.PubKey {
 				continue
 			}
-			err := group.Add(idByValidator[k], idByValidator[scoreV.Target], UInt64ToFloat32Score(scoreV.Score))
+			err := group.Add(idByValidator[k], idByValidator[scoreV.PubKey], UInt64ToFloat32Score(scoreV.Score))
 			if err != nil {
 				return nil, err
 			}
-			existVote[scoreV.Target] = true
+			existVote[scoreV.PubKey] = true
 		}
 		for validator, _ := range initScores {
 			if existVote[validator] {
@@ -65,7 +65,7 @@ func Calculate(initScores storage.ScoresByValidatorMap, votes storage.VoteByVali
 
 	out := group.Compute()
 
-	score := make(storage.ScoresByValidatorMap)
+	score := make(storage.ScoresByConsulMap)
 	for i, v := range out {
 		score[validatorById[i]] = Float32ToUInt64Score(v)
 	}

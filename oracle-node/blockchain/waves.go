@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Gravity-Tech/gravity-core/common/keys"
-	"github.com/Gravity-Tech/gravity-core/oracle-node/api/gravity"
-	"github.com/Gravity-Tech/gravity-core/oracle-node/helpers"
+	"github.com/Gravity-Tech/gravity-core/common/account"
 
+	ghClient "github.com/Gravity-Tech/gravity-core/common/client"
+	"github.com/Gravity-Tech/gravity-core/oracle-node/helpers"
 	"github.com/btcsuite/btcutil/base58"
 	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
 
@@ -46,7 +46,7 @@ func (waves *Waves) GetHeight(ctx context.Context) (uint64, error) {
 	return wavesHeight.Height, nil
 }
 
-func (waves *Waves) SendResult(tcHeight uint64, privKey []byte, nebulaId []byte, ghClient *gravity.Client, validators [][]byte, hash []byte, ctx context.Context) (string, error) {
+func (waves *Waves) SendResult(ghClient *ghClient.Client, tcHeight uint64, privKey []byte, nebulaId account.NebulaId, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
 	helperWaves := helpers.New(waves.client.GetOptions().BaseUrl, "")
 	state, err := helperWaves.GetStateByAddressAndKey(waves.contractAddress, fmt.Sprintf("%d", tcHeight))
 	if err != nil {
@@ -65,8 +65,9 @@ func (waves *Waves) SendResult(tcHeight uint64, privKey []byte, nebulaId []byte,
 		}
 
 		for _, oracle := range strings.Split(oracles.Value.(string), ",") {
-			pubKey := base58.Decode(oracle)
-			sign, err := ghClient.GetKey(keys.FormSignResultKey(nebulaId, tcHeight, pubKey))
+			var pubKey account.OraclesPubKey
+			copy(pubKey[:], base58.Decode(oracle))
+			sign, err := ghClient.Result(account.Ethereum, nebulaId, int64(tcHeight), pubKey)
 			if err != nil {
 				signs = append(signs, "nil")
 				continue
@@ -130,7 +131,8 @@ func (waves *Waves) SendResult(tcHeight uint64, privKey []byte, nebulaId []byte,
 
 	return "", nil
 }
-func (waves *Waves) SendSubs(tcHeight uint64, privKey []byte, value uint64, ctx context.Context) error {
+
+func (waves *Waves) SendSubs(tcHeight uint64, privKey []byte, value interface{}, ctx context.Context) error {
 	helperWaves := helpers.New(waves.client.GetOptions().BaseUrl, "")
 	state, err := helperWaves.GetStateByAddressAndKey(waves.contractAddress, fmt.Sprintf("%d", tcHeight))
 	if err != nil {
@@ -172,6 +174,34 @@ func (waves *Waves) SendSubs(tcHeight uint64, privKey []byte, value uint64, ctx 
 			return err
 		}
 
+		nebulaType, err := helperWaves.GetStateByAddressAndKey(waves.contractAddress, "type")
+		if err != nil {
+			return err
+		}
+
+		args := proto.Arguments{}
+		switch SubType(nebulaType.Value.(int8)) {
+		case Int64:
+			args.Append(
+				proto.IntegerArgument{
+					Value: value.(int64),
+				})
+		case String:
+			args.Append(
+				proto.StringArgument{
+					Value: value.(string),
+				})
+		case Bytes:
+			args.Append(
+				proto.BinaryArgument{
+					Value: value.([]byte),
+				})
+		}
+		args.Append(
+			proto.IntegerArgument{
+				Value: int64(tcHeight),
+			})
+
 		tx := &proto.InvokeScriptWithProofs{
 			Type:            proto.InvokeScriptTransaction,
 			Version:         1,
@@ -179,15 +209,8 @@ func (waves *Waves) SendSubs(tcHeight uint64, privKey []byte, value uint64, ctx 
 			ChainID:         waves.chainID,
 			ScriptRecipient: contract,
 			FunctionCall: proto.FunctionCall{
-				Name: "attachData",
-				Arguments: proto.Arguments{
-					proto.IntegerArgument{
-						Value: int64(value),
-					},
-					proto.IntegerArgument{
-						Value: int64(tcHeight),
-					},
-				},
+				Name:      "attachData",
+				Arguments: args,
 			},
 			Payments:  nil,
 			FeeAsset:  *asset,

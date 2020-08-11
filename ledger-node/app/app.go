@@ -89,7 +89,7 @@ func (app *GHApplication) Commit() abcitypes.ResponseCommit {
 func (app *GHApplication) Query(reqQuery abcitypes.RequestQuery) (resQuery abcitypes.ResponseQuery) {
 	var err error
 
-	b, err := query.Query(app.storage, reqQuery.Path)
+	b, err := query.Query(app.storage, reqQuery.Path, resQuery.Value)
 	if err != nil {
 		resQuery.Code = Error
 	}
@@ -102,21 +102,21 @@ func (app *GHApplication) Query(reqQuery abcitypes.RequestQuery) (resQuery abcit
 func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.ResponseInitChain {
 	app.storage.NewTransaction(app.db)
 	for key, value := range app.initScores {
-		validatorPubKey, err := account.HexToPubKey(key)
+		pubKey, err := account.HexToPubKey(key)
 		if err != nil {
 			fmt.Printf("Error: %s", err.Error())
 		}
 
-		err = app.storage.SetScore(validatorPubKey, value)
+		err = app.storage.SetScore(pubKey, value)
 		if err != nil {
 			panic(err)
 		}
 	}
 
 	for _, value := range req.Validators {
-		var validatorPubKey account.ValidatorPubKey
-		copy(validatorPubKey[:], value.PubKey.GetData())
-		err := app.storage.SetScore(validatorPubKey, uint64(value.Power))
+		var pubKey account.ConsulPubKey
+		copy(pubKey[:], value.PubKey.GetData())
+		err := app.storage.SetScore(pubKey, uint64(value.Power))
 		if err != nil {
 			panic(err)
 		}
@@ -156,7 +156,7 @@ func (app *GHApplication) EndBlock(req abcitypes.RequestEndBlock) abcitypes.Resp
 
 		pubKey := abcitypes.PubKey{
 			Type: "ed25519",
-			Data: consuls[i].Validator[:],
+			Data: consuls[i].PubKey[:],
 		}
 
 		newValidators = append(newValidators, abcitypes.ValidatorUpdate{

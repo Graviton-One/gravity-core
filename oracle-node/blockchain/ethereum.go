@@ -72,7 +72,7 @@ func (ethereum *Ethereum) GetHeight(ctx context.Context) (uint64, error) {
 	return tcHeightRq.NumberU64(), nil
 }
 
-func (ethereum *Ethereum) SendResult(tcHeight uint64, privKey []byte, nebulaId []byte, ghClient *client.Client, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
+func (ethereum *Ethereum) SendResult(ghClient *client.Client, tcHeight uint64, privKey []byte, nebulaId account.NebulaId, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
 	data, err := ethereum.nebula.Pulses(nil, big.NewInt(int64(tcHeight)))
 	if err != nil {
 		return "", err
@@ -153,6 +153,7 @@ func (ethereum *Ethereum) SendResult(tcHeight uint64, privKey []byte, nebulaId [
 }
 
 func (ethereum *Ethereum) SendSubs(tcHeight uint64, privKey []byte, value interface{}, ctx context.Context) error {
+	var err error
 	ids, err := ethereum.nebula.GetSubscribersIds(nil)
 	if err != nil {
 		return err
@@ -180,7 +181,6 @@ func (ethereum *Ethereum) SendSubs(tcHeight uint64, privKey []byte, value interf
 		}
 
 		var tx *types.Transaction
-		var err error
 		switch SubType(t) {
 		case Int64:
 			subsSenderContract, err := sender.NewSubsSenderInt(subSenderAddress, ethereum.ethClient)

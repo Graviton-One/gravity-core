@@ -13,10 +13,12 @@ type Path string
 const (
 	OracleByValidatorPath Path = "oraclesByValidator"
 	OracleByNebulaPath    Path = "oraclesByNebula"
+	BftOracleByNebulaPath Path = "bftOraclesByNebula"
 	RoundHeightPath       Path = "roundHeight"
 	CommitHashPath        Path = "commitHash"
 	RevealPath            Path = "reveal"
 	ResultPath            Path = "result"
+	ResultsPath           Path = "results"
 )
 
 var (
@@ -58,6 +60,18 @@ func Query(store *storage.Storage, path string, rq []byte) ([]byte, error) {
 		value = v
 	case ResultPath:
 		v, err := result(store, rq)
+		if err != nil {
+			return nil, err
+		}
+		value = v
+	case BftOracleByNebulaPath:
+		v, err := bftOraclesByNebula(store, rq)
+		if err != nil {
+			return nil, err
+		}
+		value = v
+	case ResultsPath:
+		v, err := results(store, rq)
 		if err != nil {
 			return nil, err
 		}

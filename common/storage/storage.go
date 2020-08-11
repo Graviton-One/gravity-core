@@ -10,15 +10,16 @@ import (
 const (
 	Separator string = "_"
 
-	ConsulsKey           Key = "consuls"
-	LastHeightKey        Key = "last_height"
-	PrevConsulsKey       Key = "prev_consuls"
-	ConsulsSignKey       Key = "consuls_sing"
-	OraclesSignNebulaKey Key = "oracles_sign"
-
-	OraclesByNebulaKey    Key = "oracles_nebula"
-	BftOraclesByNebulaKey Key = "bft_oracles_nebula"
-	OraclesByValidatorKey Key = "oracles"
+	ConsulsKey                   Key = "consuls"
+	LastHeightKey                Key = "last_height"
+	PrevConsulsKey               Key = "prev_consuls"
+	SignConsulsResultByConsulKey Key = "consuls_sing"
+	SignOraclesResultByConsulKey Key = "oracles_sign"
+	NebulaeByOracleKey           Key = "nebulae_by_oracle"
+	NebulaOraclesIndexKey        Key = "nebula_oracles_index"
+	OraclesByNebulaKey           Key = "oracles_by_nebula"
+	BftOraclesByNebulaKey        Key = "bft_oracles_nebula"
+	OraclesByValidatorKey        Key = "oracles"
 
 	BlockKey      Key = "block"
 	VoteKey       Key = "vote"

@@ -21,29 +21,24 @@ const (
 	Result            TxFunc = "result"
 	NewRound          TxFunc = "newRound"
 	Vote              TxFunc = "vote"
-
-	StringType ArgType = "string"
-	IntType    ArgType = "int"
-	BinaryType ArgType = "binary"
 )
 
 type ID [32]byte
 type TxFunc string
-type ArgType string
 type Args struct {
 	Value interface{}
 }
 
 type Transaction struct {
 	Id           ID
-	SenderPubKey account.ValidatorPubKey
+	SenderPubKey account.ConsulPubKey
 	Signature    [72]byte
 	Func         TxFunc
 	Timestamp    uint64
 	Args         []Args
 }
 
-func New(pubKey account.ValidatorPubKey, funcName TxFunc, privKey tendermintCrypto.PrivKeyEd25519, args []Args) (*Transaction, error) {
+func New(pubKey account.ConsulPubKey, funcName TxFunc, privKey tendermintCrypto.PrivKeyEd25519, args []Args) (*Transaction, error) {
 	tx := &Transaction{
 		SenderPubKey: pubKey,
 		Args:         args,
