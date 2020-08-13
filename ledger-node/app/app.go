@@ -41,7 +41,17 @@ type GHApplication struct {
 
 var _ abcitypes.Application = (*GHApplication)(nil)
 
-func NewGHApplication(ethClient *ethclient.Client, wavesClient *client.Client, scheduler *scheduler.Scheduler, db *badger.DB, initScores map[string]uint64, ctx context.Context) *GHApplication {
+func NewGHApplication(ethClientHost string, wavesClientHost string, scheduler *scheduler.Scheduler, db *badger.DB, initScores map[string]uint64, ctx context.Context) (*GHApplication, error) {
+	ethClient, err := ethclient.DialContext(ctx, ethClientHost)
+	if err != nil {
+		return nil, err
+	}
+
+	wavesClient, err := client.NewClient(client.Options{ApiKey: "", BaseUrl: wavesClientHost})
+	if err != nil {
+		return nil, err
+	}
+
 	return &GHApplication{
 		db:          db,
 		ethClient:   ethClient,
@@ -49,7 +59,7 @@ func NewGHApplication(ethClient *ethclient.Client, wavesClient *client.Client, s
 		scheduler:   scheduler,
 		ctx:         ctx,
 		initScores:  initScores,
-	}
+	}, nil
 }
 
 func (app *GHApplication) Info(req abcitypes.RequestInfo) abcitypes.ResponseInfo {

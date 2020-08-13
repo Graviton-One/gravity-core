@@ -3,9 +3,8 @@ package query
 import (
 	"encoding/json"
 
-	"github.com/mr-tron/base58"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/mr-tron/base58"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/storage"

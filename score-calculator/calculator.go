@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	Accuracy = 10
+	Accuracy = 100
 )
 
 func UInt64ToFloat32Score(score uint64) float32 {
@@ -56,7 +56,7 @@ func Calculate(initScores storage.ScoresByConsulMap, votes storage.VoteByConsulM
 			if k == validator {
 				continue
 			}
-			err := group.Add(idByValidator[k], idByValidator[validator], 1)
+			err := group.Add(idByValidator[k], idByValidator[validator], 0)
 			if err != nil {
 				return nil, err
 			}

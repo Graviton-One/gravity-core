@@ -7,26 +7,6 @@ import (
 	"time"
 )
 
-func TestBasic(t *testing.T) {
-	g := NewGroup()
-	g.Add(0, 1, 0.3)
-	g.Add(0, 2, 0.3)
-
-	g.Add(1, 0, 1)
-	g.Add(1, 2, 1)
-
-	g.Add(2, 0, 1)
-	g.Add(2, 1, 1)
-
-	g.InitialTrust(0, 1)
-
-	out := g.Compute()
-	for k, v := range out {
-		t.Logf("%d:%f", k, v)
-	}
-
-}
-
 func TestRand(t *testing.T) {
 	peers := 200
 	rand.Seed(time.Now().UTC().UnixNano())
