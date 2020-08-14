@@ -8,17 +8,18 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/account"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/keys"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/transactions"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/api/gravity"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/blockchain"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/config"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/extractors"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/rpc"
 	"math/big"
 	"strings"
 	"time"
+
+	"github.com/Gravity-Tech/proof-of-concept/common/account"
+	"github.com/Gravity-Tech/proof-of-concept/common/keys"
+	"github.com/Gravity-Tech/proof-of-concept/common/transactions"
+	"github.com/Gravity-Tech/proof-of-concept/gh-node/api/gravity"
+	"github.com/Gravity-Tech/proof-of-concept/gh-node/blockchain"
+	"github.com/Gravity-Tech/proof-of-concept/gh-node/config"
+	"github.com/Gravity-Tech/proof-of-concept/gh-node/extractor"
+	"github.com/Gravity-Tech/proof-of-concept/gh-node/rpc"
 
 	"github.com/btcsuite/btcutil/base58"
 
@@ -52,7 +53,7 @@ type Client struct {
 	ghPrivKey  tendermintCrypto.PrivKeyEd25519
 	ghPubKey   []byte
 	ghClient   *gravity.Client
-	extractor  *extractors.ExtractorClient
+	extractor  *extractor.Client
 	timeout    int
 	chainType  account.ChainType
 	blockchain blockchain.IBlockchain
@@ -215,7 +216,7 @@ func New(cfg config.Config, ctx context.Context) (*Client, error) {
 		nebulaId:   nebulaId,
 		ghPrivKey:  ghPrivKey,
 		ghClient:   ghClient,
-		extractor:  &extractors.ExtractorClient{ HostURL: &cfg.ExtractorURL },
+		extractor:  &extractor.Client{hostURL: &cfg.ExtractorURL},
 		chainType:  chainType,
 		blockchain: targetBlockchain,
 		timeout:    cfg.Timeout,

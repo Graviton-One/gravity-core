@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/account"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/keys"
-	"github.com/Gravity-Hub-Org/proof-of-concept/score-calculator/models"
+
+	"github.com/Gravity-Tech/proof-of-concept/common/account"
+	"github.com/Gravity-Tech/proof-of-concept/common/keys"
+	"github.com/Gravity-Tech/proof-of-concept/score-calculator/models"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 

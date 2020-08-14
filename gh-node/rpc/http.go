@@ -2,11 +2,12 @@ package rpc
 
 import (
 	"encoding/json"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/account"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/transactions"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/api/gravity"
-	"github.com/Gravity-Hub-Org/proof-of-concept/score-calculator/models"
 	"net/http"
+
+	"github.com/Gravity-Tech/proof-of-concept/common/account"
+	"github.com/Gravity-Tech/proof-of-concept/common/transactions"
+	"github.com/Gravity-Tech/proof-of-concept/gh-node/api/gravity"
+	"github.com/Gravity-Tech/proof-of-concept/score-calculator/models"
 
 	tendermintCrypto "github.com/tendermint/tendermint/crypto/ed25519"
 )

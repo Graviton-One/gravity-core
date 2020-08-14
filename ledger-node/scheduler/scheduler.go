@@ -6,19 +6,20 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/account"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/contracts"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/keys"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/score"
-	"github.com/Gravity-Hub-Org/proof-of-concept/common/transactions"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/api/gravity"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/helpers"
-	score_calculator "github.com/Gravity-Hub-Org/proof-of-concept/score-calculator"
-	"github.com/Gravity-Hub-Org/proof-of-concept/score-calculator/models"
 	"math/big"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/Gravity-Tech/proof-of-concept/common/account"
+	"github.com/Gravity-Tech/proof-of-concept/common/contracts"
+	"github.com/Gravity-Tech/proof-of-concept/common/keys"
+	"github.com/Gravity-Tech/proof-of-concept/common/score"
+	"github.com/Gravity-Tech/proof-of-concept/common/transactions"
+	"github.com/Gravity-Tech/proof-of-concept/gh-node/api/gravity"
+	"github.com/Gravity-Tech/proof-of-concept/gh-node/helpers"
+	score_calculator "github.com/Gravity-Tech/proof-of-concept/score-calculator"
+	"github.com/Gravity-Tech/proof-of-concept/score-calculator/models"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
@@ -137,7 +138,7 @@ func (scheduler *Scheduler) HandleBlock(height int64, txn *badger.Txn) error {
 		}
 
 		for _, v := range scheduler.nebulae[account.Waves] {
-		err := scheduler.sendOraclesWaves(v, roundId, txn)
+			err := scheduler.sendOraclesWaves(v, roundId, txn)
 			if err != nil {
 				continue
 			}

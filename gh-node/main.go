@@ -4,9 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/config"
-	"github.com/Gravity-Hub-Org/proof-of-concept/gh-node/signer"
 	"time"
+
+	"github.com/Gravity-Tech/proof-of-concept/gh-node/config"
+	"github.com/Gravity-Tech/proof-of-concept/gh-node/signer"
 )
 
 const (
