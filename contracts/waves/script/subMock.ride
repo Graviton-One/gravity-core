@@ -3,7 +3,7 @@
 {-# SCRIPT_TYPE ACCOUNT #-}
 
 @Callable(i)
-func attachData(v: Int, height: Int) = {
+func attachValue(v: Int, height: Int) = {
     WriteSet([
         DataEntry(toString(height), v)
     ])

@@ -2,9 +2,7 @@ package account
 
 import (
 	"crypto/ecdsa"
-	"errors"
 	"math/big"
-	"strings"
 
 	tendermintCrypto "github.com/tendermint/tendermint/crypto/ed25519"
 
@@ -14,29 +12,11 @@ import (
 	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
 )
 
-type ChainType byte
-
-const (
-	Ethereum ChainType = iota
-	Waves
-)
-
-func ParseChainType(chainType string) (ChainType, error) {
-	switch strings.ToLower(chainType) {
-	case "ethereum":
-		return Ethereum, nil
-	case "waves":
-		return Waves, nil
-	default:
-		return 0, errors.New("invalid parse chain type")
-	}
-}
-
 func Sign(privKey tendermintCrypto.PrivKeyEd25519, msg []byte) ([]byte, error) {
 	return privKey.Sign(msg)
 }
 
-func SignWithTCPriv(privKey []byte, msg []byte, chainType ChainType) ([]byte, error) {
+func SignWithTC(privKey []byte, msg []byte, chainType ChainType) ([]byte, error) {
 	switch chainType {
 	case Ethereum:
 		ethPrivKey := &ecdsa.PrivateKey{
@@ -65,6 +45,21 @@ func SignWithTCPriv(privKey []byte, msg []byte, chainType ChainType) ([]byte, er
 		}
 		return sig.Bytes(), nil
 	default:
-		return nil, errors.New("invalid chain type")
+		return nil, ErrInvalidChainType
+	}
+}
+func ValidateTCSign(pubKey OraclesPubKey, msg []byte, sign []byte, chainType ChainType) bool {
+	switch chainType {
+	case Ethereum:
+		return crypto.VerifySignature(pubKey[:], msg, sign[0:64])
+	case Waves:
+		var wavesPubKey wavesCrypto.PublicKey
+		copy(wavesPubKey[:], pubKey[:])
+
+		var signWaves wavesCrypto.Signature
+		copy(signWaves[:], sign[:])
+		return wavesCrypto.Verify(wavesPubKey, signWaves, msg)
+	default:
+		return false
 	}
 }

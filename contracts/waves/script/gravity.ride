@@ -36,7 +36,7 @@ func validateSign(hash: ByteVector, sign: String, oracle: String) = {
 
 #-------------------Callable----------------------------
 @Callable(i)
-func setConsuls(newConsuls: String, stringSigns: String, round: Int) = {
+func updateConsuls(newConsuls: String, stringSigns: String, round: Int) = {
     let signs = stringSigns.split(",")
     let count = validateSign(toBytes(newConsuls), signs[0], consuls[0]) +
                 validateSign(toBytes(newConsuls), signs[1], consuls[1]) +

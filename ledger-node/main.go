@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"flag"
 	"fmt"
-	"math/big"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -13,12 +11,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/Gravity-Tech/proof-of-concept/common/account"
-	"github.com/Gravity-Tech/proof-of-concept/gh-node/helpers"
-	"github.com/Gravity-Tech/proof-of-concept/ledger-node/app"
-	"github.com/Gravity-Tech/proof-of-concept/ledger-node/scheduler"
-
-	"github.com/ethereum/go-ethereum/crypto/secp256k1"
+	"github.com/Gravity-Tech/gravity-core/common/account"
+	"github.com/Gravity-Tech/gravity-core/ledger-node/app"
+	"github.com/Gravity-Tech/gravity-core/ledger-node/blockchain"
+	"github.com/Gravity-Tech/gravity-core/ledger-node/scheduler"
 
 	"github.com/tendermint/tendermint/crypto/ed25519"
 
@@ -26,11 +22,8 @@ import (
 	"github.com/wavesplatform/gowaves/pkg/crypto"
 
 	"github.com/spf13/viper"
-	"github.com/wavesplatform/gowaves/pkg/client"
 
 	"github.com/dgraph-io/badger"
-
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	cfg "github.com/tendermint/tendermint/config"
 	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
@@ -77,29 +70,18 @@ func main() {
 }
 
 func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
+	//TODO refactoring
+
 	// read config
 	config := cfg.DefaultConfig()
 	config.RootDir = filepath.Dir(filepath.Dir(configFile))
 	viper.SetConfigFile(configFile)
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("viper failed to read config file: %w", err)
-	}
-	if err := viper.Unmarshal(config); err != nil {
+	} else if err := viper.Unmarshal(config); err != nil {
 		return nil, fmt.Errorf("viper failed to unmarshal config: %w", err)
-	}
-	if err := config.ValidateBasic(); err != nil {
+	} else if err := config.ValidateBasic(); err != nil {
 		return nil, fmt.Errorf("config is invalid: %w", err)
-	}
-
-	ctx := context.Background()
-	ethClient, err := ethclient.DialContext(ctx, viper.GetString("ethNodeUrl"))
-	if err != nil {
-		return nil, err
-	}
-
-	wavesClient, err := client.NewClient(client.Options{ApiKey: "", BaseUrl: viper.GetString("wavesNodeUrl")})
-	if err != nil {
-		return nil, err
 	}
 
 	initScore := viper.GetString("initScore")
@@ -122,35 +104,16 @@ func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
 		config.PrivValidatorStateFile(),
 	)
 
+	ctx := context.Background()
+	ethClientHost := viper.GetString("ethNodeUrl")
+	wavesClientHost := viper.GetString("wavesNodeUrl")
+
 	contracts := viper.GetStringMapString("targetContracts")
 	privKeys := viper.GetStringMapString("privKeys")
-
 	wavesPrivKey := crypto.MustBytesFromBase58(privKeys["waves"])
-
 	ethereumPrivKey, err := hexutil.Decode(privKeys["ethereum"])
 	if err != nil {
 		return nil, err
-	}
-	wavesConf := &scheduler.WavesConf{
-		PrivKey: wavesPrivKey,
-		Client:  wavesClient,
-		Helper:  helpers.New(wavesClient.GetOptions().BaseUrl, ""),
-		ChainId: 'T',
-	}
-
-	ethPrivKey := &ecdsa.PrivateKey{
-		PublicKey: ecdsa.PublicKey{
-			Curve: secp256k1.S256(),
-		},
-		D: new(big.Int),
-	}
-	ethPrivKey.D.SetBytes(ethereumPrivKey)
-	ethPrivKey.PublicKey.X, ethPrivKey.PublicKey.Y = ethPrivKey.PublicKey.Curve.ScalarBaseMult(ethereumPrivKey)
-
-	ethConf := &scheduler.EthereumConf{
-		PrivKey:      ethPrivKey,
-		PrivKeyBytes: ethereumPrivKey,
-		Client:       ethClient,
 	}
 
 	ledgerPrivKey := ed25519.PrivKeyEd25519{}
@@ -164,7 +127,7 @@ func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
 	copy(ledgerPubKey[:], lPubKey.Bytes()[5:])
 	ledger := &scheduler.LedgerValidator{
 		PrivKey: ledgerPrivKey,
-		PubKey:  ledgerPubKey,
+		PubKey:  account.ConsulPubKey(ledgerPubKey),
 	}
 	nebulae := make(map[account.ChainType][][]byte)
 	nebulaeCfg := viper.GetStringMap("nebulae")
@@ -194,8 +157,28 @@ func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
 		}
 	}
 
-	s, err := scheduler.New(wavesConf, ethConf, config.RPC.ListenAddress, context.Background(), ledger, nebulae, contracts["waves"], contracts["ethereum"])
-	application := app.NewGHApplication(ethClient, wavesClient, s, db, initScoreMap, ctx)
+	blockchains := make(map[account.ChainType]blockchain.IBlockchain)
+	wavesBlockchain, err := blockchain.NewWaves(contracts["waves"], wavesPrivKey, wavesClientHost)
+	if err != nil {
+		return nil, err
+	}
+	blockchains[account.Waves] = wavesBlockchain
+
+	ethBlockchain, err := blockchain.NewEthereum(contracts["ethereum"], ethereumPrivKey, ethClientHost, ctx)
+	if err != nil {
+		return nil, err
+	}
+	blockchains[account.Ethereum] = ethBlockchain
+
+	s, err := scheduler.New(blockchains, config.RPC.ListenAddress, context.Background(), ledger, nebulae)
+	if err != nil {
+		return nil, err
+	}
+
+	application, err := app.NewGHApplication(ethClientHost, wavesClientHost, s, db, initScoreMap, ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	// create logger
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))

@@ -1,41 +1,62 @@
 package score_calculator
 
 import (
-	"github.com/Gravity-Tech/proof-of-concept/score-calculator/models"
-	"github.com/Gravity-Tech/proof-of-concept/score-calculator/trustgraph"
+	"github.com/Gravity-Tech/gravity-core/common/account"
+	"github.com/Gravity-Tech/gravity-core/common/storage"
+	"github.com/Gravity-Tech/gravity-core/score-calculator/trustgraph"
 )
 
-func Calculate(actors []models.Actor, votes map[string][]models.Vote) (map[string]float32, error) {
+const (
+	Accuracy = 100
+)
+
+func UInt64ToFloat32Score(score uint64) float32 {
+	return float32(score) / Accuracy
+}
+func Float32ToUInt64Score(score float32) uint64 {
+	return uint64(score * Accuracy)
+}
+
+type Actor struct {
+	Name      account.ConsulPubKey
+	InitScore uint64
+}
+
+func Calculate(initScores storage.ScoresByConsulMap, votes storage.VoteByConsulMap) (storage.ScoresByConsulMap, error) {
 	group := trustgraph.NewGroup()
-	actorsScore := make(map[string]int)
-	for i, v := range actors {
-		actorsScore[v.Name] = i
-		err := group.InitialTrust(i, v.InitScore)
+	idByValidator := make(map[account.ConsulPubKey]int)
+	validatorById := make(map[int]account.ConsulPubKey)
+	count := 0
+	for k, v := range initScores {
+		idByValidator[k] = count
+		validatorById[count] = k
+		err := group.InitialTrust(idByValidator[k], UInt64ToFloat32Score(v))
 		if err != nil {
 			return nil, err
 		}
+		count++
 	}
 
-	for _, v := range actors {
-		existVote := make(map[string]bool)
-		for _, scoreV := range votes[v.Name] {
-			if v.Name == scoreV.Target {
+	for k, _ := range initScores {
+		existVote := make(map[account.ConsulPubKey]bool)
+		for _, scoreV := range votes[k] {
+			if k == scoreV.PubKey {
 				continue
 			}
-			err := group.Add(actorsScore[v.Name], actorsScore[scoreV.Target], scoreV.Score)
+			err := group.Add(idByValidator[k], idByValidator[scoreV.PubKey], UInt64ToFloat32Score(scoreV.Score))
 			if err != nil {
 				return nil, err
 			}
-			existVote[scoreV.Target] = true
+			existVote[scoreV.PubKey] = true
 		}
-		for _, actor := range actors {
-			if existVote[actor.Name] {
+		for validator, _ := range initScores {
+			if existVote[validator] {
 				continue
 			}
-			if v.Name == actor.Name {
+			if k == validator {
 				continue
 			}
-			err := group.Add(actorsScore[v.Name], actorsScore[actor.Name], 1)
+			err := group.Add(idByValidator[k], idByValidator[validator], 0)
 			if err != nil {
 				return nil, err
 			}
@@ -44,9 +65,9 @@ func Calculate(actors []models.Actor, votes map[string][]models.Vote) (map[strin
 
 	out := group.Compute()
 
-	score := make(map[string]float32)
+	score := make(storage.ScoresByConsulMap)
 	for i, v := range out {
-		score[actors[i].Name] = v
+		score[validatorById[i]] = Float32ToUInt64Score(v)
 	}
 	return score, nil
 }
