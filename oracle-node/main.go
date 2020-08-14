@@ -14,13 +14,6 @@ const (
 	DefaultConfigFileName = "config.json"
 )
 
-func logErr(err error) {
-	if err == nil {
-		return
-	}
-
-	fmt.Printf("Error: %s\n", err.Error())
-}
 func main() {
 	var confFileName string
 	flag.StringVar(&confFileName, "config", DefaultConfigFileName, "set config path")
@@ -33,7 +26,6 @@ func main() {
 	}
 
 	client, err := node.New(cfg, ctx)
-
 	if err != nil {
 		panic(err)
 	}
