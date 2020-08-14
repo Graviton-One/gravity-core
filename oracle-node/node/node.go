@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Gravity-Tech/gravity-core/oracle-node/extractor"
+
 	"github.com/Gravity-Tech/gravity-core/common/state"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
@@ -14,7 +16,6 @@ import (
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
 	"github.com/Gravity-Tech/gravity-core/oracle-node/blockchain"
 	"github.com/Gravity-Tech/gravity-core/oracle-node/config"
-	"github.com/Gravity-Tech/gravity-core/oracle-node/extractors"
 	"github.com/Gravity-Tech/gravity-core/oracle-node/rpc"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -36,14 +37,14 @@ type ExtractorType string
 type Node struct {
 	nebulaId account.NebulaId
 	TCAccount
-	ghPrivKey     tendermintCrypto.PrivKeyEd25519
-	ghPubKey      account.ConsulPubKey
-	ghClient      *client.Client
-	extractor     extractors.Extractor
-	timeout       int
-	chainType     account.ChainType
-	blockchain    blockchain.IBlockchain
-	extractorType ExtractorType
+	ghPrivKey       tendermintCrypto.PrivKeyEd25519
+	ghPubKey        account.ConsulPubKey
+	ghClient        *client.Client
+	timeout         int
+	chainType       account.ChainType
+	blockchain      blockchain.IBlockchain
+	extractorClient *extractor.Client
+	extractorType   ExtractorType
 }
 
 func New(cfg config.Config, ctx context.Context) (*Node, error) {
@@ -106,20 +107,22 @@ func New(cfg config.Config, ctx context.Context) (*Node, error) {
 		GhClient:  ghClient,
 	})
 
+	extractorClient := extractor.New(cfg.ExtractorUrl)
+
 	return &Node{
 		TCAccount: TCAccount{
 			pubKey:  tcPubKey,
 			privKey: tcPrivKey,
 		},
-		nebulaId:      nebulaId,
-		ghPrivKey:     ghPrivKey,
-		ghClient:      ghClient,
-		extractor:     &extractors.BinanceExtractor{},
-		chainType:     chainType,
-		blockchain:    targetBlockchain,
-		timeout:       cfg.Timeout,
-		ghPubKey:      ghPubKey,
-		extractorType: ExtractorType(cfg.ExtractorType),
+		nebulaId:        nebulaId,
+		ghPrivKey:       ghPrivKey,
+		ghClient:        ghClient,
+		extractorClient: extractorClient,
+		chainType:       chainType,
+		blockchain:      targetBlockchain,
+		timeout:         cfg.Timeout,
+		ghPubKey:        ghPubKey,
+		extractorType:   ExtractorType(cfg.ExtractorType),
 	}, nil
 }
 
@@ -252,7 +255,7 @@ func (node *Node) Start(ctx context.Context) error {
 				return err
 			}
 
-			data, err := node.extractor.Extract()
+			data, err := node.extractorClient.Extract()
 			if err != nil {
 				return err
 			}
@@ -441,7 +444,7 @@ func (node *Node) signResult(tcHeight uint64) (bool, interface{}, []byte, error)
 		values = append(values, fromBytes(v, node.extractorType))
 	}
 
-	result, err := node.extractor.Aggregate(values)
+	result, err := node.extractorClient.Aggregate(values)
 	if err != nil {
 		return false, nil, nil, err
 	}
