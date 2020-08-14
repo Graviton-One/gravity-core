@@ -7,15 +7,12 @@ import (
 	"time"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
-
 	ghClient "github.com/Gravity-Tech/gravity-core/common/client"
 	"github.com/Gravity-Tech/gravity-core/oracle-node/helpers"
 	"github.com/btcsuite/btcutil/base58"
-	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
-
-	"github.com/wavesplatform/gowaves/pkg/proto"
-
 	"github.com/wavesplatform/gowaves/pkg/client"
+	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
+	"github.com/wavesplatform/gowaves/pkg/proto"
 )
 
 type Waves struct {

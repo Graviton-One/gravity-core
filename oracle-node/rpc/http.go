@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/Gravity-Tech/gravity-core/common/storage"
-	"github.com/Gravity-Tech/gravity-core/common/transactions"
-
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/client"
+	"github.com/Gravity-Tech/gravity-core/common/storage"
+	"github.com/Gravity-Tech/gravity-core/common/transactions"
 
 	tendermintCrypto "github.com/tendermint/tendermint/crypto/ed25519"
 )

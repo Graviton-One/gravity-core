@@ -148,7 +148,7 @@ func (ethereum *Ethereum) SignConsuls(consulsAddresses []account.OraclesPubKey) 
 	for _, v := range consulsAddresses {
 		oraclesAddresses = append(oraclesAddresses, common.BytesToAddress(v.ToBytes(account.Ethereum)))
 	}
-	hash, err := ethereum.gravityEthereum.HashNewConsuls(nil, addressesOracles)
+	hash, err := ethereum.gravityEthereum.HashNewConsuls(nil, oraclesAddresses)
 	if err != nil {
 		return nil, err
 	}

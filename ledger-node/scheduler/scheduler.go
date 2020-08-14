@@ -6,12 +6,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Gravity-Tech/gravity-core/ledger-node/blockchain"
-
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	ghClient "github.com/Gravity-Tech/gravity-core/common/client"
 	"github.com/Gravity-Tech/gravity-core/common/storage"
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
+	"github.com/Gravity-Tech/gravity-core/ledger-node/blockchain"
 	calculator "github.com/Gravity-Tech/gravity-core/score-calculator"
 
 	"github.com/tendermint/tendermint/crypto/ed25519"
@@ -187,7 +186,6 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 
 	return nil
 }
-
 func (scheduler *Scheduler) signOracleResultByNebula(roundId int64, nebulaId []byte, chainType account.ChainType, store *storage.Storage) error {
 	_, err := store.SignOraclesResultByConsul(scheduler.Ledger.PubKey, nebulaId, roundId)
 	if err != nil && err != storage.ErrKeyNotFound {
@@ -299,7 +297,6 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 	fmt.Printf("Tx consuls update (%d): %s \n", chainType, id)
 	return nil
 }
-
 func (scheduler *Scheduler) sendOraclesToNebula(nebulaId []byte, chainType account.ChainType, round int64, store *storage.Storage) error {
 	prevConsuls, err := store.PrevConsuls()
 	if err != nil {

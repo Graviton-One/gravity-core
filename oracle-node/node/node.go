@@ -100,7 +100,7 @@ func New(cfg config.Config, ctx context.Context) (*Node, error) {
 
 	go rpc.ListenRpcServer(rpc.ServerConfig{
 		Host:      cfg.RPCHost,
-		PubKey:    tcPubKey,
+		PubKey:    ghPubKey,
 		PrivKey:   ghPrivKey,
 		ChainType: chainType,
 		GhClient:  ghClient,

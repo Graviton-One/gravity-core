@@ -7,13 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/Gravity-Tech/gravity-core/common/transactions"
-
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/wavesplatform/gowaves/pkg/client"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/storage"
+	"github.com/Gravity-Tech/gravity-core/common/transactions"
 
 	"github.com/ethereum/go-ethereum/crypto"
 )

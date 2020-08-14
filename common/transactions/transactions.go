@@ -6,9 +6,7 @@ import (
 	"time"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
-
 	"github.com/ethereum/go-ethereum/crypto"
-
 	_ "github.com/tendermint/tendermint/crypto/ed25519"
 	tendermintCrypto "github.com/tendermint/tendermint/crypto/ed25519"
 )

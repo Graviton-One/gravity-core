@@ -11,10 +11,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/Gravity-Tech/gravity-core/ledger-node/blockchain"
-
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/ledger-node/app"
+	"github.com/Gravity-Tech/gravity-core/ledger-node/blockchain"
 	"github.com/Gravity-Tech/gravity-core/ledger-node/scheduler"
 
 	"github.com/tendermint/tendermint/crypto/ed25519"
@@ -117,16 +116,6 @@ func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
 		return nil, err
 	}
 
-	wavesConf, err := blockchain.NewWaves(contracts["waves"], wavesPrivKey, wavesClientHost)
-	if err != nil {
-		return nil, err
-	}
-
-	ethConf, err := blockchain.NewEthereum(contracts["ethereum"], ethereumPrivKey, ethClientHost, ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	ledgerPrivKey := ed25519.PrivKeyEd25519{}
 	copy(ledgerPrivKey[:], pv.Key.PrivKey.Bytes()[5:])
 
@@ -168,7 +157,20 @@ func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
 		}
 	}
 
-	s, err := scheduler.New(wavesConf, ethConf, config.RPC.ListenAddress, context.Background(), ledger, nebulae, contracts["waves"], contracts["ethereum"])
+	blockchains := make(map[account.ChainType]blockchain.IBlockchain)
+	wavesBlockchain, err := blockchain.NewWaves(contracts["waves"], wavesPrivKey, wavesClientHost)
+	if err != nil {
+		return nil, err
+	}
+	blockchains[account.Waves] = wavesBlockchain
+
+	ethBlockchain, err := blockchain.NewEthereum(contracts["ethereum"], ethereumPrivKey, ethClientHost, ctx)
+	if err != nil {
+		return nil, err
+	}
+	blockchains[account.Ethereum] = ethBlockchain
+
+	s, err := scheduler.New(blockchains, config.RPC.ListenAddress, context.Background(), ledger, nebulae)
 	if err != nil {
 		return nil, err
 	}

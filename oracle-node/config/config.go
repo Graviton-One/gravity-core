@@ -15,6 +15,7 @@ type Config struct {
 	NebulaId      string
 	ChainType     string
 	ExtractorType string
+	ExtractorUrl  string
 }
 
 func Load(filename string) (Config, error) {

@@ -7,24 +7,16 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/core/types"
-
-	"github.com/Gravity-Tech/gravity-core/common/contracts/sender"
-
 	"github.com/Gravity-Tech/gravity-core/common/account"
-
 	"github.com/Gravity-Tech/gravity-core/common/client"
-
 	"github.com/Gravity-Tech/gravity-core/common/contracts"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
+	"github.com/Gravity-Tech/gravity-core/common/contracts/sender"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
-
-	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
