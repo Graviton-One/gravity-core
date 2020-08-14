@@ -11,6 +11,7 @@ type Config struct {
 	RPCHost   string
 	NodeUrl   string
 	GHNodeURL string
+	ExtractorURL string
 	Timeout   int
 	NebulaId  string
 	ChainType string

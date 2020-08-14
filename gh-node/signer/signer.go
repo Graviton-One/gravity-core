@@ -52,7 +52,7 @@ type Client struct {
 	ghPrivKey  tendermintCrypto.PrivKeyEd25519
 	ghPubKey   []byte
 	ghClient   *gravity.Client
-	extractor  extractors.PriceExtractor
+	extractor  *extractors.ExtractorClient
 	timeout    int
 	chainType  account.ChainType
 	blockchain blockchain.IBlockchain
@@ -215,7 +215,7 @@ func New(cfg config.Config, ctx context.Context) (*Client, error) {
 		nebulaId:   nebulaId,
 		ghPrivKey:  ghPrivKey,
 		ghClient:   ghClient,
-		extractor:  &extractors.BinanceExtractor{},
+		extractor:  &extractors.ExtractorClient{ HostURL: &cfg.ExtractorURL },
 		chainType:  chainType,
 		blockchain: targetBlockchain,
 		timeout:    cfg.Timeout,
@@ -412,16 +412,9 @@ func (client *Client) Start(ctx context.Context) error {
 
 func (client *Client) commit(tcHeight uint64) (uint64, []byte, error) {
 	var commitPrice uint64
-	price, err := client.extractor.PriceNow()
-	if err != nil {
-		return 0, nil, err
-	}
+	commitBytes := client.extractor.RawData()
 
-	commitPrice = uint64(price * 100)
-
-	commitPriceBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(commitPriceBytes, commitPrice)
-	commit := crypto.Keccak256(commitPriceBytes)
+	commit := crypto.Keccak256(commitBytes)
 
 	fmt.Printf("Commit: %.2f - %s \n", float32(commitPrice)/100, hexutil.Encode(commit[:]))
 	heightBytes := make([]byte, 8)
