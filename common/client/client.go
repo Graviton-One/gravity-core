@@ -8,7 +8,7 @@ import (
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/storage"
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
-	"github.com/Gravity-Tech/gravity-core/ledger-node/query"
+	"github.com/Gravity-Tech/gravity-core/ledger/query"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 )
