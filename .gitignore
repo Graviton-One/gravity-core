@@ -18,7 +18,7 @@ data/
 db/
 .data/
 .db/
-ledger-node/.data/*
+ledger/.data/*
 */data
 */db
 */.db
@@ -28,7 +28,7 @@ ledger-node/.data/*
 */build
 */*/build
 */gh-node
-oracle-node/config.*.json
+oracle/config.*.json
 # Deploy vendor
 nebula-address.txt
 migration.txt
