@@ -43,7 +43,8 @@ let ConsulsKey = "consuls"
 let SubscriberAddressKey = "subscriber_address"
 let GravityContractKey = "gravity_contract"
 let BftCoefficientKey = "bft_coefficient"
-let LasrRoundKey = "last_round"
+let LastHeightKey = "last_height"
+let LastRoundKey = "last_round"
 let TypeKey = "type"
 #-------------------Global vars-------------------------
 let oracles = getStringByKey(OraclesKey).split(",")
@@ -51,7 +52,7 @@ let bftCoefficient = getNumberByKey(BftCoefficientKey)
 let gracityContract = addressFromStringValue(getStringByKey(GravityContractKey))
 let consuls = getStringByAddressAndKey(gracityContract, ConsulsKey).split(",")
 let subscriberAddress = getStringByKey(SubscriberAddressKey)
-let type = getStringByKey(TypeKey)
+let type = getNumberByKey(TypeKey)
 
 func validateSign(hash: ByteVector, sign: String, oracle: String) = {
     if (sign != "nil") then 
@@ -69,13 +70,14 @@ func sendHashValue(hash: ByteVector, signs: String) = {
         + validateSign(hash, signList[3], oracles[3]) 
         + validateSign(hash, signList[4], oracles[4]) 
 
-    if (count > bftCoefficient)
+    if (count < bftCoefficient)
        then throw("invalid bft count")
     else if(getBytesByKey(toString(height)) != base64'0') 
         then throw("data is exist")
     else {
         WriteSet([
-            DataEntry(toString(height), hash)
+            DataEntry(toString(height), hash),
+            DataEntry(LastHeightKey, height)
         ])
     }
 }
@@ -95,7 +97,7 @@ func updateOracles(newSortedOracles: String, stringSigns: String, round: Int) = 
     else {  
         WriteSet([
             DataEntry(OraclesKey, newSortedOracles),
-            DataEntry(LasrRoundKey + "_" + toString(round), round)
+            DataEntry(LastRoundKey + "_" + toString(round), round)
         ])
     }
 }
@@ -134,19 +136,21 @@ func sendValueToSub() = {
             
            
             
-            if (invokeTx.function == "attachValue") 
-                then throw("invalid args size")
+            if (invokeTx.function != "attachValue") 
+                then throw("invalid function name")
             else if (invokeTx.args.size() != 2) 
                 then throw("invalid args size")
             else if (invokeTx.dApp != addressFromStringValue(subscriberAddress))
                 then throw("invalid dapp address")
-            else if (getStringByKey(toString(vHeight)) == "")
+            else if (getBytesByKey(toString(vHeight)) == base64'0')
                 then throw("invalid height")
-            else if(keccak256(vBytes) != fromBase58String(getStringByKey(toString(vHeight))))
+            else if(keccak256(vBytes) != getBytesByKey(toString(vHeight)))
                     then throw("invalid keccak256(value)")
             else {
                 true
             }
-        case _ => true #TODO
+        case scriptTx:SetAssetScriptTransaction => sigVerify(scriptTx.bodyBytes, scriptTx.proofs[0], scriptTx.senderPublicKey)
+        case dataTx:DataTransaction => sigVerify(dataTx.bodyBytes, dataTx.proofs[0], dataTx.senderPublicKey)
+        case _ => false
       }
 }

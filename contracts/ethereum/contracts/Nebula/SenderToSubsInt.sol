@@ -1,5 +1,4 @@
-
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity ^0.7.0;
 
 import "./Nebula.sol";
 import "../interfaces/ISubscriberInt.sol";
@@ -10,7 +9,7 @@ contract SubsSenderInt {
         nebulaAddress = newNebulaAddress;
     }
 
-    function () external payable {}
+    receive() external payable { } 
 
     function sendValueToSub(int64 value, uint256 blockNumber, bytes32 subId) public {
         require(blockNumber <= block.number + 1, "invalid block number");

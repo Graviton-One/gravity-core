@@ -32,7 +32,7 @@ func NewWaves(gravityContractAddress string, privKey []byte, nodeUrl string) (*W
 
 	return &Waves{
 		privKeyBytes:           privKey,
-		helper:                 waves.New(wavesClient),
+		helper:                 waves.NewClientHelper(wavesClient),
 		client:                 wavesClient,
 		gravityContractAddress: gravityContractAddress,
 		chainID:                'T',

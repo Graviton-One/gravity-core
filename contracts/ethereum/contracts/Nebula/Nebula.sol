@@ -1,4 +1,4 @@
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity ^0.7.0;
 
 import "../Gravity/Gravity.sol";
 import "../libs/Queue.sol";
@@ -31,7 +31,7 @@ contract Nebula {
         senderToSubs = newSenderToSubs;
     }
 
-    function () external payable {}
+    receive() external payable { } 
 
 
     function getOracles() public view returns(address[] memory) {

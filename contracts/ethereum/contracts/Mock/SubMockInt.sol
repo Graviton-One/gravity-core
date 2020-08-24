@@ -1,4 +1,4 @@
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity ^0.7.0;
 
 import "../interfaces/ISubscriberInt.sol";
 
@@ -9,7 +9,7 @@ contract SubMockInt is ISubscriberInt {
         nebulaAddress = newNebulaAddress;
         reward = newReward;
     }
-    function () external payable {}
+    receive() external payable { } 
 
     function attachValue(uint64 data) public {
     }

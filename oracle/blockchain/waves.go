@@ -40,7 +40,7 @@ func NewWavesClient(ghClient *client.Client, nebulaId account.NebulaId, privKey 
 		nebulaId:        nebulaId,
 		chainID:         'T',
 		privKey:         privKey,
-		helper:          wavesHelper.New(wavesClient),
+		helper:          wavesHelper.NewClientHelper(wavesClient),
 	}, nil
 }
 

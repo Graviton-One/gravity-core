@@ -10,6 +10,7 @@ import (
 
 	"log"
 
+	"github.com/Gravity-Tech/gravity-core/common/contracts"
 	"github.com/Gravity-Tech/gravity-core/common/state"
 
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
@@ -29,19 +30,11 @@ import (
 	tendermintCrypto "github.com/tendermint/tendermint/crypto/ed25519"
 )
 
-const (
-	Int64Type  ExtractorType = "int64"
-	StringType ExtractorType = "string"
-	BytesType  ExtractorType = "bytes"
-)
-
 var (
 	errorLogger = log.New(os.Stdout,
 		"ERROR: ",
 		log.Ldate|log.Ltime|log.Lshortfile)
 )
-
-type ExtractorType string
 
 type Node struct {
 	nebulaId        account.NebulaId
@@ -53,7 +46,7 @@ type Node struct {
 	chainType       account.ChainType
 	blockchain      blockchain.IBlockchainClient
 	extractorClient *extractor.Client
-	extractorType   ExtractorType
+	extractorType   contracts.ExtractorType
 }
 
 func New(cfg config.Config, ctx context.Context) (*Node, error) {
@@ -128,7 +121,7 @@ func New(cfg config.Config, ctx context.Context) (*Node, error) {
 		chainType:       chainType,
 		blockchain:      targetBlockchain,
 		timeout:         cfg.Timeout,
-		extractorType:   ExtractorType(cfg.ExtractorType),
+		extractorType:   contracts.ExtractorType(cfg.ExtractorType),
 	}, nil
 }
 
@@ -513,13 +506,13 @@ func toBytes(value interface{}) []byte {
 	}
 	return nil
 }
-func fromBytes(value []byte, extractorType ExtractorType) interface{} {
+func fromBytes(value []byte, extractorType contracts.ExtractorType) interface{} {
 	switch extractorType {
-	case Int64Type:
+	case contracts.Int64Type:
 		return binary.BigEndian.Uint64(value)
-	case StringType:
+	case contracts.StringType:
 		return string(value)
-	case BytesType:
+	case contracts.BytesType:
 		return value
 	}
 
