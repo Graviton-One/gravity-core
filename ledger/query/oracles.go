@@ -53,15 +53,9 @@ func oraclesByNebula(store *storage.Storage, value []byte) (storage.OraclesMap, 
 		return nil, err
 	}
 
-	var nebula []byte
-	switch rq.ChainType {
-	case account.Ethereum:
-		nebula, err = hexutil.Decode(rq.NebulaAddress)
-		if err != nil {
-			return nil, err
-		}
-	case account.Waves:
-		nebula = base58.Decode(rq.NebulaAddress)
+	nebula, err := account.StringToNebulaId(rq.NebulaAddress, rq.ChainType)
+	if err != nil {
+		return nil, err
 	}
 
 	v, err := store.OraclesByNebula(nebula)

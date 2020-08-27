@@ -11,10 +11,10 @@ import (
 	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
 )
 
-type ConsulPubKey [32]byte  //TODO length
-type OraclesPubKey [33]byte //TODO length
+type ConsulPubKey [32]byte
+type OraclesPubKey [33]byte
 
-func HexToPrivKey(value string, chainType ChainType) (privKey []byte, pubKey OraclesPubKey, err error) {
+func StringToPrivKey(value string, chainType ChainType) (privKey []byte, pubKey OraclesPubKey, err error) {
 	var pubKeyBytes []byte
 	switch chainType {
 	case Ethereum:

@@ -1,4 +1,4 @@
-package waves
+package helpers
 
 import (
 	"context"
@@ -22,7 +22,7 @@ type ClientHelper struct {
 	client *client.Client
 }
 
-func New(client *client.Client) ClientHelper {
+func NewClientHelper(client *client.Client) ClientHelper {
 	return ClientHelper{client: client}
 }
 

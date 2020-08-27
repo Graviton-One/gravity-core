@@ -4,28 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/Gravity-Tech/gravity-core/common/account"
-	"github.com/Gravity-Tech/gravity-core/common/client"
-	"github.com/Gravity-Tech/gravity-core/common/storage"
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
-
-	tendermintCrypto "github.com/tendermint/tendermint/crypto/ed25519"
 )
 
-type ServerConfig struct {
-	Host      string
-	PubKey    account.ConsulPubKey
-	PrivKey   tendermintCrypto.PrivKeyEd25519
-	ChainType account.ChainType
-	GhClient  *client.Client
-}
-type VotesRq struct {
-	votes []storage.Vote
-}
+var cfg *RPCConfig
 
-var cfg ServerConfig
-
-func ListenRpcServer(config ServerConfig) error {
+func ListenRpcServer(config *RPCConfig) error {
 	cfg = config
 	http.HandleFunc("/vote", vote)
 	err := http.ListenAndServe(cfg.Host, nil)
@@ -46,10 +30,10 @@ func vote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := transactions.New(cfg.PubKey, transactions.Vote, cfg.PrivKey, []transactions.Args{
+	tx, err := transactions.New(cfg.pubKey, transactions.Vote, cfg.privKey, []transactions.Args{
 		{Value: b},
 	})
-	err = cfg.GhClient.SendTx(tx)
+	err = cfg.client.SendTx(tx)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
