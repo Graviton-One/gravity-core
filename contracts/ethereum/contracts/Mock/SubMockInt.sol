@@ -9,8 +9,9 @@ contract SubMockInt is ISubscriberInt {
         nebulaAddress = newNebulaAddress;
         reward = newReward;
     }
+    
     receive() external payable { } 
-
+    
     function attachValue(uint64 data) public {
     }
 

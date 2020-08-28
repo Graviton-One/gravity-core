@@ -3,6 +3,9 @@ pragma solidity ^0.7.0;
 import "../Gravity/Gravity.sol";
 import "../libs/Queue.sol";
 import "./NModels.sol";
+import "../interfaces/ISubscriberBytes.sol";
+import "../interfaces/ISubscriberInt.sol";
+import "../interfaces/ISubscriberString.sol";
 
 contract Nebula {
     event NewPulse(uint256 height, bytes32 dataHash);
@@ -12,7 +15,6 @@ contract Nebula {
     QueueLib.Queue public subscriptionsQueue;
     QueueLib.Queue public pulseQueue;
 
-    address public senderToSubs;
     address[] public oracles;
     uint256 public bftValue;
     address public gravityContract;
@@ -23,16 +25,14 @@ contract Nebula {
     mapping(uint256 => NModels.Pulse) public pulses;
     mapping(uint256 => mapping(bytes32 => bool)) public isPublseSubSent;
 
-    constructor(NModels.DataType newDataType, address newGravityContract, address[] memory newOracle, address newSenderToSubs, uint256 newBftValue) public {
+    constructor(NModels.DataType newDataType, address newGravityContract, address[] memory newOracle, uint256 newBftValue) public {
         dataType = newDataType;
         oracles = newOracle;
         bftValue = newBftValue;
         gravityContract = newGravityContract;
-        senderToSubs = newSenderToSubs;
     }
-
+    
     receive() external payable { } 
-
 
     function getOracles() public view returns(address[] memory) {
         return oracles;
@@ -40,9 +40,6 @@ contract Nebula {
 
     function getSubscribersIds() public view returns(bytes32[] memory) {
         return subscriptionIds;
-    }
-    function getContractAddressBySubId(bytes32 subId) public view returns(address payable) {
-        return subscriptions[subId].contractAddress;
     }
 
     function sendHashValue(bytes32 dataHash, uint8[] memory v, bytes32[] memory r, bytes32[] memory s) public {
@@ -81,9 +78,26 @@ contract Nebula {
        rounds[newRound] = true;
     }
 
-    function setPublseSubSent(uint256 blockNumber, bytes32 id) public {
-        require(msg.sender == senderToSubs, "invalid sender");
-        isPublseSubSent[blockNumber][id] = true;
+    function sendValueToSub(uint256 blockNumber, bytes32 subId) internal {
+        require(blockNumber <= block.number + 1, "invalid block number");
+        require(isPublseSubSent[blockNumber][subId] == false, "sub sent");
+        
+        isPublseSubSent[blockNumber][subId] = true;
+    }
+
+    function sendValueToSubByte(bytes memory value, uint256 blockNumber, bytes32 subId) public {
+        sendValueToSub(blockNumber, subId);
+        ISubscriberBytes(subscriptions[subId].contractAddress).attachValue(value);
+    }
+
+    function sendValueToSubInt(int64 value, uint256 blockNumber, bytes32 subId) public {
+        sendValueToSub(blockNumber, subId);
+        ISubscriberInt(subscriptions[subId].contractAddress).attachValue(value);
+    }
+
+    function sendValueToSubString(string memory value, uint256 blockNumber, bytes32 subId) public {
+        sendValueToSub(blockNumber, subId);
+        ISubscriberString(subscriptions[subId].contractAddress).attachValue(value);
     }
 
 
