@@ -25,16 +25,16 @@ func (node *Node) commit(data interface{}, tcHeight uint64) ([]byte, error) {
 			Value: commit,
 		},
 		{
-			Value: node.tcPubKey,
+			Value: node.oraclePubKey,
 		},
 	}
 
-	tx, err := transactions.New(node.ghPubKey, transactions.Commit, node.ghPrivKey, args)
+	tx, err := transactions.New(node.validator.pubKey, transactions.Commit, node.validator.privKey, args)
 	if err != nil {
 		return nil, err
 	}
 
-	err = node.ghClient.SendTx(tx)
+	err = node.gravityClient.SendTx(tx)
 	if err != nil {
 		return nil, err
 	}
@@ -61,16 +61,16 @@ func (node *Node) reveal(tcHeight uint64, reveal interface{}, commit []byte) err
 			Value: reveal,
 		},
 		{
-			Value: node.tcPubKey,
+			Value: node.oraclePubKey,
 		},
 	}
 
-	tx, err := transactions.New(node.ghPubKey, transactions.Reveal, node.ghPrivKey, args)
+	tx, err := transactions.New(node.validator.pubKey, transactions.Reveal, node.validator.privKey, args)
 	if err != nil {
 		return err
 	}
 
-	err = node.ghClient.SendTx(tx)
+	err = node.gravityClient.SendTx(tx)
 	if err != nil {
 		return err
 	}
@@ -80,16 +80,16 @@ func (node *Node) reveal(tcHeight uint64, reveal interface{}, commit []byte) err
 }
 func (node *Node) signResult(tcHeight uint64, ctx context.Context) (bool, interface{}, []byte, error) {
 	var values []interface{}
-	bytesValues, err := node.ghClient.Results(tcHeight, node.chainType, node.nebulaId)
+	bytesValues, err := node.gravityClient.Results(tcHeight, node.chainType, node.nebulaId)
 	if err != nil {
 		return false, nil, nil, err
 	}
 
 	for _, v := range bytesValues {
-		values = append(values, fromBytes(v, node.extractorType))
+		values = append(values, fromBytes(v, node.extractor.ExtractorType))
 	}
 
-	result, err := node.extractorClient.Aggregate(values, ctx)
+	result, err := node.extractor.Aggregate(values, ctx)
 	if err != nil {
 		return false, nil, nil, err
 	}
@@ -115,15 +115,15 @@ func (node *Node) signResult(tcHeight uint64, ctx context.Context) (bool, interf
 			Value: byte(node.chainType),
 		},
 		{
-			Value: node.tcPubKey,
+			Value: node.oraclePubKey,
 		},
 	}
-	tx, err := transactions.New(node.ghPubKey, transactions.Result, node.ghPrivKey, args)
+	tx, err := transactions.New(node.validator.pubKey, transactions.Result, node.validator.privKey, args)
 	if err != nil {
 		return false, nil, nil, err
 	}
 
-	err = node.ghClient.SendTx(tx)
+	err = node.gravityClient.SendTx(tx)
 	if err != nil {
 		return false, nil, nil, err
 	}

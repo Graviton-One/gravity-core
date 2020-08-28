@@ -7,13 +7,21 @@ import (
 
 type AdaptorsConfig struct {
 	NodeUrl                string
+	BootstrapUrl           string
 	GravityContractAddress string
 	PrivKey                string
 	Nebulae                []string
 }
+
+type Genesis struct {
+	InitScore                 map[string]uint64
+	OraclesAddressByValidator map[string]map[string]string
+}
+
 type Config struct {
-	InitScore map[string]uint64
-	Adapters  map[string]AdaptorsConfig
+	Genesis      Genesis
+	BootstrapUrl *string
+	Adapters     map[string]AdaptorsConfig
 }
 
 func Load(filename string) (Config, error) {

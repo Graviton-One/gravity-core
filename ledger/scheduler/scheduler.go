@@ -45,12 +45,23 @@ func New(adaptors map[account.ChainType]*AdaptorConfig, ledger *LedgerValidator,
 }
 
 func (scheduler *Scheduler) HandleBlock(height int64, store *storage.Storage) error {
-	roundId := height / CalculateScoreInterval
+	lastHeight, err := store.LastHeight()
+	if err != nil {
+		return err
+	}
+
 	if height%CalculateScoreInterval == 0 {
 		if err := scheduler.calculateScores(store); err != nil {
 			return err
 		}
-	} else if height%CalculateScoreInterval < CalculateScoreInterval/2 {
+	}
+
+	if uint64(height) < lastHeight {
+		return nil
+	}
+
+	roundId := height / CalculateScoreInterval
+	if height%CalculateScoreInterval < CalculateScoreInterval/2 {
 		for k, v := range scheduler.Adaptors {
 			err := scheduler.signConsulsResult(roundId, k, store)
 			if err != nil {
@@ -58,7 +69,7 @@ func (scheduler *Scheduler) HandleBlock(height int64, store *storage.Storage) er
 			}
 
 			for _, v := range v.Nebulae {
-				err := scheduler.signOracleResultByNebula(roundId, v, account.Waves, store)
+				err := scheduler.signOracleResultByNebula(roundId, v, k, store)
 				if err != nil {
 					continue
 				}
@@ -83,44 +94,6 @@ func (scheduler *Scheduler) HandleBlock(height int64, store *storage.Storage) er
 	return nil
 }
 
-/*
-func (scheduler *Scheduler) setPrivKeys(storage *storage.Storage, chainType account.ChainType) error {
-	oracles, err := storage.OraclesByConsul(scheduler.Ledger.PubKey)
-	if err != nil {
-		return err
-	}
-
-	if _, ok := oracles[chainType]; ok {
-		return nil
-	}
-
-	args := []transactions.Args{
-		{
-			Value: chainType,
-		},
-		{
-			Value: scheduler.Blockchains[chainType].PubKey(),
-		},
-	}
-
-	tx, err := transactions.New(scheduler.Ledger.PubKey, transactions.AddOracle, scheduler.Ledger.PrivKey, args)
-	if err != nil {
-		return err
-	}
-
-	ghClient, err := ghClient.NewGravityClient(scheduler.GhNode)
-	if err != nil {
-		return err
-	}
-
-	err = ghClient.SendTx(tx)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-*/
 func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.ChainType, store *storage.Storage) error {
 	_, err := store.SignConsulsResultByConsul(scheduler.Ledger.PubKey, chainType, roundId)
 	if err == badger.ErrKeyNotFound {
@@ -249,7 +222,7 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 
 	var signs [][]byte
 	for _, v := range prevConsuls {
-		sign, err := store.SignConsulsResultByConsul(v.PubKey, account.Waves, round)
+		sign, err := store.SignConsulsResultByConsul(v.PubKey, chainType, round)
 		if err != nil && err != storage.ErrKeyNotFound {
 			return err
 		}

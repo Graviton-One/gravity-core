@@ -3,7 +3,6 @@ module github.com/Gravity-Tech/gravity-core
 go 1.14
 
 require (
-	github.com/Gravity-Hub-Org/proof-of-concept v1.0.0 // indirect
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/dgraph-io/badger v1.6.1
 	github.com/ethereum/go-ethereum v1.9.18

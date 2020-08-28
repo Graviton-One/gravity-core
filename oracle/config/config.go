@@ -5,17 +5,23 @@ import (
 	"io/ioutil"
 )
 
-type Config struct {
-	GHPrivKey     string
-	TCPrivKey     string
-	RPCHost       string
-	NodeUrl       string
-	GHNodeURL     string
-	Timeout       int
-	NebulaId      string
-	ChainType     string
+type ExtractorConfig struct {
 	ExtractorType string
 	ExtractorUrl  string
+}
+type Secrets struct {
+	ValidatorPrivKey string
+	OracleSecretKey  string
+}
+
+type Config struct {
+	RPCHost            string
+	TargetChainNodeUrl string
+	GravityNodeUrl     string
+	NebulaId           string
+	ChainType          string
+	Secrets            Secrets
+	Extractor          ExtractorConfig
 }
 
 func Load(filename string) (Config, error) {

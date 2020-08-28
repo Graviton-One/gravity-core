@@ -9,6 +9,9 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/Gravity-Tech/gravity-core/common/client"
+	"github.com/Gravity-Tech/gravity-core/common/transactions"
+
 	"github.com/Gravity-Tech/gravity-core/ledger/config"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
@@ -159,7 +162,7 @@ func crateApp(db *badger.DB, pv *privval.FilePV, configFile string, ctx context.
 		if err != nil {
 			return nil, err
 		}
-		privKey, _, err := account.StringToPrivKey(v.PrivKey, chainType)
+		privKey, err := account.StringToPrivKey(v.PrivKey, chainType)
 		if err != nil {
 			return nil, err
 		}
@@ -192,6 +195,13 @@ func crateApp(db *badger.DB, pv *privval.FilePV, configFile string, ctx context.
 			Nebulae:            nebulae,
 		}
 		nodeUrls[chainType] = v.NodeUrl
+
+		if cfg.BootstrapUrl != nil {
+			err := setOraclePubKey(*cfg.BootstrapUrl, ledgerValidator.PubKey, ledgerValidator.PrivKey, adaptor.PubKey(), chainType)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	blockScheduler, err := scheduler.New(adaptersConfig, ledgerValidator, ctx)
@@ -199,10 +209,75 @@ func crateApp(db *badger.DB, pv *privval.FilePV, configFile string, ctx context.
 		return nil, err
 	}
 
-	application, err := app.NewGHApplication(nodeUrls[account.Ethereum], nodeUrls[account.Waves], blockScheduler, db, cfg.InitScore, ctx)
+	genesis := new(app.Genesis)
+	for k, v := range cfg.Genesis.InitScore {
+		pubKey, err := account.HexToValidatorPubKey(k)
+		if err != nil {
+			return nil, err
+		}
+		genesis.InitScore[pubKey] = v
+	}
+	for k, v := range cfg.Genesis.OraclesAddressByValidator {
+		validatorPubKey, err := account.HexToValidatorPubKey(k)
+		if err != nil {
+			return nil, err
+		}
+		for chainTypeString, oracle := range v {
+			chainType, err := account.ParseChainType(chainTypeString)
+			if err != nil {
+				return nil, err
+			}
+
+			oraclePubKey, err := account.StringToOraclePubKey(oracle, chainType)
+			if err != nil {
+				return nil, err
+			}
+
+			genesis.OraclesAddressByValidator[validatorPubKey][chainType] = oraclePubKey
+		}
+	}
+
+	application, err := app.NewGHApplication(nodeUrls[account.Ethereum], nodeUrls[account.Waves], blockScheduler, db, genesis, ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	return application, nil
+}
+
+func setOraclePubKey(bootstrapUrl string, pubKey account.ConsulPubKey, privKey ed25519.PrivKeyEd25519, oracle account.OraclesPubKey, chainType account.ChainType) error {
+	gravityClient, err := client.NewGravityClient(bootstrapUrl)
+	if err != nil {
+		return err
+	}
+
+	oracles, err := gravityClient.OraclesByValidator(pubKey)
+	if err != nil {
+		return err
+	}
+
+	if _, ok := oracles[chainType]; ok {
+		return nil
+	}
+
+	args := []transactions.Args{
+		{
+			Value: chainType,
+		},
+		{
+			Value: oracle,
+		},
+	}
+
+	tx, err := transactions.New(pubKey, transactions.AddOracle, privKey, args)
+	if err != nil {
+		return err
+	}
+
+	err = gravityClient.SendTx(tx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

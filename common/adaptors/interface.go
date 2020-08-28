@@ -10,7 +10,7 @@ type IBlockchainAdaptor interface {
 	GetHeight(ctx context.Context) (uint64, error)
 	WaitTx(id string, ctx context.Context) error
 	Sign(msg []byte) ([]byte, error)
-	PubKey() []byte
+	PubKey() account.OraclesPubKey
 
 	SendDataResult(nebulaId account.NebulaId, tcHeight uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error)
 	SendDataToSubs(nebulaId account.NebulaId, tcHeight uint64, value interface{}, ctx context.Context) error

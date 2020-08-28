@@ -81,9 +81,11 @@ func (adaptor *WavesAdaptor) Sign(msg []byte) ([]byte, error) {
 	}
 	return sig.Bytes(), nil
 }
-func (adaptor *WavesAdaptor) PubKey() []byte {
+func (adaptor *WavesAdaptor) PubKey() account.OraclesPubKey {
+	var oraclePubKey account.OraclesPubKey
 	pubKey := wavesCrypto.GeneratePublicKey(adaptor.secret)
-	return pubKey.Bytes()
+	copy(oraclePubKey[:], pubKey.Bytes())
+	return oraclePubKey
 }
 
 func (adaptor *WavesAdaptor) SendDataResult(nebulaId account.NebulaId, tcHeight uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {

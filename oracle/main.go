@@ -8,6 +8,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Gravity-Tech/gravity-core/common/account"
+
+	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
+
 	"github.com/Gravity-Tech/gravity-core/oracle/config"
 	"github.com/Gravity-Tech/gravity-core/oracle/node"
 	"github.com/Gravity-Tech/gravity-core/oracle/rpc"
@@ -44,17 +48,49 @@ func start(ctx context.Context) error {
 		return err
 	}
 
-	oracleNode, err := node.New(cfg, ctx)
+	validatorPrivKey, err := base64.StdEncoding.DecodeString(cfg.Secrets.ValidatorPrivKey)
 	if err != nil {
 		return err
 	}
 
-	privKey, err := base64.StdEncoding.DecodeString(cfg.GHPrivKey)
+	chainType, err := account.ParseChainType(cfg.ChainType)
 	if err != nil {
 		return err
 	}
 
-	rpcConfig, err := rpc.NewRPCConfig(cfg.RPCHost, cfg.GHNodeURL, privKey)
+	nebula, err := account.StringToNebulaId(cfg.NebulaId, chainType)
+	if err != nil {
+		return err
+	}
+
+	oracleSecretKey, err := account.StringToPrivKey(cfg.Secrets.OracleSecretKey, chainType)
+	if err != nil {
+		return err
+	}
+
+	oracleNode, err := node.New(
+		nebula,
+		chainType,
+		oracleSecretKey,
+		node.NewValidator(validatorPrivKey),
+		&node.Extractor{
+			ExtractorType: node.ExtractorType(cfg.Extractor.ExtractorType),
+			Client:        extractor.New(cfg.Extractor.ExtractorUrl),
+		},
+		cfg.GravityNodeUrl,
+		cfg.TargetChainNodeUrl,
+		ctx)
+
+	if err != nil {
+		return err
+	}
+
+	rpcConfig, err := rpc.NewRPCConfig(cfg.RPCHost, cfg.RPCHost, validatorPrivKey)
+	if err != nil {
+		return err
+	}
+
+	err = oracleNode.Init()
 	if err != nil {
 		return err
 	}

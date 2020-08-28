@@ -14,7 +14,6 @@ import (
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/client"
 	"github.com/Gravity-Tech/gravity-core/common/contracts"
-	"github.com/Gravity-Tech/gravity-core/common/contracts/sender"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -109,8 +108,10 @@ func (adaptor *EthereumAdaptor) Sign(msg []byte) ([]byte, error) {
 func (adaptor *EthereumAdaptor) WaitTx(id string, ctx context.Context) error {
 	return nil
 }
-func (adaptor *EthereumAdaptor) PubKey() []byte {
-	return crypto.PubkeyToAddress(adaptor.privKey.PublicKey).Bytes()
+func (adaptor *EthereumAdaptor) PubKey() account.OraclesPubKey {
+	var oraclePubKey account.OraclesPubKey
+	copy(oraclePubKey[:], crypto.PubkeyToAddress(adaptor.privKey.PublicKey).Bytes())
+	return oraclePubKey
 }
 
 func (adaptor *EthereumAdaptor) SendDataResult(nebulaId account.NebulaId, tcHeight uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
@@ -210,39 +211,20 @@ func (adaptor *EthereumAdaptor) SendDataToSubs(nebulaId account.NebulaId, tcHeig
 		}
 
 		transactOpt := bind.NewKeyedTransactor(adaptor.privKey)
-		subSenderAddress, err := nebula.SenderToSubs(nil)
-		if err != nil {
-			return err
-		}
 
 		switch SubType(t) {
 		case Int64:
-			subsSenderContract, err := sender.NewSubsSenderInt(subSenderAddress, adaptor.ethClient)
-			if err != nil {
-				return err
-			}
-
-			_, err = subsSenderContract.SendValueToSub(transactOpt, value.(int64), big.NewInt(int64(tcHeight)), id)
+			_, err = nebula.SendValueToSubInt(transactOpt, value.(int64), big.NewInt(int64(tcHeight)), id)
 			if err != nil {
 				return err
 			}
 		case String:
-			subsSenderContract, err := sender.NewSubsSenderString(subSenderAddress, adaptor.ethClient)
-			if err != nil {
-				return err
-			}
-
-			_, err = subsSenderContract.SendValueToSub(transactOpt, value.(string), big.NewInt(int64(tcHeight)), id)
+			_, err = nebula.SendValueToSubString(transactOpt, value.(string), big.NewInt(int64(tcHeight)), id)
 			if err != nil {
 				return err
 			}
 		case Bytes:
-			subsSenderContract, err := sender.NewSubsSenderBytes(subSenderAddress, adaptor.ethClient)
-			if err != nil {
-				return err
-			}
-
-			_, err = subsSenderContract.SendValueToSub(transactOpt, value.([]byte), big.NewInt(int64(tcHeight)), id)
+			_, err = nebula.SendValueToSubByte(transactOpt, value.([]byte), big.NewInt(int64(tcHeight)), id)
 			if err != nil {
 				return err
 			}

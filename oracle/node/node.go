@@ -2,7 +2,6 @@ package node
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"os"
 	"time"
@@ -17,11 +16,6 @@ import (
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
 	"github.com/Gravity-Tech/gravity-core/common/client"
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
-	"github.com/Gravity-Tech/gravity-core/oracle/config"
-
-	"github.com/btcsuite/btcutil/base58"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	tendermintCrypto "github.com/tendermint/tendermint/crypto/ed25519"
 )
@@ -30,6 +24,7 @@ const (
 	Int64Type  ExtractorType = "int64"
 	StringType ExtractorType = "string"
 	BytesType  ExtractorType = "bytes"
+	Timeout                  = 10
 )
 
 var (
@@ -40,110 +35,95 @@ var (
 
 type ExtractorType string
 
-type Node struct {
-	nebulaId        account.NebulaId
-	tcPubKey        account.OraclesPubKey
-	ghPrivKey       tendermintCrypto.PrivKeyEd25519
-	ghPubKey        account.ConsulPubKey
-	ghClient        *client.GravityClient
-	timeout         int
-	chainType       account.ChainType
-	adaptor         adaptors.IBlockchainAdaptor
-	extractorClient *extractor.Client
-	extractorType   ExtractorType
+type Validator struct {
+	privKey tendermintCrypto.PrivKeyEd25519
+	pubKey  account.ConsulPubKey
 }
 
-func New(cfg config.Config, ctx context.Context) (*Node, error) {
-	chainType, err := account.ParseChainType(cfg.ChainType)
-	if err != nil {
-		return nil, err
-	}
-
-	var nebulaId account.NebulaId
-	switch chainType {
-	case account.Waves:
-		nebulaId = base58.Decode(cfg.NebulaId)
-	case account.Ethereum:
-		nebulaId, err = hexutil.Decode(cfg.NebulaId)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	ghClient, err := client.NewGravityClient(cfg.GHNodeURL)
-	if err != nil {
-		return nil, err
-	}
-
-	tcPrivKey, tcPubKey, err := account.StringToPrivKey(cfg.TCPrivKey, chainType)
-	if err != nil {
-		return nil, err
-	}
-
-	ghPrivKeyBytes, err := base64.StdEncoding.DecodeString(cfg.GHPrivKey)
-	if err != nil {
-		return nil, err
-	}
-
-	ghPrivKey := tendermintCrypto.PrivKeyEd25519{}
-	copy(ghPrivKey[:], ghPrivKeyBytes)
+func NewValidator(privKey []byte) *Validator {
+	validatorPrivKey := tendermintCrypto.PrivKeyEd25519{}
+	copy(validatorPrivKey[:], privKey)
 
 	var ghPubKey account.ConsulPubKey
-	copy(ghPubKey[:], ghPrivKey.PubKey().Bytes()[5:])
+	copy(ghPubKey[:], validatorPrivKey.PubKey().Bytes()[5:])
+
+	return &Validator{
+		privKey: validatorPrivKey,
+		pubKey:  ghPubKey,
+	}
+}
+
+type Extractor struct {
+	*extractor.Client
+	ExtractorType ExtractorType
+}
+
+type Node struct {
+	nebulaId  account.NebulaId
+	chainType account.ChainType
+
+	validator     *Validator
+	oraclePubKey  account.OraclesPubKey
+	gravityClient *client.GravityClient
+
+	adaptor   adaptors.IBlockchainAdaptor
+	extractor *Extractor
+}
+
+func New(nebulaId account.NebulaId, chainType account.ChainType, oracleSecretKey []byte, validator *Validator, extractor *Extractor, gravityNodeUrl string, targetChainNodeUrl string, ctx context.Context) (*Node, error) {
+	ghClient, err := client.NewGravityClient(gravityNodeUrl)
+	if err != nil {
+		return nil, err
+	}
 
 	var adaptor adaptors.IBlockchainAdaptor
 	switch chainType {
 	case account.Ethereum:
-		adaptor, err = adaptors.NewEthereumAdaptor(tcPrivKey, cfg.NodeUrl, ctx, adaptors.EthAdapterWithGhClient(ghClient))
+		adaptor, err = adaptors.NewEthereumAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.EthAdapterWithGhClient(ghClient))
 		if err != nil {
 			return nil, err
 		}
 	case account.Waves:
-		adaptor, err = adaptors.NewWavesAdapter(tcPrivKey, cfg.NodeUrl, adaptors.WavesAdapterWithGhClient(ghClient))
+		adaptor, err = adaptors.NewWavesAdapter(oracleSecretKey, targetChainNodeUrl, adaptors.WavesAdapterWithGhClient(ghClient))
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	extractorClient := extractor.New(cfg.ExtractorUrl)
-
 	return &Node{
-		tcPubKey:        tcPubKey,
-		nebulaId:        nebulaId,
-		ghPrivKey:       ghPrivKey,
-		ghPubKey:        ghPubKey,
-		ghClient:        ghClient,
-		extractorClient: extractorClient,
-		chainType:       chainType,
-		adaptor:         adaptor,
-		timeout:         cfg.Timeout,
-		extractorType:   ExtractorType(cfg.ExtractorType),
+		validator:     validator,
+		nebulaId:      nebulaId,
+		extractor:     extractor,
+		chainType:     chainType,
+		adaptor:       adaptor,
+		gravityClient: ghClient,
+		oraclePubKey:  adaptor.PubKey(),
 	}, nil
 }
 
 func (node *Node) Init() error {
-	oraclesByValidator, err := node.ghClient.OraclesByValidator(node.ghPubKey)
+	oraclesByValidator, err := node.gravityClient.OraclesByValidator(node.validator.pubKey)
 	if err != nil {
 		return err
 	}
 
 	oracle, ok := oraclesByValidator[node.chainType]
-	if !ok || oracle == node.tcPubKey {
+	if !ok || oracle == node.oraclePubKey {
 		args := []transactions.Args{
 			{
 				Value: node.chainType,
 			},
 			{
-				Value: node.tcPubKey,
+				Value: node.oraclePubKey,
 			},
 		}
 
-		tx, err := transactions.New(node.ghPubKey, transactions.AddOracle, node.ghPrivKey, args)
+		tx, err := transactions.New(node.validator.pubKey, transactions.AddOracle, node.validator.privKey, args)
 		if err != nil {
 			return err
 		}
 
-		err = node.ghClient.SendTx(tx)
+		err = node.gravityClient.SendTx(tx)
 		if err != nil {
 			return err
 		}
@@ -152,28 +132,28 @@ func (node *Node) Init() error {
 		time.Sleep(time.Duration(5) * time.Second)
 	}
 
-	oraclesByNebulaKey, err := node.ghClient.OraclesByNebula(node.nebulaId, node.chainType)
+	oraclesByNebulaKey, err := node.gravityClient.OraclesByNebula(node.nebulaId, node.chainType)
 	if err != nil {
 		return err
 	}
 
-	_, ok = oraclesByNebulaKey[node.tcPubKey]
+	_, ok = oraclesByNebulaKey[node.oraclePubKey]
 	if !ok {
 		args := []transactions.Args{
 			{
 				Value: node.nebulaId,
 			},
 			{
-				Value: node.tcPubKey,
+				Value: node.oraclePubKey,
 			},
 		}
 
-		tx, err := transactions.New(node.ghPubKey, transactions.AddOracleInNebula, node.ghPrivKey, args)
+		tx, err := transactions.New(node.validator.pubKey, transactions.AddOracleInNebula, node.validator.privKey, args)
 		if err != nil {
 			return err
 		}
 
-		err = node.ghClient.SendTx(tx)
+		err = node.gravityClient.SendTx(tx)
 		if err != nil {
 			return err
 		}
@@ -188,7 +168,7 @@ func (node *Node) Start(ctx context.Context) {
 	var lastLedgerHeight uint64
 	roundState := make(map[uint64]*RoundState)
 	for {
-		info, err := node.ghClient.HttpClient.Status()
+		info, err := node.gravityClient.HttpClient.Status()
 		if err != nil {
 			errorLogger.Print(err)
 		} else {
@@ -204,7 +184,7 @@ func (node *Node) Start(ctx context.Context) {
 			}
 		}
 
-		time.Sleep(time.Duration(node.timeout) * time.Second)
+		time.Sleep(time.Duration(Timeout) * time.Second)
 	}
 }
 
@@ -214,7 +194,7 @@ func (node *Node) execute(ledgerHeight uint64, roundState map[uint64]*RoundState
 		return err
 	}
 
-	roundHeight, err := node.ghClient.RoundHeight(node.chainType, ledgerHeight)
+	roundHeight, err := node.gravityClient.RoundHeight(node.chainType, ledgerHeight)
 	if err != nil && err != client.ErrValueNotFound {
 		return err
 	}
@@ -234,11 +214,11 @@ func (node *Node) execute(ledgerHeight uint64, roundState map[uint64]*RoundState
 			},
 		}
 
-		tx, err := transactions.New(node.ghPubKey, transactions.NewRound, node.ghPrivKey, args)
+		tx, err := transactions.New(node.validator.pubKey, transactions.NewRound, node.validator.privKey, args)
 		if err != nil {
 			return err
 		}
-		err = node.ghClient.SendTx(tx)
+		err = node.gravityClient.SendTx(tx)
 		if err != nil {
 			return err
 		}
@@ -253,12 +233,12 @@ func (node *Node) execute(ledgerHeight uint64, roundState map[uint64]*RoundState
 			return nil
 		}
 
-		_, err := node.ghClient.CommitHash(node.chainType, node.nebulaId, int64(tcHeight), node.tcPubKey)
+		_, err := node.gravityClient.CommitHash(node.chainType, node.nebulaId, int64(tcHeight), node.oraclePubKey)
 		if err != nil && err != client.ErrValueNotFound {
 			return err
 		}
 
-		data, err := node.extractorClient.Extract(ctx)
+		data, err := node.extractor.Extract(ctx)
 		if err != nil {
 			return err
 		}
@@ -274,7 +254,7 @@ func (node *Node) execute(ledgerHeight uint64, roundState map[uint64]*RoundState
 		if _, ok := roundState[tcHeight]; !ok {
 			return nil
 		}
-		_, err := node.ghClient.Reveal(node.nebulaId, int64(tcHeight), roundState[tcHeight].commitHash)
+		_, err := node.gravityClient.Reveal(node.nebulaId, int64(tcHeight), roundState[tcHeight].commitHash)
 		if err != nil && err != client.ErrValueNotFound {
 			return err
 		}
@@ -288,7 +268,7 @@ func (node *Node) execute(ledgerHeight uint64, roundState map[uint64]*RoundState
 			return nil
 		}
 
-		_, err := node.ghClient.Result(node.chainType, node.nebulaId, int64(tcHeight), node.tcPubKey)
+		_, err := node.gravityClient.Result(node.chainType, node.nebulaId, int64(tcHeight), node.oraclePubKey)
 		if err != nil && err != client.ErrValueNotFound {
 			return err
 		}
@@ -306,14 +286,14 @@ func (node *Node) execute(ledgerHeight uint64, roundState map[uint64]*RoundState
 		var oracles []account.OraclesPubKey
 		var myRound uint64
 
-		oraclesMap, err := node.ghClient.BftOraclesByNebula(node.chainType, node.nebulaId)
+		oraclesMap, err := node.gravityClient.BftOraclesByNebula(node.chainType, node.nebulaId)
 		if err != nil {
 			return err
 		}
 		var count uint64
 		for oracle, _ := range oraclesMap {
 			oracles = append(oracles, oracle)
-			if node.tcPubKey == oracle {
+			if node.oraclePubKey == oracle {
 				myRound = count
 			}
 			count++
@@ -326,7 +306,7 @@ func (node *Node) execute(ledgerHeight uint64, roundState map[uint64]*RoundState
 			return nil
 		}
 
-		_, err = node.ghClient.Result(node.chainType, node.nebulaId, int64(tcHeight), node.tcPubKey)
+		_, err = node.gravityClient.Result(node.chainType, node.nebulaId, int64(tcHeight), node.oraclePubKey)
 		if err == client.ErrValueNotFound {
 			return nil
 		} else if err != nil {
@@ -344,23 +324,14 @@ func (node *Node) execute(ledgerHeight uint64, roundState map[uint64]*RoundState
 
 		roundState[tcHeight].isSent = true
 
-		//TODO
-		if txId == "" {
-			go func(txId string) {
-				err := node.adaptor.WaitTx(txId, ctx)
-				if err != nil {
-					println(err.Error())
-					return
-				}
-				for i := 0; i < 1; i++ {
-					err = node.adaptor.SendDataToSubs(node.nebulaId, tcHeight, roundState[tcHeight].resultValue, ctx)
-					if err != nil {
-						time.Sleep(time.Second)
-						continue
-					}
-					break
-				}
-			}(txId)
+		err = node.adaptor.WaitTx(txId, ctx)
+		if err != nil {
+			return err
+		}
+
+		err = node.adaptor.SendDataToSubs(node.nebulaId, tcHeight, roundState[tcHeight].resultValue, ctx)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
