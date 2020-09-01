@@ -19,7 +19,7 @@ import (
 
 	"github.com/wavesplatform/gowaves/pkg/crypto"
 
-	"github.com/Gravity-Tech/gravity-core/common/helpers/waves"
+	"github.com/Gravity-Tech/gravity-core/common/helpers"
 	wavesClient "github.com/wavesplatform/gowaves/pkg/client"
 )
 
@@ -32,7 +32,7 @@ const (
 )
 
 type TestPulseConfig struct {
-	Helper waves.ClientHelper
+	Helper helpers.ClientHelper
 	Client *wavesClient.Client
 	Ctx    context.Context
 
@@ -88,7 +88,7 @@ func initTests() (*TestPulseConfig, error) {
 		return nil, err
 	}
 	testConfig.Client = wClient
-	testConfig.Helper = waves.NewClientHelper(testConfig.Client)
+	testConfig.Helper = helpers.NewClientHelper(testConfig.Client)
 
 	testConfig.Gravity, err = GenerateAddress(ChainId)
 	if err != nil {
@@ -413,12 +413,12 @@ func testSendSubPositive(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	lastHeightState, _, err := config.Helper.GetStateByAddressAndKey(config.Nebula.Address, "last_height", config.Ctx)
+	lastPulseState, _, err := config.Helper.GetStateByAddressAndKey(config.Nebula.Address, "last_pulse_id", config.Ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	lastHeight := int64(lastHeightState.Value.(float64))
+	lastPulseId := int64(lastPulseState.Value.(float64))
 	recipient, err = proto.NewAddressFromString(config.Sub.Address)
 	if err != nil {
 		t.Fatal(err)
@@ -435,7 +435,7 @@ func testSendSubPositive(t *testing.T) {
 					Value: id,
 				},
 				proto.IntegerArgument{
-					Value: lastHeight,
+					Value: lastPulseId,
 				},
 			},
 		},
@@ -457,7 +457,7 @@ func testSendSubPositive(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	subValue, _, err := config.Helper.GetStateByAddressAndKey(config.Sub.Address, fmt.Sprintf("%d", lastHeight), config.Ctx)
+	subValue, _, err := config.Helper.GetStateByAddressAndKey(config.Sub.Address, fmt.Sprintf("%d", lastPulseId), config.Ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -530,12 +530,12 @@ func testSendSubInvalidHash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	lastHeightState, _, err := config.Helper.GetStateByAddressAndKey(config.Nebula.Address, "last_height", config.Ctx)
+	lastPulseId, _, err := config.Helper.GetStateByAddressAndKey(config.Nebula.Address, "last_pulse_id", config.Ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	lastHeight := int64(lastHeightState.Value.(float64))
+	lastPulse := int64(lastPulseId.Value.(float64))
 	recipient, err = proto.NewAddressFromString(config.Sub.Address)
 	if err != nil {
 		t.Fatal(err)
@@ -552,7 +552,7 @@ func testSendSubInvalidHash(t *testing.T) {
 					Value: make([]byte, 32, 32),
 				},
 				proto.IntegerArgument{
-					Value: lastHeight,
+					Value: lastPulse,
 				},
 			},
 		},

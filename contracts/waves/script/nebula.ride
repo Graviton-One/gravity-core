@@ -41,11 +41,17 @@ func getStringByAddressAndKey(address: Address,key: String) = {
 let OraclesKey = "oracles"
 let ConsulsKey = "consuls"
 let SubscriberAddressKey = "subscriber_address"
+let TypeKey = "type"
 let GravityContractKey = "gravity_contract"
 let BftCoefficientKey = "bft_coefficient"
+
 let LastHeightKey = "last_height"
 let LastRoundKey = "last_round"
-let TypeKey = "type"
+let LastPulseIdKey = "last_pulse_id"
+
+func getHashDataKey(pulseId: Int) = "data_hash_" + toString(pulseId)
+func getHeightByPulseKey(pulseId: Int) = "height_" + toString(pulseId)
+
 #-------------------Global vars-------------------------
 let oracles = getStringByKey(OraclesKey).split(",")
 let bftCoefficient = getNumberByKey(BftCoefficientKey)
@@ -53,6 +59,10 @@ let gracityContract = addressFromStringValue(getStringByKey(GravityContractKey))
 let consuls = getStringByAddressAndKey(gracityContract, ConsulsKey).split(",")
 let subscriberAddress = getStringByKey(SubscriberAddressKey)
 let type = getNumberByKey(TypeKey)
+let lastPulseId = getNumberByKey(LastPulseIdKey)
+
+func getHashData(pulseId: Int) = getBytesByKey(getHashDataKey(pulseId))
+func getHeightByPulse(pulseId: Int) = getNumberByKey(getHeightByPulseKey(pulseId))
 
 func validateSign(hash: ByteVector, sign: String, oracle: String) = {
     if (sign != "nil") then 
@@ -75,13 +85,15 @@ func sendHashValue(hash: ByteVector, signs: String) = {
     else if(getBytesByKey(toString(height)) != base64'0') 
         then throw("data is exist")
     else {
+        let pulseId = lastPulseId + 1
         WriteSet([
-            DataEntry(toString(height), hash),
-            DataEntry(LastHeightKey, height)
+            DataEntry(getHashDataKey(pulseId), hash),
+            DataEntry(getHeightByPulseKey(pulseId), height),
+            DataEntry(LastHeightKey, height),
+            DataEntry(LastPulseIdKey, pulseId)
         ])
     }
 }
-
 
 @Callable(i)
 func updateOracles(newSortedOracles: String, stringSigns: String, round: Int) = {
@@ -102,13 +114,12 @@ func updateOracles(newSortedOracles: String, stringSigns: String, round: Int) = 
     }
 }
 
-
 @Verifier(i)
 func sendValueToSub() = {
     match (i) {
         case invokeTx:InvokeScriptTransaction => 
-            let vHeight = match (invokeTx.args[1]) {
-                case vHeight:Int => vHeight
+            let vPulseId = match (invokeTx.args[1]) {
+                case vPulseId:Int => vPulseId
                 case _ => throw("invalid height type")
             }
             let vBytes =
@@ -133,8 +144,9 @@ func sendValueToSub() = {
                 } else 
                     throw("invalid value type")
 
-            
            
+            
+            
             
             if (invokeTx.function != "attachValue") 
                 then throw("invalid function name")
@@ -142,9 +154,11 @@ func sendValueToSub() = {
                 then throw("invalid args size")
             else if (invokeTx.dApp != addressFromStringValue(subscriberAddress))
                 then throw("invalid dapp address")
-            else if (getBytesByKey(toString(vHeight)) == base64'0')
+            else if (getHeightByPulse(vPulseId) != height) 
                 then throw("invalid height")
-            else if(keccak256(vBytes) != getBytesByKey(toString(vHeight)))
+            else if (getHashData(vPulseId) == base64'0')
+                then throw("invalid pulse id")
+            else if(keccak256(vBytes) != getHashData(vPulseId))
                     then throw("invalid keccak256(value)")
             else {
                 true

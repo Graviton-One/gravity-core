@@ -18,6 +18,7 @@ library NModels {
 
     struct Pulse {
         bytes32 dataHash;
+        uint256 height;
     }
 
     struct Oracle {

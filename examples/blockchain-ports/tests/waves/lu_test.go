@@ -5,12 +5,11 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"rebbit-hole/deployer"
-	"rebbit-hole/helpers/waves"
+	"rebbit-hole/helpers"
 	"testing"
 	"time"
 
 	"github.com/mr-tron/base58"
-
 	wavesCrypto "github.com/wavesplatform/go-lib-crypto"
 	"github.com/wavesplatform/gowaves/pkg/crypto"
 	"github.com/wavesplatform/gowaves/pkg/proto"
@@ -32,7 +31,7 @@ const (
 )
 
 type TestConfig struct {
-	Helper waves.ClientHelper
+	Helper helpers.ClientHelper
 	Client *wavesClient.Client
 	Ctx    context.Context
 
@@ -63,8 +62,10 @@ func TestLU(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		t.Run(k, v)
-
+		success := t.Run(k, v)
+		if !success {
+			t.Fatal("invalid run tests")
+		}
 		err = <-config.Helper.WaitByHeight(height.Height+1, config.Ctx)
 		if err != nil {
 			t.Fatal(err)
@@ -86,7 +87,7 @@ func initTests() (*TestConfig, error) {
 		return nil, err
 	}
 	testConfig.Client = wClient
-	testConfig.Helper = waves.NewClientHelper(testConfig.Client)
+	testConfig.Helper = helpers.NewClientHelper(testConfig.Client)
 
 	testConfig.LUPort, err = GenerateAddress(ChainId)
 	if err != nil {

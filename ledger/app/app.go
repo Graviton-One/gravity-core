@@ -33,6 +33,7 @@ type Genesis struct {
 	InitScore                 map[account.ConsulPubKey]uint64
 	OraclesAddressByValidator map[account.ConsulPubKey]map[account.ChainType]account.OraclesPubKey
 }
+
 type GHApplication struct {
 	db          *badger.DB
 	storage     *storage.Storage

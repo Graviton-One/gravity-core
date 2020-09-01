@@ -21,10 +21,10 @@ func DeployGravityEthereum(ethClient *ethclient.Client, consuls []common.Address
 }
 
 func DeployNebulaEthereum(ethClient *ethclient.Client, extractorType contracts.ExtractorType, gravityContract common.Address,
-	senderToSub common.Address, oracles []common.Address, bftValue int64, ethPrivKey *ecdsa.PrivateKey) (common.Address, *contracts.Nebula, error) {
+	subscriber common.Address, oracles []common.Address, bftValue int64, ethPrivKey *ecdsa.PrivateKey) (common.Address, *contracts.Nebula, error) {
 
 	transactOpt := bind.NewKeyedTransactor(ethPrivKey)
-	address, _, gravity, err := contracts.DeployNebula(transactOpt, ethClient, uint8(extractorType), gravityContract, oracles, senderToSub, big.NewInt(bftValue))
+	address, _, gravity, err := contracts.DeployNebula(transactOpt, ethClient, uint8(extractorType), gravityContract, oracles, big.NewInt(bftValue), subscriber)
 	if err != nil {
 		return common.Address{}, nil, err
 	}
