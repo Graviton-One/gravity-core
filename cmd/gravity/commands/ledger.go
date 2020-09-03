@@ -156,6 +156,13 @@ var (
 				},
 			},
 		},
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  HomeFlag,
+				Value: "./",
+				Usage: "Home dir for gravity config and files",
+			},
+		},
 	}
 )
 
@@ -164,6 +171,13 @@ func initLedgerConfig(ctx *cli.Context) error {
 
 	home := ctx.String(HomeFlag)
 	network := Network(ctx.String(NetworkFlag))
+
+	if _, err := os.Stat(home); os.IsNotExist(err) {
+		err = os.Mkdir(home, 0644)
+		if err != nil {
+			return err
+		}
+	}
 
 	var privKeysCfg config.PrivKeys
 	privKeysFile := path.Join(home, PrivKeysConfigFileName)
@@ -178,8 +192,8 @@ func initLedgerConfig(ctx *cli.Context) error {
 			return err
 		}
 
-		b, err := json.Marshal(&privKeysCfg)
-		err = ioutil.WriteFile(path.Join(home, LedgerConfigFileName), b, 0644)
+		b, err := json.MarshalIndent(&privKeysCfg, "", " ")
+		err = ioutil.WriteFile(path.Join(home, PrivKeysConfigFileName), b, 0644)
 		if err != nil {
 			return err
 		}
@@ -191,7 +205,7 @@ func initLedgerConfig(ctx *cli.Context) error {
 	} else {
 		genesis = CustomNetGenesis
 	}
-	b, err := json.Marshal(&genesis)
+	b, err := json.MarshalIndent(&genesis, "", " ")
 	if err != nil {
 		return err
 	}
@@ -206,7 +220,7 @@ func initLedgerConfig(ctx *cli.Context) error {
 	} else {
 		ledgerConf = config.DefaultLedgerConfig()
 	}
-	b, err = json.Marshal(&ledgerConf)
+	b, err = json.MarshalIndent(&ledgerConf, "", " ")
 	err = ioutil.WriteFile(path.Join(home, LedgerConfigFileName), b, 0644)
 	if err != nil {
 		return err

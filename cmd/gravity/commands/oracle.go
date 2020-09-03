@@ -50,7 +50,7 @@ var (
 			&cli.StringFlag{
 				Name:  HomeFlag,
 				Value: "./",
-				Usage: "Home dir for gravity conf and files",
+				Usage: "Home dir for gravity config and files",
 			},
 		},
 	}
@@ -59,6 +59,13 @@ var (
 func initOracleConfig(ctx *cli.Context) error {
 	home := ctx.String(HomeFlag)
 	args := ctx.Args()
+
+	if _, err := os.Stat(home); os.IsNotExist(err) {
+		err = os.Mkdir(home, 0644)
+		if err != nil {
+			return err
+		}
+	}
 
 	nebulaId := args.Get(0)
 	chainTypeStr := args.Get(1)
