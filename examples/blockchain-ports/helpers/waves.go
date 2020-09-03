@@ -1,4 +1,4 @@
-package waves
+package helpers
 
 import (
 	"context"
@@ -40,6 +40,7 @@ func (helper *ClientHelper) GetStateByAddressAndKey(address string, key string, 
 	if err != nil {
 		return nil, response, err
 	}
+
 	if len(out) == 0 {
 		return nil, response, nil
 	}

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	wavesHelper "rebbit-hole/helpers/waves"
+	wavesHelper "rebbit-hole/helpers"
 
 	wavesClient "github.com/wavesplatform/gowaves/pkg/client"
 	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"

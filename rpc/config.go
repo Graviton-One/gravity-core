@@ -4,26 +4,22 @@ import (
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/client"
 	"github.com/Gravity-Tech/gravity-core/common/storage"
-
-	tendermintCrypto "github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/tendermint/tendermint/crypto"
 )
 
 type RPCConfig struct {
 	Host    string
 	pubKey  account.ConsulPubKey
-	privKey tendermintCrypto.PrivKeyEd25519
+	privKey crypto.PrivKey
 	client  *client.GravityClient
 }
 type VotesRq struct {
 	votes []storage.Vote
 }
 
-func NewRPCConfig(host string, ghClientUrl string, privKey []byte) (*RPCConfig, error) {
-	ghPrivKey := tendermintCrypto.PrivKeyEd25519{}
-	copy(ghPrivKey[:], privKey)
-
+func NewRPCConfig(host string, ghClientUrl string, privKey crypto.PrivKey) (*RPCConfig, error) {
 	var ghPubKey account.ConsulPubKey
-	copy(ghPubKey[:], ghPrivKey.PubKey().Bytes()[5:])
+	copy(ghPubKey[:], privKey.PubKey().Bytes()[5:])
 
 	ghClient, err := client.NewGravityClient(ghClientUrl)
 	if err != nil {
@@ -31,7 +27,7 @@ func NewRPCConfig(host string, ghClientUrl string, privKey []byte) (*RPCConfig, 
 	}
 	return &RPCConfig{
 		Host:    host,
-		privKey: ghPrivKey,
+		privKey: privKey,
 		pubKey:  ghPubKey,
 		client:  ghClient,
 	}, nil

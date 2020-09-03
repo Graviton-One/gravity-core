@@ -8,12 +8,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
-func formRevealKey(nebulaId account.NebulaId, height int64, commitHash []byte) []byte {
-	return formKey(string(RevealKey), hexutil.Encode(nebulaId), fmt.Sprintf("%d", height), hexutil.Encode(commitHash))
+func formRevealKey(nebulaId account.NebulaId, pulseId int64, commitHash []byte) []byte {
+	return formKey(string(RevealKey), hexutil.Encode(nebulaId[:]), fmt.Sprintf("%d", pulseId), hexutil.Encode(commitHash))
 }
 
-func (storage *Storage) Reveal(nebulaId account.NebulaId, height int64, commitHash []byte) ([]byte, error) {
-	b, err := storage.getValue(formRevealKey(nebulaId, height, commitHash))
+func (storage *Storage) Reveal(nebulaId account.NebulaId, pulseId int64, commitHash []byte) ([]byte, error) {
+	b, err := storage.getValue(formRevealKey(nebulaId, pulseId, commitHash))
 	if err != nil {
 		return nil, err
 	}
@@ -21,6 +21,6 @@ func (storage *Storage) Reveal(nebulaId account.NebulaId, height int64, commitHa
 	return b, err
 }
 
-func (storage *Storage) SetReveal(nebulaId account.NebulaId, height int64, commitHash []byte, reveal []byte) error {
-	return storage.setValue(formRevealKey(nebulaId, height, commitHash), reveal)
+func (storage *Storage) SetReveal(nebulaId account.NebulaId, pulseId int64, commitHash []byte, reveal []byte) error {
+	return storage.setValue(formRevealKey(nebulaId, pulseId, commitHash), reveal)
 }

@@ -8,7 +8,7 @@ import (
 
 	"github.com/Gravity-Tech/gravity-core/common/client"
 
-	wavesHelper "github.com/Gravity-Tech/gravity-core/common/helpers/waves"
+	wavesHelper "github.com/Gravity-Tech/gravity-core/common/helpers"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/btcsuite/btcutil/base58"

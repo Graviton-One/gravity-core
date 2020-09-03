@@ -11,8 +11,6 @@ import (
 	calculator "github.com/Gravity-Tech/gravity-core/common/score"
 	"github.com/Gravity-Tech/gravity-core/common/storage"
 
-	"github.com/tendermint/tendermint/crypto/ed25519"
-
 	"github.com/dgraph-io/badger"
 )
 
@@ -22,21 +20,13 @@ const (
 	OracleCount            = 5
 )
 
-type LedgerValidator struct {
-	PrivKey ed25519.PrivKeyEd25519
-	PubKey  account.ConsulPubKey
-}
-type AdaptorConfig struct {
-	adaptors.IBlockchainAdaptor
-	Nebulae []account.NebulaId
-}
 type Scheduler struct {
-	Adaptors map[account.ChainType]*AdaptorConfig
-	Ledger   *LedgerValidator
+	Adaptors map[account.ChainType]adaptors.IBlockchainAdaptor
+	Ledger   *account.LedgerValidator
 	ctx      context.Context
 }
 
-func New(adaptors map[account.ChainType]*AdaptorConfig, ledger *LedgerValidator, ctx context.Context) (*Scheduler, error) {
+func New(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, ledger *account.LedgerValidator, ctx context.Context) (*Scheduler, error) {
 	return &Scheduler{
 		Ledger:   ledger,
 		Adaptors: adaptors,
@@ -62,28 +52,38 @@ func (scheduler *Scheduler) HandleBlock(height int64, store *storage.Storage) er
 
 	roundId := height / CalculateScoreInterval
 	if height%CalculateScoreInterval < CalculateScoreInterval/2 {
-		for k, v := range scheduler.Adaptors {
+		for k, _ := range scheduler.Adaptors {
 			err := scheduler.signConsulsResult(roundId, k, store)
 			if err != nil {
 				return err
 			}
 
-			for _, v := range v.Nebulae {
-				err := scheduler.signOracleResultByNebula(roundId, v, k, store)
+			nebulae, err := store.Nebulae()
+			if err != nil {
+				return err
+			}
+
+			for nebulaId, _ := range nebulae {
+				err := scheduler.signOracleResultByNebula(roundId, nebulaId, k, store)
 				if err != nil {
 					continue
 				}
 			}
 		}
 	} else if height%CalculateScoreInterval > CalculateScoreInterval/2 {
-		for k, v := range scheduler.Adaptors {
+		for k := range scheduler.Adaptors {
 			err := scheduler.sendConsulsToGravityContract(roundId, k, store)
 			if err != nil {
 				return err
 			}
 
-			for _, v := range v.Nebulae {
-				err := scheduler.sendOraclesToNebula(v, k, roundId, store)
+			nebulae, err := store.Nebulae()
+			if err != nil {
+				return err
+			}
+
+			for nebulaId, _ := range nebulae {
+				err := scheduler.sendOraclesToNebula(nebulaId, k, roundId, store)
 				if err != nil {
 					continue
 				}
@@ -154,7 +154,7 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 
 	return nil
 }
-func (scheduler *Scheduler) signOracleResultByNebula(roundId int64, nebulaId []byte, chainType account.ChainType, store *storage.Storage) error {
+func (scheduler *Scheduler) signOracleResultByNebula(roundId int64, nebulaId account.NebulaId, chainType account.ChainType, store *storage.Storage) error {
 	_, err := store.SignOraclesResultByConsul(scheduler.Ledger.PubKey, nebulaId, roundId)
 	if err != nil && err != storage.ErrKeyNotFound {
 		return err
@@ -265,7 +265,7 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 	fmt.Printf("Tx consuls update (%d): %s \n", chainType, id)
 	return nil
 }
-func (scheduler *Scheduler) sendOraclesToNebula(nebulaId []byte, chainType account.ChainType, round int64, store *storage.Storage) error {
+func (scheduler *Scheduler) sendOraclesToNebula(nebulaId account.NebulaId, chainType account.ChainType, round int64, store *storage.Storage) error {
 	prevConsuls, err := store.PrevConsuls()
 	if err != nil {
 		return err

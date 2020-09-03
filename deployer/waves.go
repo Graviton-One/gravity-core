@@ -7,7 +7,7 @@ import (
 
 	"github.com/Gravity-Tech/gravity-core/common/contracts"
 
-	wavesHelper "github.com/Gravity-Tech/gravity-core/common/helpers/waves"
+	wavesHelper "github.com/Gravity-Tech/gravity-core/common/helpers"
 	wavesClient "github.com/wavesplatform/gowaves/pkg/client"
 	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
 

@@ -1,4 +1,4 @@
-package waves
+package helpers
 
 type States []State
 type State struct {

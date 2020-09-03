@@ -12,6 +12,8 @@ const (
 
 	ConsulsKey                   Key = "consuls"
 	LastHeightKey                Key = "last_height"
+	ConsulsCountKey              Key = "consuls_count"
+	BftOracleInNebulaCountKey    Key = "bft_oracle_in_nebula_count"
 	PrevConsulsKey               Key = "prev_consuls"
 	SignConsulsResultByConsulKey Key = "consuls_sing"
 	SignOraclesResultByConsulKey Key = "oracles_sign"
@@ -27,6 +29,7 @@ const (
 	CommitKey     Key = "commit"
 	RevealKey     Key = "reveal"
 	SignResultKey Key = "signResult"
+	Nebulae       Key = "nebulae"
 )
 
 var (

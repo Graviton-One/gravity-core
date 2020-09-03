@@ -1,24 +1,67 @@
 package account
 
 import (
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/wavesplatform/gowaves/pkg/crypto"
 )
 
-type NebulaId []byte
+const (
+	NebulaIdLength        = 32
+	EthereumAddressLength = 20
+	WavesAddressLength    = 26
+)
+
+type NebulaId [NebulaIdLength]byte
 
 func StringToNebulaId(address string, chainType ChainType) (NebulaId, error) {
 	var nebula NebulaId
-	var err error
+
 	switch chainType {
 	case Ethereum:
-		nebula, err = hexutil.Decode(address)
+		nebulaBytes, err := hexutil.Decode(address)
 		if err != nil {
-			return nil, err
+			return NebulaId{}, err
 		}
+		nebula = BytesToNebulaId(nebulaBytes)
 	case Waves:
-		nebula = crypto.MustBytesFromBase58(address)
+		nebulaBytes := crypto.MustBytesFromBase58(address)
+		nebula = BytesToNebulaId(nebulaBytes)
 	}
 
 	return nebula, nil
+}
+func BytesToNebulaId(value []byte) NebulaId {
+	var idBytes []byte
+	var id NebulaId
+	if len(value) < NebulaIdLength {
+		idBytes = append(idBytes, make([]byte, NebulaIdLength-len(value), NebulaIdLength-len(value))...)
+	}
+	idBytes = append(idBytes, value...)
+	copy(id[:], idBytes)
+
+	return id
+}
+
+func (id NebulaId) ToString(chainType ChainType) string {
+	var nebula NebulaId
+
+	switch chainType {
+	case Ethereum:
+		return hexutil.Encode(nebula[:])
+	case Waves:
+		return base58.Encode(nebula[:])
+	}
+
+	return ""
+}
+func (id NebulaId) ToBytes(chainType ChainType) []byte {
+	switch chainType {
+	case Ethereum:
+		return id[NebulaIdLength-EthereumAddressLength:]
+	case Waves:
+		return id[NebulaIdLength-WavesAddressLength:]
+	}
+
+	return nil
 }

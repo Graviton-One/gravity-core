@@ -2,11 +2,12 @@ package account
 
 import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 	wavesplatform "github.com/wavesplatform/go-lib-crypto"
 	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
 )
 
-type ConsulPubKey [32]byte
+type ConsulPubKey ed25519.PubKeyEd25519
 type OraclesPubKey [33]byte
 
 func StringToPrivKey(value string, chainType ChainType) ([]byte, error) {

@@ -41,6 +41,9 @@ func (helper *ClientHelper) GetStateByAddressAndKey(address string, key string, 
 		return nil, response, err
 	}
 
+	if len(out) == 0 {
+		return nil, response, nil
+	}
 	return &out[0], response, nil
 }
 

@@ -25,14 +25,14 @@ import (
 const (
 	Success uint32 = 0
 	Error   uint32 = 500
-
-	ValidatorCount = 5
 )
 
 type Genesis struct {
-	InitScore                 map[account.ConsulPubKey]uint64
+	ConsulsCount              int
+	BftOracleInNebulaCount    int
 	OraclesAddressByValidator map[account.ConsulPubKey]map[account.ChainType]account.OraclesPubKey
 }
+
 type GHApplication struct {
 	db          *badger.DB
 	storage     *storage.Storage
@@ -115,11 +115,14 @@ func (app *GHApplication) Query(reqQuery abcitypes.RequestQuery) (resQuery abcit
 
 func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.ResponseInitChain {
 	app.storage.NewTransaction(app.db)
-	for pubKey, score := range app.genesis.InitScore {
-		err := app.storage.SetScore(pubKey, score)
-		if err != nil {
-			panic(err)
-		}
+
+	err := app.storage.SetBftOracleInNebulaCount(app.genesis.BftOracleInNebulaCount)
+	if err != nil {
+		panic(err)
+	}
+	err = app.storage.SetConsulsCount(app.genesis.ConsulsCount)
+	if err != nil {
+		panic(err)
 	}
 
 	for _, value := range req.Validators {
@@ -131,7 +134,7 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 		}
 	}
 
-	err := app.storage.Commit()
+	err = app.storage.Commit()
 	if err != nil {
 		panic(err)
 	}
@@ -174,7 +177,7 @@ func (app *GHApplication) EndBlock(req abcitypes.RequestEndBlock) abcitypes.Resp
 	}
 
 	var newValidators []abcitypes.ValidatorUpdate
-	for i := 0; i < ValidatorCount && i < len(consuls); i++ {
+	for i := 0; i < app.genesis.ConsulsCount && i < len(consuls); i++ {
 		if consuls[i].Value == 0 {
 			continue
 		}
