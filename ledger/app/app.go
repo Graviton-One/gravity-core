@@ -25,12 +25,9 @@ import (
 const (
 	Success uint32 = 0
 	Error   uint32 = 500
-
-	ValidatorCount = 5
 )
 
 type Genesis struct {
-	InitScore                 map[account.ConsulPubKey]uint64
 	OraclesAddressByValidator map[account.ConsulPubKey]map[account.ChainType]account.OraclesPubKey
 }
 

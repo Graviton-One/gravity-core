@@ -7,8 +7,8 @@ import (
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/ethereum/go-ethereum/crypto"
+	tCrypto "github.com/tendermint/tendermint/crypto"
 	_ "github.com/tendermint/tendermint/crypto/ed25519"
-	tendermintCrypto "github.com/tendermint/tendermint/crypto/ed25519"
 )
 
 const (
@@ -19,6 +19,7 @@ const (
 	Result            TxFunc = "result"
 	NewRound          TxFunc = "newRound"
 	Vote              TxFunc = "vote"
+	SetNebula         TxFunc = "setNebula"
 )
 
 type ID [32]byte
@@ -36,7 +37,7 @@ type Transaction struct {
 	Args         []Args
 }
 
-func New(pubKey account.ConsulPubKey, funcName TxFunc, privKey tendermintCrypto.PrivKeyEd25519, args []Args) (*Transaction, error) {
+func New(pubKey account.ConsulPubKey, funcName TxFunc, privKey tCrypto.PrivKey, args []Args) (*Transaction, error) {
 	tx := &Transaction{
 		SenderPubKey: pubKey,
 		Args:         args,
@@ -57,7 +58,7 @@ func (tx *Transaction) Hash() {
 	tx.Id = ID(crypto.Keccak256Hash(tx.Bytes()))
 }
 
-func (tx *Transaction) Sign(privKey tendermintCrypto.PrivKeyEd25519) error {
+func (tx *Transaction) Sign(privKey tCrypto.PrivKey) error {
 	sign, err := account.Sign(privKey, tx.Id.Bytes())
 	if err != nil {
 		return err

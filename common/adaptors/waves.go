@@ -6,6 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Gravity-Tech/gravity-core/common/contracts"
+
+	"github.com/Gravity-Tech/gravity-core/common/storage"
+
 	"github.com/Gravity-Tech/gravity-core/common/helpers"
 
 	"github.com/Gravity-Tech/gravity-core/common/client"
@@ -87,11 +91,20 @@ func (adaptor *WavesAdaptor) PubKey() account.OraclesPubKey {
 	copy(oraclePubKey[:], pubKey.Bytes())
 	return oraclePubKey
 }
+func (adaptor *WavesAdaptor) GetExtractorType(nebulaId account.NebulaId, ctx context.Context) (contracts.ExtractorType, error) {
+	nebulaAddress := base58.Encode(nebulaId.ToBytes(account.Waves))
+	state, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, "type", ctx)
+	if err != nil {
+		return 0, err
+	}
 
-func (adaptor *WavesAdaptor) SendDataResult(nebulaId account.NebulaId, tcHeight uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
-	nebulaAddress := base58.Encode(nebulaId)
+	return contracts.ExtractorType(state.Value.(float64)), nil
+}
 
-	state, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, fmt.Sprintf("%d", tcHeight), ctx)
+func (adaptor *WavesAdaptor) SendDataResult(nebulaId account.NebulaId, pulseId uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
+	nebulaAddress := base58.Encode(nebulaId.ToBytes(account.Waves))
+
+	state, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, fmt.Sprintf("data_hash_%d", pulseId), ctx)
 	if err != nil {
 		return "", err
 	} else if state != nil {
@@ -112,7 +125,7 @@ func (adaptor *WavesAdaptor) SendDataResult(nebulaId account.NebulaId, tcHeight 
 	for _, oracle := range strings.Split(oracles.Value.(string), ",") {
 		var pubKey account.OraclesPubKey
 		copy(pubKey[:], base58.Decode(oracle))
-		sign, err := adaptor.ghClient.Result(account.Ethereum, nebulaId, int64(tcHeight), pubKey)
+		sign, err := adaptor.ghClient.Result(account.Ethereum, nebulaId, int64(pulseId), pubKey)
 		if err != nil {
 			signs = append(signs, "nil")
 			continue
@@ -152,7 +165,7 @@ func (adaptor *WavesAdaptor) SendDataResult(nebulaId account.NebulaId, tcHeight 
 		ChainID:         adaptor.chainID,
 		ScriptRecipient: contract,
 		FunctionCall: proto.FunctionCall{
-			Name:      "confirmData",
+			Name:      "sendHashValue",
 			Arguments: *funcArgs,
 		},
 		Payments:  nil,
@@ -173,9 +186,9 @@ func (adaptor *WavesAdaptor) SendDataResult(nebulaId account.NebulaId, tcHeight 
 
 	return tx.ID.String(), nil
 }
-func (adaptor *WavesAdaptor) SendDataToSubs(nebulaId account.NebulaId, tcHeight uint64, value interface{}, ctx context.Context) error {
-	nebulaAddress := base58.Encode(nebulaId)
-	state, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, fmt.Sprintf("%d", tcHeight), ctx)
+func (adaptor *WavesAdaptor) SendDataToSubs(nebulaId account.NebulaId, pulseId uint64, value interface{}, ctx context.Context) error {
+	nebulaAddress := base58.Encode(nebulaId.ToBytes(account.Waves))
+	state, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, fmt.Sprintf("data_hash_%d", pulseId), ctx)
 	if err != nil {
 		return err
 	} else if state == nil {
@@ -189,15 +202,6 @@ func (adaptor *WavesAdaptor) SendDataToSubs(nebulaId account.NebulaId, tcHeight 
 
 	pubKeyNebulaContract, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, "contract_pubkey", ctx)
 	if err != nil {
-		return err
-	}
-
-	height, _, err := adaptor.helper.GetStateByAddressAndKey(subContract.Value.(string), fmt.Sprintf("%d", tcHeight), ctx)
-	if err != nil {
-		return err
-	}
-
-	if height != nil {
 		return err
 	}
 
@@ -241,7 +245,7 @@ func (adaptor *WavesAdaptor) SendDataToSubs(nebulaId account.NebulaId, tcHeight 
 	}
 	args.Append(
 		proto.IntegerArgument{
-			Value: int64(tcHeight),
+			Value: int64(pulseId),
 		})
 
 	tx := &proto.InvokeScriptWithProofs{
@@ -251,7 +255,7 @@ func (adaptor *WavesAdaptor) SendDataToSubs(nebulaId account.NebulaId, tcHeight 
 		ChainID:         adaptor.chainID,
 		ScriptRecipient: contract,
 		FunctionCall: proto.FunctionCall{
-			Name:      "attachData",
+			Name:      "attachValue",
 			Arguments: args,
 		},
 		Payments:  nil,
@@ -274,7 +278,7 @@ func (adaptor *WavesAdaptor) SendDataToSubs(nebulaId account.NebulaId, tcHeight 
 }
 
 func (adaptor *WavesAdaptor) SendOraclesToNebula(nebulaId account.NebulaId, oracles []account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
-	nebulaAddress := base58.Encode(nebulaId)
+	nebulaAddress := base58.Encode(nebulaId.ToBytes(account.Waves))
 	lastRoundState, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, "last_round_"+fmt.Sprintf("%d", round), ctx)
 	if err != nil {
 		return "", err
@@ -446,6 +450,19 @@ func (adaptor *WavesAdaptor) SignOracles(nebulaId account.NebulaId, oracles []ac
 	return adaptor.signOraclesPubKey(oracles)
 }
 
+func (adaptor *WavesAdaptor) LastPulseId(nebulaId account.NebulaId, ctx context.Context) (uint64, error) {
+	nebulaAddress := base58.Encode(nebulaId.ToBytes(account.Waves))
+	state, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, "last_pulse_id", ctx)
+	if err != nil && err != storage.ErrKeyNotFound {
+		return 0, err
+	}
+
+	if err == storage.ErrKeyNotFound || state == nil {
+		return 0, nil
+	}
+
+	return uint64(state.Value.(float64)), nil
+}
 func (adaptor *WavesAdaptor) signOraclesPubKey(consulsAddresses []account.OraclesPubKey) ([]byte, error) {
 	var stringOracles []string
 	for _, v := range consulsAddresses {

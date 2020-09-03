@@ -118,11 +118,7 @@ func updateOracles(newSortedOracles: String, stringSigns: String, round: Int) = 
 func sendValueToSub() = {
     match (i) {
         case invokeTx:InvokeScriptTransaction => 
-            let vPulseId = match (invokeTx.args[1]) {
-                case vPulseId:Int => vPulseId
-                case _ => throw("invalid height type")
-            }
-            let vBytes =
+            let vBytes = {
                 if (type == IntType) then { 
                     let v = match (invokeTx.args[0]) {
                         case v:Int => v
@@ -143,10 +139,11 @@ func sendValueToSub() = {
                     v
                 } else 
                     throw("invalid value type")
-
-           
-            
-            
+            }
+            let vPulseId = match (invokeTx.args[1]) {
+                case vPulseId:Int => vPulseId
+                case _ => throw("invalid height type")
+            }
             
             if (invokeTx.function != "attachValue") 
                 then throw("invalid function name")

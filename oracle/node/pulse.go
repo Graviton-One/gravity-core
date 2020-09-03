@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-func (node *Node) commit(data interface{}, tcHeight uint64) ([]byte, error) {
+func (node *Node) commit(data interface{}, pulseId uint64) ([]byte, error) {
 	dataBytes := toBytes(data)
 	commit := crypto.Keccak256(dataBytes)
 	fmt.Printf("Commit: %s - %s \n", hexutil.Encode(dataBytes), hexutil.Encode(commit[:]))
@@ -19,7 +19,7 @@ func (node *Node) commit(data interface{}, tcHeight uint64) ([]byte, error) {
 			Value: node.nebulaId,
 		},
 		{
-			Value: tcHeight,
+			Value: pulseId,
 		},
 		{
 			Value: commit,
@@ -43,7 +43,7 @@ func (node *Node) commit(data interface{}, tcHeight uint64) ([]byte, error) {
 
 	return commit, nil
 }
-func (node *Node) reveal(tcHeight uint64, reveal interface{}, commit []byte) error {
+func (node *Node) reveal(pulseId uint64, reveal interface{}, commit []byte) error {
 	dataBytes := toBytes(reveal)
 	fmt.Printf("Reveal: %s  - %s \n", hexutil.Encode(dataBytes), hexutil.Encode(commit))
 
@@ -55,7 +55,7 @@ func (node *Node) reveal(tcHeight uint64, reveal interface{}, commit []byte) err
 			Value: node.nebulaId,
 		},
 		{
-			Value: tcHeight,
+			Value: pulseId,
 		},
 		{
 			Value: reveal,
@@ -78,11 +78,11 @@ func (node *Node) reveal(tcHeight uint64, reveal interface{}, commit []byte) err
 
 	return nil
 }
-func (node *Node) signResult(tcHeight uint64, ctx context.Context) (bool, interface{}, []byte, error) {
+func (node *Node) signResult(pulseId uint64, ctx context.Context) (interface{}, []byte, error) {
 	var values []interface{}
-	bytesValues, err := node.gravityClient.Results(tcHeight, node.chainType, node.nebulaId)
+	bytesValues, err := node.gravityClient.Results(pulseId, node.chainType, node.nebulaId)
 	if err != nil {
-		return false, nil, nil, err
+		return nil, nil, err
 	}
 
 	for _, v := range bytesValues {
@@ -91,13 +91,13 @@ func (node *Node) signResult(tcHeight uint64, ctx context.Context) (bool, interf
 
 	result, err := node.extractor.Aggregate(values, ctx)
 	if err != nil {
-		return false, nil, nil, err
+		return nil, nil, err
 	}
 
 	hash := crypto.Keccak256(toBytes(result))
 	sign, err := node.adaptor.Sign(hash)
 	if err != nil {
-		return false, nil, nil, err
+		return nil, nil, err
 	}
 	fmt.Printf("Result hash: %s \n", hexutil.Encode(hash))
 
@@ -106,7 +106,7 @@ func (node *Node) signResult(tcHeight uint64, ctx context.Context) (bool, interf
 			Value: node.nebulaId,
 		},
 		{
-			Value: tcHeight,
+			Value: pulseId,
 		},
 		{
 			Value: sign,
@@ -120,14 +120,14 @@ func (node *Node) signResult(tcHeight uint64, ctx context.Context) (bool, interf
 	}
 	tx, err := transactions.New(node.validator.pubKey, transactions.Result, node.validator.privKey, args)
 	if err != nil {
-		return false, nil, nil, err
+		return nil, nil, err
 	}
 
 	err = node.gravityClient.SendTx(tx)
 	if err != nil {
-		return false, nil, nil, err
+		return nil, nil, err
 	}
 
 	fmt.Printf("Sign result txId: %s\n", tx.Id)
-	return true, result, hash, nil
+	return result, hash, nil
 }

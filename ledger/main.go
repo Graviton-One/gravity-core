@@ -139,10 +139,7 @@ func crateApp(db *badger.DB, pv *privval.FilePV, configFile string, ctx context.
 		return nil, err
 	}
 
-	ledgerPrivKey := ed25519.PrivKeyEd25519{}
-	copy(ledgerPrivKey[:], pv.Key.PrivKey.Bytes()[5:])
-
-	ledgerPubKey := ed25519.PubKeyEd25519{}
+	ledgerPubKey := account.ConsulPubKey{}
 	lPubKey, err := pv.GetPubKey()
 	if err != nil {
 		return nil, err
@@ -151,8 +148,8 @@ func crateApp(db *badger.DB, pv *privval.FilePV, configFile string, ctx context.
 	copy(ledgerPubKey[:], lPubKey.Bytes()[5:])
 
 	ledgerValidator := &scheduler.LedgerValidator{
-		PrivKey: ledgerPrivKey,
-		PubKey:  account.ConsulPubKey(ledgerPubKey),
+		PrivKey: pv.Key.PrivKey,
+		PubKey:  (ledgerPubKey),
 	}
 
 	nodeUrls := make(map[account.ChainType]string)
