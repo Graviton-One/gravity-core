@@ -20,38 +20,36 @@ import (
 type SubRound int64
 
 const (
-	SubRoundCount = 4
+	SubRoundDuration = 2
+	SubRoundCount    = 3
 
 	CommitSubRound SubRound = iota
 	RevealSubRound
 	ResultSubRound
-	SendToTargetChain
 )
 
 var (
-	ErrInvalidSign        = errors.New("invalid signature")
-	ErrFuncNotFound       = errors.New("function is not found")
-	ErrRevealIsExist      = errors.New("reveal is exist")
-	ErrCommitIsExist      = errors.New("commit is exist")
-	ErrCommitIsNotExist   = errors.New("commit is not exist")
-	ErrInvalidReveal      = errors.New("invalid reveal")
-	ErrNewRound           = errors.New("round is exist")
-	ErrAddOracleInNebula  = errors.New("oracle was added in nebula")
-	ErrInvalidScore       = errors.New("invalid score. score <= 0")
-	ErrInvalidChainType   = errors.New("invalid chain type")
-	ErrInvalidHeight      = errors.New("invalid height")
-	ErrInvalidSubRound    = errors.New("invalid sub round")
-	ErrInvalidNebulaOwner = errors.New("invalid nebula owner")
-	ErrNebulaNotFound     = errors.New("nebula not found")
+	ErrInvalidSign       = errors.New("invalid signature")
+	ErrFuncNotFound      = errors.New("function is not found")
+	ErrRevealIsExist     = errors.New("reveal is exist")
+	ErrCommitIsExist     = errors.New("commit is exist")
+	ErrCommitIsNotExist  = errors.New("commit is not exist")
+	ErrInvalidReveal     = errors.New("invalid reveal")
+	ErrNewRound          = errors.New("round is exist")
+	ErrAddOracleInNebula = errors.New("oracle was added in nebula")
+	ErrInvalidScore      = errors.New("invalid score. score <= 0")
+	ErrInvalidChainType  = errors.New("invalid chain type")
+	ErrInvalidHeight     = errors.New("invalid height")
+	ErrInvalidSubRound   = errors.New("invalid sub round")
 )
 
-func CalculateSubRound(id uint64) SubRound {
-	return SubRound(id % SubRoundCount)
+func CalculateSubRound(height uint64) SubRound {
+	return SubRound(height % (SubRoundCount * SubRoundDuration) / SubRoundDuration)
 }
 
 func SetState(tx *transactions.Transaction, store *storage.Storage, ethClient *ethclient.Client, wavesClient *client.Client, ctx context.Context) error {
-	if err := isValidSigns(store, tx); err != nil {
-		return err
+	if isValidSigns(tx) {
+		return ErrInvalidSign
 	}
 
 	height, err := store.LastHeight()
@@ -83,22 +81,20 @@ func SetState(tx *transactions.Transaction, store *storage.Storage, ethClient *e
 		return newRound(store, tx, height, ethClient, wavesClient, ctx)
 	case transactions.Vote:
 		return vote(store, tx)
-	case transactions.SetNebula:
-		return setNebula(store, tx)
 	default:
 		return ErrFuncNotFound
 	}
 }
 
 func commit(store *storage.Storage, tx *transactions.Transaction) error {
-	nebula := account.BytesToNebulaId(tx.Args[0].Value.([]byte))
-	pulseId := tx.Args[1].Value.(int64)
+	nebula := tx.Args[0].Value.([]byte)
+	height := tx.Args[1].Value.(int64)
 	commit := tx.Args[2].Value.([]byte)
 	pubKey := tx.Args[3].Value.(account.OraclesPubKey)
 
-	_, err := store.CommitHash(nebula, pulseId, pubKey)
+	_, err := store.CommitHash(nebula, height, pubKey)
 	if err == storage.ErrKeyNotFound {
-		err := store.SetCommitHash(nebula, pulseId, pubKey, commit)
+		err := store.SetCommitHash(nebula, height, pubKey, commit)
 		if err != nil {
 			return err
 		}
@@ -113,15 +109,15 @@ func commit(store *storage.Storage, tx *transactions.Transaction) error {
 
 func reveal(store *storage.Storage, tx *transactions.Transaction) error {
 	commit := tx.Args[0].Value.([]byte)
-	nebula := account.BytesToNebulaId(tx.Args[1].Value.([]byte))
-	pulseId := tx.Args[2].Value.(int64)
+	nebula := tx.Args[1].Value.([]byte)
+	height := tx.Args[2].Value.(int64)
 	reveal := tx.Args[3].Value.([]byte)
 	pubKey := tx.Args[4].Value.(account.OraclesPubKey)
 
-	_, err := store.Reveal(nebula, pulseId, commit)
+	_, err := store.Reveal(nebula, height, commit)
 	if err == storage.ErrKeyNotFound {
 		var commitBytes []byte
-		_, err := store.CommitHash(nebula, pulseId, pubKey)
+		_, err := store.CommitHash(nebula, height, pubKey)
 
 		if err == storage.ErrKeyNotFound {
 			return ErrCommitIsNotExist
@@ -134,7 +130,7 @@ func reveal(store *storage.Storage, tx *transactions.Transaction) error {
 			return ErrInvalidReveal
 		}
 
-		return store.SetReveal(nebula, pulseId, commit, reveal)
+		return store.SetReveal(nebula, height, commit, reveal)
 	} else if err != nil {
 		return err
 	} else {
@@ -143,18 +139,8 @@ func reveal(store *storage.Storage, tx *transactions.Transaction) error {
 }
 
 func addOracleInNebula(store *storage.Storage, tx *transactions.Transaction) error {
-	nebulaAddress := account.BytesToNebulaId(tx.Args[0].Value.([]byte))
+	nebulaAddress := tx.Args[0].Value.([]byte)
 	pubKey := tx.Args[1].Value.([]byte)
-
-	nebulae, err := store.Nebulae()
-	if err != nil && err != storage.ErrKeyNotFound {
-		return err
-	}
-
-	nebula, ok := nebulae[nebulaAddress]
-	if !ok {
-		return ErrNebulaNotFound
-	}
 
 	oraclesByNebula, err := store.OraclesByNebula(nebulaAddress)
 	if err != nil && err != storage.ErrKeyNotFound {
@@ -173,7 +159,7 @@ func addOracleInNebula(store *storage.Storage, tx *transactions.Transaction) err
 		return err
 	}
 
-	if score < nebula.MinScore {
+	if score < 0 {
 		return ErrInvalidScore
 	}
 
@@ -213,8 +199,8 @@ func addOracle(store *storage.Storage, tx *transactions.Transaction) error {
 }
 
 func result(store *storage.Storage, tx *transactions.Transaction) error {
-	nebulaAddress := account.BytesToNebulaId(tx.Args[0].Value.([]byte))
-	pulseId := tx.Args[1].Value.(int64)
+	nebulaAddress := tx.Args[0].Value.([]byte)
+	height := tx.Args[1].Value.(int64)
 	signBytes := tx.Args[2].Value.([]byte)
 	chainType := account.ChainType(tx.Args[3].Value.(byte))
 
@@ -223,7 +209,7 @@ func result(store *storage.Storage, tx *transactions.Transaction) error {
 		return err
 	}
 
-	return store.SetResult(nebulaAddress, pulseId, oracles[chainType], signBytes)
+	return store.SetResult(nebulaAddress, height, oracles[chainType], signBytes)
 }
 
 func newRound(store *storage.Storage, tx *transactions.Transaction, ledgerHeight uint64, ethClient *ethclient.Client, wavesClient *client.Client, ctx context.Context) error {
@@ -272,40 +258,6 @@ func vote(store *storage.Storage, tx *transactions.Transaction) error {
 	return store.SetVote(tx.SenderPubKey, votes)
 }
 
-func setNebula(store *storage.Storage, tx *transactions.Transaction) error {
-	nebulaId := account.BytesToNebulaId(tx.Args[0].Value.([]byte))
-	nebulaInfoBytes := tx.Args[1].Value.([]byte)
-
-	nebulae, err := store.Nebulae()
-	if err != nil {
-		return err
-	}
-
-	if v, ok := nebulae[nebulaId]; ok {
-		if v.Owner != tx.SenderPubKey {
-			return ErrInvalidNebulaOwner
-		}
-	}
-
-	var nebulaInfo storage.NebulaInfo
-	err = json.Unmarshal(nebulaInfoBytes, &nebulaInfo)
-	if err != nil {
-		return err
-	}
-
-	nebulae[nebulaId] = nebulaInfo
-
-	return store.SetNebula(nebulaId, nebulaInfo)
-}
-
-func isValidSigns(store *storage.Storage, tx *transactions.Transaction) error {
-	score, err := store.Score(tx.SenderPubKey)
-	if err != nil || score < 0 {
-		return ErrInvalidScore
-	}
-
-	if ed25519.Verify(tx.SenderPubKey[:], tx.Id.Bytes(), tx.Signature[:]) {
-		return ErrInvalidSign
-	}
-	return nil
+func isValidSigns(tx *transactions.Transaction) bool {
+	return ed25519.Verify(tx.SenderPubKey[:], tx.Id.Bytes(), tx.Signature[:])
 }

@@ -17,13 +17,13 @@ func formBftOraclesByNebulaKey(nebulaId account.NebulaId) []byte {
 	return formKey(string(BftOraclesByNebulaKey), hexutil.Encode(nebulaId[:]))
 }
 func formSignOraclesResultByConsulKey(consulPubKey account.ConsulPubKey, nebulaId account.NebulaId, roundId int64) []byte {
-	return formKey(string(SignOraclesResultByConsulKey), hexutil.Encode(consulPubKey[:]), hexutil.Encode(nebulaId[:]), fmt.Sprintf("%d", roundId))
+	return formKey(string(SignOraclesResultByConsulKey), hexutil.Encode(consulPubKey[:]), hexutil.Encode(nebulaId), fmt.Sprintf("%d", roundId))
 }
 func formOraclesByConsulKey(consulPubKey account.ConsulPubKey) []byte {
 	return formKey(string(OraclesByValidatorKey), hexutil.Encode(consulPubKey[:]))
 }
 func formOraclesByNebulaKey(nebulaId account.NebulaId) []byte {
-	return formKey(string(OraclesByNebulaKey), hexutil.Encode(nebulaId[:]))
+	return formKey(string(OraclesByNebulaKey), hexutil.Encode(nebulaId))
 }
 func formNebulaeByOracleKey(pubKey account.OraclesPubKey) []byte {
 	return formKey(string(NebulaeByOracleKey), hexutil.Encode(pubKey[:]))
@@ -43,7 +43,7 @@ func (storage *Storage) OraclesByNebula(nebulaId account.NebulaId) (OraclesMap, 
 
 	return oraclesByNebula, err
 }
-func (storage *Storage) SetOraclesByNebula(nebulaAddress account.NebulaId, oracles OraclesMap) error {
+func (storage *Storage) SetOraclesByNebula(nebulaAddress []byte, oracles OraclesMap) error {
 	return storage.setValue(formOraclesByNebulaKey(nebulaAddress), oracles)
 }
 

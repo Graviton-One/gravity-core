@@ -27,7 +27,6 @@ const (
 	CommitKey     Key = "commit"
 	RevealKey     Key = "reveal"
 	SignResultKey Key = "signResult"
-	Nebulae       Key = "nebulae"
 )
 
 var (

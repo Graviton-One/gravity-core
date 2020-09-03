@@ -41,28 +41,17 @@ func getStringByAddressAndKey(address: Address,key: String) = {
 let OraclesKey = "oracles"
 let ConsulsKey = "consuls"
 let SubscriberAddressKey = "subscriber_address"
-let TypeKey = "type"
 let GravityContractKey = "gravity_contract"
 let BftCoefficientKey = "bft_coefficient"
-
-let LastHeightKey = "last_height"
-let LastRoundKey = "last_round"
-let LastPulseIdKey = "last_pulse_id"
-
-func getHashDataKey(pulseId: Int) = "data_hash_" + toString(pulseId)
-func getHeightByPulseKey(pulseId: Int) = "height_" + toString(pulseId)
-
+let LasrRoundKey = "last_round"
+let TypeKey = "type"
 #-------------------Global vars-------------------------
 let oracles = getStringByKey(OraclesKey).split(",")
 let bftCoefficient = getNumberByKey(BftCoefficientKey)
 let gracityContract = addressFromStringValue(getStringByKey(GravityContractKey))
 let consuls = getStringByAddressAndKey(gracityContract, ConsulsKey).split(",")
 let subscriberAddress = getStringByKey(SubscriberAddressKey)
-let type = getNumberByKey(TypeKey)
-let lastPulseId = getNumberByKey(LastPulseIdKey)
-
-func getHashData(pulseId: Int) = getBytesByKey(getHashDataKey(pulseId))
-func getHeightByPulse(pulseId: Int) = getNumberByKey(getHeightByPulseKey(pulseId))
+let type = getStringByKey(TypeKey)
 
 func validateSign(hash: ByteVector, sign: String, oracle: String) = {
     if (sign != "nil") then 
@@ -80,20 +69,17 @@ func sendHashValue(hash: ByteVector, signs: String) = {
         + validateSign(hash, signList[3], oracles[3]) 
         + validateSign(hash, signList[4], oracles[4]) 
 
-    if (count < bftCoefficient)
+    if (count > bftCoefficient)
        then throw("invalid bft count")
     else if(getBytesByKey(toString(height)) != base64'0') 
         then throw("data is exist")
     else {
-        let pulseId = lastPulseId + 1
         WriteSet([
-            DataEntry(getHashDataKey(pulseId), hash),
-            DataEntry(getHeightByPulseKey(pulseId), height),
-            DataEntry(LastHeightKey, height),
-            DataEntry(LastPulseIdKey, pulseId)
+            DataEntry(toString(height), hash)
         ])
     }
 }
+
 
 @Callable(i)
 func updateOracles(newSortedOracles: String, stringSigns: String, round: Int) = {
@@ -109,16 +95,21 @@ func updateOracles(newSortedOracles: String, stringSigns: String, round: Int) = 
     else {  
         WriteSet([
             DataEntry(OraclesKey, newSortedOracles),
-            DataEntry(LastRoundKey + "_" + toString(round), round)
+            DataEntry(LasrRoundKey + "_" + toString(round), round)
         ])
     }
 }
+
 
 @Verifier(i)
 func sendValueToSub() = {
     match (i) {
         case invokeTx:InvokeScriptTransaction => 
-            let vBytes = {
+            let vHeight = match (invokeTx.args[1]) {
+                case vHeight:Int => vHeight
+                case _ => throw("invalid height type")
+            }
+            let vBytes =
                 if (type == IntType) then { 
                     let v = match (invokeTx.args[0]) {
                         case v:Int => v
@@ -139,29 +130,23 @@ func sendValueToSub() = {
                     v
                 } else 
                     throw("invalid value type")
-            }
-            let vPulseId = match (invokeTx.args[1]) {
-                case vPulseId:Int => vPulseId
-                case _ => throw("invalid height type")
-            }
+
             
-            if (invokeTx.function != "attachValue") 
-                then throw("invalid function name")
+           
+            
+            if (invokeTx.function == "attachValue") 
+                then throw("invalid args size")
             else if (invokeTx.args.size() != 2) 
                 then throw("invalid args size")
             else if (invokeTx.dApp != addressFromStringValue(subscriberAddress))
                 then throw("invalid dapp address")
-            else if (getHeightByPulse(vPulseId) != height) 
+            else if (getStringByKey(toString(vHeight)) == "")
                 then throw("invalid height")
-            else if (getHashData(vPulseId) == base64'0')
-                then throw("invalid pulse id")
-            else if(keccak256(vBytes) != getHashData(vPulseId))
+            else if(keccak256(vBytes) != fromBase58String(getStringByKey(toString(vHeight))))
                     then throw("invalid keccak256(value)")
             else {
                 true
             }
-        case scriptTx:SetAssetScriptTransaction => sigVerify(scriptTx.bodyBytes, scriptTx.proofs[0], scriptTx.senderPublicKey)
-        case dataTx:DataTransaction => sigVerify(dataTx.bodyBytes, dataTx.proofs[0], dataTx.senderPublicKey)
-        case _ => false
+        case _ => true #TODO
       }
 }

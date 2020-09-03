@@ -21,7 +21,6 @@ type CommitHashRq struct {
 	OraclePubKey  string
 }
 type RevealRq struct {
-	ChainType     account.ChainType
 	NebulaAddress string
 	Height        int64
 	CommitHash    string
@@ -49,7 +48,7 @@ func commitHash(store *storage.Storage, value []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	nebulaAddress, err := account.StringToNebulaId(rq.NebulaAddress, rq.ChainType)
+	nebulaAddress, err := hexutil.Decode(rq.NebulaAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +72,7 @@ func reveal(store *storage.Storage, value []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	nebulaAddress, err := account.StringToNebulaId(rq.NebulaAddress, rq.ChainType)
+	nebulaAddress, err := hexutil.Decode(rq.NebulaAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +96,7 @@ func result(store *storage.Storage, value []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	nebulaAddress, err := account.StringToNebulaId(rq.NebulaAddress, rq.ChainType)
+	nebulaAddress, err := hexutil.Decode(rq.NebulaAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -108,14 +107,6 @@ func result(store *storage.Storage, value []byte) ([]byte, error) {
 	}
 
 	v, err := store.Result(nebulaAddress, rq.Height, account.BytesToOraclePubKey(oraclePubKey, rq.ChainType))
-	if err != nil {
-		return nil, err
-	}
-
-	return v, nil
-}
-func nebulae(store *storage.Storage) (storage.NebulaMap, error) {
-	v, err := store.Nebulae()
 	if err != nil {
 		return nil, err
 	}

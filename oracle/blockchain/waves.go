@@ -8,7 +8,7 @@ import (
 
 	"github.com/Gravity-Tech/gravity-core/common/client"
 
-	wavesHelper "github.com/Gravity-Tech/gravity-core/common/helpers"
+	wavesHelper "github.com/Gravity-Tech/gravity-core/common/helpers/waves"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/btcsuite/btcutil/base58"
@@ -40,7 +40,7 @@ func NewWavesClient(ghClient *client.Client, nebulaId account.NebulaId, privKey 
 		nebulaId:        nebulaId,
 		chainID:         'T',
 		privKey:         privKey,
-		helper:          wavesHelper.NewClientHelper(wavesClient),
+		helper:          wavesHelper.New(wavesClient),
 	}, nil
 }
 

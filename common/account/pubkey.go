@@ -1,35 +1,51 @@
 package account
 
 import (
+	"crypto/ecdsa"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	wavesplatform "github.com/wavesplatform/go-lib-crypto"
 	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
 )
 
-type ConsulPubKey ed25519.PubKeyEd25519
-type OraclesPubKey [33]byte
+type ConsulPubKey [32]byte  //TODO length
+type OraclesPubKey [33]byte //TODO length
 
-func StringToPrivKey(value string, chainType ChainType) ([]byte, error) {
-	var privKey []byte
-	var err error
+func HexToPrivKey(value string, chainType ChainType) (privKey []byte, pubKey OraclesPubKey, err error) {
+	var pubKeyBytes []byte
 	switch chainType {
 	case Ethereum:
-		privKey, err = hexutil.Decode(value)
+		privKeyBytes, err := hexutil.Decode(value)
 		if err != nil {
-			return nil, err
+			return nil, OraclesPubKey{}, err
 		}
+		ethPrivKey := &ecdsa.PrivateKey{
+			PublicKey: ecdsa.PublicKey{
+				Curve: secp256k1.S256(),
+			},
+			D: new(big.Int),
+		}
+		ethPrivKey.D.SetBytes(privKeyBytes)
+		ethPrivKey.PublicKey.X, ethPrivKey.PublicKey.Y = ethPrivKey.PublicKey.Curve.ScalarBaseMult(privKeyBytes)
+		pubKeyBytes = crypto.CompressPubkey(&ethPrivKey.PublicKey)
+		privKey = privKeyBytes
 	case Waves:
 		wCrypto := wavesplatform.NewWavesCrypto()
 		seed := wavesplatform.Seed(value)
 		secret, err := wavesCrypto.NewSecretKeyFromBase58(string(wCrypto.PrivateKey(seed)))
 		if err != nil {
-			return nil, err
+			return nil, OraclesPubKey{}, err
 		}
+		key := wavesCrypto.GeneratePublicKey(secret)
+		pubKeyBytes = key.Bytes()
 		privKey = secret.Bytes()
 	}
 
-	return privKey, nil
+	pubKey = BytesToOraclePubKey(pubKeyBytes, chainType)
+	return
 }
 
 func BytesToOraclePubKey(value []byte, chainType ChainType) OraclesPubKey {
@@ -54,26 +70,7 @@ func (pubKey *OraclesPubKey) ToBytes(chainType ChainType) []byte {
 	return v
 }
 
-func StringToOraclePubKey(value string, chainType ChainType) (OraclesPubKey, error) {
-	var pubKey []byte
-	var err error
-	switch chainType {
-	case Ethereum:
-		pubKey, err = hexutil.Decode(value)
-		if err != nil {
-			return [33]byte{}, err
-		}
-	case Waves:
-		wPubKey, err := wavesCrypto.NewPublicKeyFromBase58(value)
-		pubKey = wPubKey[:]
-		if err != nil {
-			return [33]byte{}, err
-		}
-	}
-	return BytesToOraclePubKey(pubKey, chainType), nil
-}
-
-func HexToValidatorPubKey(hex string) (ConsulPubKey, error) {
+func HexToPubKey(hex string) (ConsulPubKey, error) {
 	b, err := hexutil.Decode(hex)
 	if err != nil {
 		return ConsulPubKey{}, err

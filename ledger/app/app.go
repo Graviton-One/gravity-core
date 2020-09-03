@@ -25,11 +25,9 @@ import (
 const (
 	Success uint32 = 0
 	Error   uint32 = 500
-)
 
-type Genesis struct {
-	OraclesAddressByValidator map[account.ConsulPubKey]map[account.ChainType]account.OraclesPubKey
-}
+	ValidatorCount = 5
+)
 
 type GHApplication struct {
 	db          *badger.DB
@@ -38,12 +36,12 @@ type GHApplication struct {
 	wavesClient *client.Client
 	scheduler   *scheduler.Scheduler
 	ctx         context.Context
-	genesis     *Genesis
+	initScores  map[string]uint64
 }
 
 var _ abcitypes.Application = (*GHApplication)(nil)
 
-func NewGHApplication(ethClientHost string, wavesClientHost string, scheduler *scheduler.Scheduler, db *badger.DB, genesis *Genesis, ctx context.Context) (*GHApplication, error) {
+func NewGHApplication(ethClientHost string, wavesClientHost string, scheduler *scheduler.Scheduler, db *badger.DB, initScores map[string]uint64, ctx context.Context) (*GHApplication, error) {
 	ethClient, err := ethclient.DialContext(ctx, ethClientHost)
 	if err != nil {
 		return nil, err
@@ -60,7 +58,7 @@ func NewGHApplication(ethClientHost string, wavesClientHost string, scheduler *s
 		wavesClient: wavesClient,
 		scheduler:   scheduler,
 		ctx:         ctx,
-		genesis:     genesis,
+		initScores:  initScores,
 	}, nil
 }
 
@@ -113,8 +111,13 @@ func (app *GHApplication) Query(reqQuery abcitypes.RequestQuery) (resQuery abcit
 
 func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.ResponseInitChain {
 	app.storage.NewTransaction(app.db)
-	for pubKey, score := range app.genesis.InitScore {
-		err := app.storage.SetScore(pubKey, score)
+	for key, value := range app.initScores {
+		pubKey, err := account.HexToPubKey(key)
+		if err != nil {
+			fmt.Printf("Error: %s", err.Error())
+		}
+
+		err = app.storage.SetScore(pubKey, value)
 		if err != nil {
 			panic(err)
 		}
@@ -134,18 +137,6 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 		panic(err)
 	}
 
-	for validator, value := range app.genesis.OraclesAddressByValidator {
-		oracles := make(storage.OraclesByTypeMap)
-		for chainType, oracle := range value {
-			oracles[chainType] = oracle
-		}
-
-		err = app.storage.SetOraclesByConsul(validator, oracles)
-		if err != nil {
-			panic(err)
-		}
-	}
-
 	return abcitypes.ResponseInitChain{}
 }
 
@@ -161,11 +152,7 @@ func (app *GHApplication) BeginBlock(req abcitypes.RequestBeginBlock) abcitypes.
 }
 
 func (app *GHApplication) EndBlock(req abcitypes.RequestEndBlock) abcitypes.ResponseEndBlock {
-	err := app.storage.SetLastHeight(uint64(req.Height))
-	if err != nil {
-		panic(err)
-	}
-
+	//TODO LastHeight
 	consuls, err := app.storage.Consuls()
 	if err != nil {
 		panic(err)
