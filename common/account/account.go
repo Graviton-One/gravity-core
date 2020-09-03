@@ -1,11 +1,14 @@
 package account
 
 import (
-	tendermintCrypto "github.com/tendermint/tendermint/crypto/ed25519"
-
-	_ "github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/tendermint/tendermint/crypto"
 )
 
-func Sign(privKey tendermintCrypto.PrivKeyEd25519, msg []byte) ([]byte, error) {
+func Sign(privKey crypto.PrivKey, msg []byte) ([]byte, error) {
 	return privKey.Sign(msg)
+}
+
+type LedgerValidator struct {
+	PrivKey crypto.PrivKey
+	PubKey  ConsulPubKey
 }

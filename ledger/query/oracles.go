@@ -3,10 +3,6 @@ package query
 import (
 	"encoding/json"
 
-	"github.com/btcsuite/btcutil/base58"
-
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/storage"
 )
@@ -33,7 +29,7 @@ func oraclesByValidator(store *storage.Storage, value []byte) (storage.OraclesBy
 		return nil, err
 	}
 
-	pubKey, err := account.HexToPubKey(rq.PubKey)
+	pubKey, err := account.HexToValidatorPubKey(rq.PubKey)
 	if err != nil {
 		return nil, err
 	}
@@ -53,15 +49,9 @@ func oraclesByNebula(store *storage.Storage, value []byte) (storage.OraclesMap, 
 		return nil, err
 	}
 
-	var nebula []byte
-	switch rq.ChainType {
-	case account.Ethereum:
-		nebula, err = hexutil.Decode(rq.NebulaAddress)
-		if err != nil {
-			return nil, err
-		}
-	case account.Waves:
-		nebula = base58.Decode(rq.NebulaAddress)
+	nebula, err := account.StringToNebulaId(rq.NebulaAddress, rq.ChainType)
+	if err != nil {
+		return nil, err
 	}
 
 	v, err := store.OraclesByNebula(nebula)
@@ -79,15 +69,9 @@ func bftOraclesByNebula(store *storage.Storage, value []byte) (storage.OraclesMa
 		return nil, err
 	}
 
-	var nebula []byte
-	switch rq.ChainType {
-	case account.Ethereum:
-		nebula, err = hexutil.Decode(rq.NebulaAddress)
-		if err != nil {
-			return nil, err
-		}
-	case account.Waves:
-		nebula = base58.Decode(rq.NebulaAddress)
+	nebula, err := account.StringToNebulaId(rq.NebulaAddress, rq.ChainType)
+	if err != nil {
+		return nil, err
 	}
 
 	v, err := store.BftOraclesByNebula(nebula)
@@ -105,15 +89,9 @@ func results(store *storage.Storage, value []byte) ([][]byte, error) {
 		return nil, err
 	}
 
-	var nebula []byte
-	switch rq.ChainType {
-	case account.Ethereum:
-		nebula, err = hexutil.Decode(rq.NebulaAddress)
-		if err != nil {
-			return nil, err
-		}
-	case account.Waves:
-		nebula = base58.Decode(rq.NebulaAddress)
+	nebula, err := account.StringToNebulaId(rq.NebulaAddress, rq.ChainType)
+	if err != nil {
+		return nil, err
 	}
 
 	v, err := store.Results(nebula, rq.Height)

@@ -19,6 +19,7 @@ const (
 	RevealPath            Path = "reveal"
 	ResultPath            Path = "result"
 	ResultsPath           Path = "results"
+	NebulaePath           Path = "nebulae"
 )
 
 var (
@@ -72,6 +73,12 @@ func Query(store *storage.Storage, path string, rq []byte) ([]byte, error) {
 		value = v
 	case ResultsPath:
 		v, err := results(store, rq)
+		if err != nil {
+			return nil, err
+		}
+		value = v
+	case NebulaePath:
+		v, err := nebulae(store)
 		if err != nil {
 			return nil, err
 		}

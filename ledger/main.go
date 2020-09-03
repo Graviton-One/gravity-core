@@ -7,19 +7,20 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"syscall"
 
-	"github.com/Gravity-Tech/gravity-core/common/account"
-	"github.com/Gravity-Tech/gravity-core/ledger/app"
-	"github.com/Gravity-Tech/gravity-core/ledger/blockchain"
-	"github.com/Gravity-Tech/gravity-core/ledger/scheduler"
+	"github.com/Gravity-Tech/gravity-core/common/client"
+	"github.com/Gravity-Tech/gravity-core/common/transactions"
 
+	"github.com/Gravity-Tech/gravity-core/ledger/config"
+
+	"github.com/Gravity-Tech/gravity-core/common/account"
+	"github.com/Gravity-Tech/gravity-core/common/adaptors"
+	"github.com/Gravity-Tech/gravity-core/ledger/app"
+	"github.com/Gravity-Tech/gravity-core/ledger/scheduler"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/wavesplatform/gowaves/pkg/crypto"
+	"github.com/tendermint/tendermint/abci/types"
 
 	"github.com/spf13/viper"
 
@@ -34,33 +35,41 @@ import (
 	"github.com/tendermint/tendermint/proxy"
 )
 
-var configFile, db string
+var tendermintConfigFile, gravityConfigFile, dbPath string
 
 func init() {
-	flag.StringVar(&db, "db", "./.db", "Path to config.toml")
-	flag.StringVar(&configFile, "config", "./data/config/config.toml", "Path to config.toml")
+	flag.StringVar(&dbPath, "db", "./.db", "Path to config.toml")
+	flag.StringVar(&tendermintConfigFile, "tendermintConfig", "./data/config/config.toml", "Path to config.toml")
+	flag.StringVar(&gravityConfigFile, "gravityConfig", "./gravity.config", "Path to config.toml")
 	flag.Parse()
 }
 
 func main() {
-	flag.Parse()
-	db, err := badger.Open(badger.DefaultOptions(db).WithTruncate(true))
+	ctx := context.Background()
+
+	db, err := badger.Open(badger.DefaultOptions(dbPath).WithTruncate(true))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to open badger db: %v", err)
-		os.Exit(1)
+		panic(err)
 	}
 	defer db.Close()
 
-	node, err := newTendermint(db, configFile)
+	node, err := newNode(db, tendermintConfigFile, gravityConfigFile, ctx)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v", err)
-		os.Exit(2)
+		panic(err)
 	}
 
-	node.Start()
+	err = node.Start()
+	if err != nil {
+		panic(err)
+	}
+
 	defer func() {
-		node.Stop()
+		err := node.Stop()
 		node.Wait()
+
+		if err != nil {
+			panic(err)
+		}
 	}()
 
 	c := make(chan os.Signal, 1)
@@ -69,13 +78,12 @@ func main() {
 	os.Exit(0)
 }
 
-func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
-	//TODO refactoring
-
+func newNode(db *badger.DB, tendermintConfigFile string, gravityConfigFile string, ctx context.Context) (*nm.Node, error) {
 	// read config
 	config := cfg.DefaultConfig()
-	config.RootDir = filepath.Dir(filepath.Dir(configFile))
-	viper.SetConfigFile(configFile)
+	config.RootDir = filepath.Dir(filepath.Dir(tendermintConfigFile))
+
+	viper.SetConfigFile(tendermintConfigFile)
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("viper failed to read config file: %w", err)
 	} else if err := viper.Unmarshal(config); err != nil {
@@ -84,105 +92,14 @@ func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
 		return nil, fmt.Errorf("config is invalid: %w", err)
 	}
 
-	initScore := viper.GetString("initScore")
-	initScoreMap := make(map[string]uint64)
-	for _, v := range strings.Split(initScore, ",") {
-		if v == "" {
-			continue
-		}
-		elements := strings.Split(v, "@")
-		value, err := strconv.ParseUint(elements[1], 10, 64)
-		if err != nil {
-			return nil, err
-		}
-		initScoreMap[elements[0]] = value
-	}
-
 	// read private validator
 	pv := privval.LoadFilePV(
 		config.PrivValidatorKeyFile(),
 		config.PrivValidatorStateFile(),
 	)
 
-	ctx := context.Background()
-	ethClientHost := viper.GetString("ethNodeUrl")
-	wavesClientHost := viper.GetString("wavesNodeUrl")
-
-	contracts := viper.GetStringMapString("targetContracts")
-	privKeys := viper.GetStringMapString("privKeys")
-	wavesPrivKey := crypto.MustBytesFromBase58(privKeys["waves"])
-	ethereumPrivKey, err := hexutil.Decode(privKeys["ethereum"])
-	if err != nil {
-		return nil, err
-	}
-
-	ledgerPrivKey := ed25519.PrivKeyEd25519{}
-	copy(ledgerPrivKey[:], pv.Key.PrivKey.Bytes()[5:])
-
-	ledgerPubKey := ed25519.PubKeyEd25519{}
-	lPubKey, err := pv.GetPubKey()
-	if err != nil {
-		return nil, err
-	}
-	copy(ledgerPubKey[:], lPubKey.Bytes()[5:])
-	ledger := &scheduler.LedgerValidator{
-		PrivKey: ledgerPrivKey,
-		PubKey:  account.ConsulPubKey(ledgerPubKey),
-	}
-	nebulae := make(map[account.ChainType][][]byte)
-	nebulaeCfg := viper.GetStringMap("nebulae")
-	for chainType, v := range nebulaeCfg {
-		nebulaeStrings := v.([]interface{})
-		var nebulaeBytes [][]byte
-		for _, v := range nebulaeStrings {
-			var b []byte
-			switch chainType {
-			case "waves":
-				b = crypto.MustBytesFromBase58(v.(string))
-			case "ethereum":
-				b, err = hexutil.Decode(v.(string))
-				if err != nil {
-					continue
-				}
-			}
-
-			nebulaeBytes = append(nebulaeBytes, b)
-		}
-
-		switch chainType {
-		case "waves":
-			nebulae[account.Waves] = nebulaeBytes
-		case "ethereum":
-			nebulae[account.Ethereum] = nebulaeBytes
-		}
-	}
-
-	blockchains := make(map[account.ChainType]blockchain.IBlockchain)
-	wavesBlockchain, err := blockchain.NewWaves(contracts["waves"], wavesPrivKey, wavesClientHost)
-	if err != nil {
-		return nil, err
-	}
-	blockchains[account.Waves] = wavesBlockchain
-
-	ethBlockchain, err := blockchain.NewEthereum(contracts["ethereum"], ethereumPrivKey, ethClientHost, ctx)
-	if err != nil {
-		return nil, err
-	}
-	blockchains[account.Ethereum] = ethBlockchain
-
-	s, err := scheduler.New(blockchains, config.RPC.ListenAddress, context.Background(), ledger, nebulae)
-	if err != nil {
-		return nil, err
-	}
-
-	application, err := app.NewGHApplication(ethClientHost, wavesClientHost, s, db, initScoreMap, ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	// create logger
-	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
-	logger, err = tmflags.ParseLogLevel(config.LogLevel, logger, cfg.DefaultLogLevel())
+	logger, err := tmflags.ParseLogLevel(config.LogLevel, log.NewTMLogger(log.NewSyncWriter(os.Stdout)), cfg.DefaultLogLevel())
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse log level: %w", err)
 	}
@@ -192,12 +109,18 @@ func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load node's key: %w", err)
 	}
+
+	app, err := crateApp(db, pv, gravityConfigFile, ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse gravity config: %w", err)
+	}
+
 	// create node
 	node, err := nm.NewNode(
 		config,
 		pv,
 		nodeKey,
-		proxy.NewLocalClientCreator(application),
+		proxy.NewLocalClientCreator(app),
 		nm.DefaultGenesisDocProviderFunc(config),
 		nm.DefaultDBProvider,
 		nm.DefaultMetricsProvider(config.Instrumentation),
@@ -208,4 +131,150 @@ func newTendermint(db *badger.DB, configFile string) (*nm.Node, error) {
 	}
 
 	return node, nil
+}
+
+func crateApp(db *badger.DB, pv *privval.FilePV, configFile string, ctx context.Context) (types.Application, error) {
+	cfg, err := config.Load(configFile)
+	if err != nil {
+		return nil, err
+	}
+
+	ledgerPubKey := account.ConsulPubKey{}
+	lPubKey, err := pv.GetPubKey()
+	if err != nil {
+		return nil, err
+	}
+
+	copy(ledgerPubKey[:], lPubKey.Bytes()[5:])
+
+	ledgerValidator := &scheduler.LedgerValidator{
+		PrivKey: pv.Key.PrivKey,
+		PubKey:  (ledgerPubKey),
+	}
+
+	nodeUrls := make(map[account.ChainType]string)
+	adaptersConfig := make(map[account.ChainType]*scheduler.AdaptorConfig)
+	for k, v := range cfg.Adapters {
+		chainType, err := account.ParseChainType(k)
+		if err != nil {
+			return nil, err
+		}
+		privKey, err := account.StringToPrivKey(v.PrivKey, chainType)
+		if err != nil {
+			return nil, err
+		}
+
+		var adaptor adaptors.IBlockchainAdaptor
+
+		switch chainType {
+		case account.Ethereum:
+			adaptor, err = adaptors.NewEthereumAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithEthereumGravityContract(v.GravityContractAddress))
+			if err != nil {
+				return nil, err
+			}
+		case account.Waves:
+			adaptor, err = adaptors.NewWavesAdapter(privKey, v.NodeUrl, adaptors.WithWavesGravityContract(v.GravityContractAddress))
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		var nebulae []account.NebulaId
+		for _, address := range v.Nebulae {
+			nebulaId, err := account.StringToNebulaId(address, chainType)
+			if err != nil {
+				return nil, err
+			}
+			nebulae = append(nebulae, nebulaId)
+		}
+		adaptersConfig[chainType] = &scheduler.AdaptorConfig{
+			IBlockchainAdaptor: adaptor,
+			Nebulae:            nebulae,
+		}
+		nodeUrls[chainType] = v.NodeUrl
+
+		if cfg.BootstrapUrl != nil {
+			err := setOraclePubKey(*cfg.BootstrapUrl, ledgerValidator.PubKey, ledgerValidator.PrivKey, adaptor.PubKey(), chainType)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	blockScheduler, err := scheduler.New(adaptersConfig, ledgerValidator, ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	genesis := new(app.Genesis)
+	for k, v := range cfg.Genesis.InitScore {
+		pubKey, err := account.HexToValidatorPubKey(k)
+		if err != nil {
+			return nil, err
+		}
+		genesis.InitScore[pubKey] = v
+	}
+	for k, v := range cfg.Genesis.OraclesAddressByValidator {
+		validatorPubKey, err := account.HexToValidatorPubKey(k)
+		if err != nil {
+			return nil, err
+		}
+		for chainTypeString, oracle := range v {
+			chainType, err := account.ParseChainType(chainTypeString)
+			if err != nil {
+				return nil, err
+			}
+
+			oraclePubKey, err := account.StringToOraclePubKey(oracle, chainType)
+			if err != nil {
+				return nil, err
+			}
+
+			genesis.OraclesAddressByValidator[validatorPubKey][chainType] = oraclePubKey
+		}
+	}
+
+	application, err := app.NewGHApplication(nodeUrls[account.Ethereum], nodeUrls[account.Waves], blockScheduler, db, genesis, ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return application, nil
+}
+
+func setOraclePubKey(bootstrapUrl string, pubKey account.ConsulPubKey, privKey ed25519.PrivKeyEd25519, oracle account.OraclesPubKey, chainType account.ChainType) error {
+	gravityClient, err := client.NewGravityClient(bootstrapUrl)
+	if err != nil {
+		return err
+	}
+
+	oracles, err := gravityClient.OraclesByValidator(pubKey)
+	if err != nil {
+		return err
+	}
+
+	if _, ok := oracles[chainType]; ok {
+		return nil
+	}
+
+	args := []transactions.Args{
+		{
+			Value: chainType,
+		},
+		{
+			Value: oracle,
+		},
+	}
+
+	tx, err := transactions.New(pubKey, transactions.AddOracle, privKey, args)
+	if err != nil {
+		return err
+	}
+
+	err = gravityClient.SendTx(tx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
