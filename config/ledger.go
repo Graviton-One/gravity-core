@@ -16,12 +16,11 @@ type AdaptorsConfig struct {
 }
 
 type LedgerConfig struct {
-	Moniker       string
-	SchedulerHost string
-	IsFastSync    bool
-	Mempool       *cfg.MempoolConfig
-	RPC           *cfg.RPCConfig
-	P2P           *cfg.P2PConfig
+	Moniker    string
+	IsFastSync bool
+	Mempool    *cfg.MempoolConfig
+	RPC        *cfg.RPCConfig
+	P2P        *cfg.P2PConfig
 
 	Adapters map[string]AdaptorsConfig
 }

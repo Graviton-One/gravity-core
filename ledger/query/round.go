@@ -119,6 +119,9 @@ func nebulae(store *storage.Storage) (storage.NebulaMap, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(v) == 0 {
+		return nil, storage.ErrKeyNotFound
+	}
 
 	return v, nil
 }

@@ -21,8 +21,9 @@ import (
 )
 
 const (
-	Success uint32 = 0
-	Error   uint32 = 500
+	Success      uint32 = 0
+	Error        uint32 = 500
+	NotFoundCode uint32 = 404
 )
 
 type OraclesAddresses struct {
@@ -36,6 +37,7 @@ type Genesis struct {
 }
 
 type GHApplication struct {
+	IsSync    bool
 	db        *badger.DB
 	storage   *storage.Storage
 	adaptors  map[account.ChainType]adaptors.IBlockchainAdaptor
@@ -97,7 +99,9 @@ func (app *GHApplication) Query(reqQuery abcitypes.RequestQuery) (resQuery abcit
 	store := storage.New()
 	store.NewTransaction(app.db)
 	b, err := query.Query(store, reqQuery.Path, reqQuery.Data)
-	if err != nil {
+	if err == query.ErrValueNotFound {
+		resQuery.Code = NotFoundCode
+	} else if err != nil {
 		resQuery.Code = Error
 	}
 
@@ -137,6 +141,11 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 		panic(err)
 	}
 
+	err = app.storage.SetConsulsCandidate(consuls)
+	if err != nil {
+		panic(err)
+	}
+
 	for validator, value := range app.genesis.OraclesAddressByValidator {
 		oracles := make(storage.OraclesByTypeMap)
 		for _, oracle := range value {
@@ -160,7 +169,7 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 func (app *GHApplication) BeginBlock(req abcitypes.RequestBeginBlock) abcitypes.ResponseBeginBlock {
 	app.storage.NewTransaction(app.db)
 
-	err := app.scheduler.HandleBlock(req.Header.Height, app.storage)
+	err := app.scheduler.HandleBlock(req.Header.Height, app.storage, app.IsSync)
 	if err != nil {
 		fmt.Printf("Error: %s \n", err.Error())
 	}

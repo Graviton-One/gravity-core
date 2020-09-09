@@ -349,7 +349,7 @@ func approveLastRound(store *storage.Storage, adaptors map[account.ChainType]ada
 	roundId := height / scheduler.CalculateScoreInterval
 
 	lastRound, err := store.LastRoundApproved()
-	if err != nil {
+	if err != nil && err != storage.ErrKeyNotFound {
 		return err
 	}
 

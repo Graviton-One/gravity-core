@@ -16,7 +16,7 @@ type SignByConsulRq struct {
 
 func consuls(store *storage.Storage) ([]storage.Consul, error) {
 	v, err := store.Consuls()
-	if err != nil {
+	if err != nil && err != storage.ErrKeyNotFound {
 		return nil, err
 	}
 
@@ -25,7 +25,7 @@ func consuls(store *storage.Storage) ([]storage.Consul, error) {
 
 func consulsCandidate(store *storage.Storage) ([]storage.Consul, error) {
 	v, err := store.ConsulsCandidate()
-	if err != nil {
+	if err != nil && err != storage.ErrKeyNotFound {
 		return nil, err
 	}
 

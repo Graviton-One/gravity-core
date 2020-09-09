@@ -32,6 +32,7 @@ contract Gravity {
         require(count >= bftValue, "invalid bft count");
 
         rounds[roundId] = newConsuls;
+        lastRound = roundId;
     }
 
     function hashNewConsuls(address[] memory newConsuls, uint256 roundId) public pure returns(bytes32) {

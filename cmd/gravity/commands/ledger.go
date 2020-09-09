@@ -29,7 +29,6 @@ import (
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
 	"github.com/Gravity-Tech/gravity-core/ledger/app"
 	"github.com/Gravity-Tech/gravity-core/ledger/scheduler"
-	httpscheduler "github.com/Gravity-Tech/gravity-core/scheduler"
 	"github.com/dgraph-io/badger"
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/tendermint/tendermint/types"
@@ -68,11 +67,10 @@ const (
 
 var (
 	DevNetConfig = config.LedgerConfig{
-		Moniker:       config.DefaultMoniker,
-		RPC:           cfg.DefaultRPCConfig(),
-		IsFastSync:    true,
-		Mempool:       cfg.DefaultMempoolConfig(),
-		SchedulerHost: "127.0.0.1:5000",
+		Moniker:    config.DefaultMoniker,
+		RPC:        cfg.DefaultRPCConfig(),
+		IsFastSync: true,
+		Mempool:    cfg.DefaultMempoolConfig(),
 		Adapters: map[string]config.AdaptorsConfig{
 			account.Ethereum.String(): {
 				NodeUrl:                "http://127.0.0.1:8545",
@@ -333,11 +331,12 @@ func startLedger(ctx *cli.Context) error {
 		PubKey:  ledgerPubKey,
 	}
 
-	gravityApp, httpScheduler, err := crateApp(db, ledgerValidator, privKeysCfg.TargetChains, ledgerConf, genesis, bootstrap, tConfig.RPC.ListenAddress, sysCtx)
+	gravityApp, err := crateApp(db, ledgerValidator, privKeysCfg.TargetChains, ledgerConf, genesis, bootstrap, tConfig.RPC.ListenAddress, sysCtx)
 	if err != nil {
 		return fmt.Errorf("failed to parse gravity config: %w", err)
 	}
 
+	gravityApp.IsSync = true
 	var validators []types.GenesisValidator
 	for k, v := range genesis.InitScore {
 		pubKey, err := account.HexToValidatorPubKey(k)
@@ -357,8 +356,6 @@ func startLedger(ctx *cli.Context) error {
 		PubKey:  ledgerValidator.PrivKey.PubKey(),
 		PrivKey: ledgerValidator.PrivKey,
 	}
-
-	go httpScheduler.ListenRpcServer()
 
 	node, err := nm.NewNode(
 		tConfig,
@@ -386,6 +383,7 @@ func startLedger(ctx *cli.Context) error {
 		return nil
 	}
 
+	gravityApp.IsSync = false
 	err = node.Start()
 	if err != nil {
 		return err
@@ -412,17 +410,17 @@ func startLedger(ctx *cli.Context) error {
 	return nil
 }
 
-func crateApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys map[string]string, cfg config.LedgerConfig, genesisCfg config.Genesis, bootstrap string, localHost string, ctx context.Context) (*app.GHApplication, *httpscheduler.Scheduler, error) {
+func crateApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys map[string]string, cfg config.LedgerConfig, genesisCfg config.Genesis, bootstrap string, localHost string, ctx context.Context) (*app.GHApplication, error) {
 	bAdaptors := make(map[account.ChainType]adaptors.IBlockchainAdaptor)
 	for k, v := range cfg.Adapters {
 		chainType, err := account.ParseChainType(k)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		privKey, err := account.StringToPrivKey(privKeys[k], chainType)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		var adaptor adaptors.IBlockchainAdaptor
@@ -431,12 +429,12 @@ func crateApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys 
 		case account.Ethereum:
 			adaptor, err = adaptors.NewEthereumAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithEthereumGravityContract(v.GravityContractAddress))
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 		case account.Waves:
 			adaptor, err = adaptors.NewWavesAdapter(privKey, v.NodeUrl, v.ChainId[0], adaptors.WithWavesGravityContract(v.GravityContractAddress))
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 		}
 
@@ -444,19 +442,13 @@ func crateApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys 
 		if bootstrap != "" {
 			err := setOraclePubKey(bootstrap, ledgerValidator.PubKey, ledgerValidator.PrivKey, adaptor.PubKey(), chainType)
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 		}
 	}
-
-	httpScheduler, err := httpscheduler.New(cfg.SchedulerHost, bAdaptors, ledgerValidator, localHost, ctx)
+	blockScheduler, err := scheduler.New(bAdaptors, ledgerValidator, localHost, ctx)
 	if err != nil {
-		return nil, nil, err
-	}
-
-	blockScheduler, err := scheduler.New(cfg.SchedulerHost, ctx)
-	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	genesis := app.Genesis{
@@ -468,17 +460,17 @@ func crateApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys 
 	for k, v := range genesisCfg.OraclesAddressByValidator {
 		validatorPubKey, err := account.HexToValidatorPubKey(k)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		for chainTypeString, oracle := range v {
 			chainType, err := account.ParseChainType(chainTypeString)
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 
 			oraclePubKey, err := account.StringToOraclePubKey(oracle, chainType)
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 
 			genesis.OraclesAddressByValidator[validatorPubKey] = append(genesis.OraclesAddressByValidator[validatorPubKey], app.OraclesAddresses{
@@ -490,10 +482,10 @@ func crateApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys 
 
 	application, err := app.NewGHApplication(bAdaptors, blockScheduler, db, &genesis, ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return application, httpScheduler, nil
+	return application, nil
 }
 
 func setOraclePubKey(bootstrapUrl string, pubKey account.ConsulPubKey, privKey crypto.PrivKey, oracle account.OraclesPubKey, chainType account.ChainType) error {
@@ -503,7 +495,7 @@ func setOraclePubKey(bootstrapUrl string, pubKey account.ConsulPubKey, privKey c
 	}
 
 	oracles, err := gravityClient.OraclesByValidator(pubKey)
-	if err != nil {
+	if err != nil && err != gravity.ErrValueNotFound {
 		return err
 	}
 

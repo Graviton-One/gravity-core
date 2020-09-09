@@ -55,7 +55,7 @@ func updateConsuls(newConsuls: String, stringSigns: String, round: Int) = {
 
     if(round <= lastRound)
         then throw("round less last round")
-    else if(count > bftCoefficient) 
+    else if(count < bftCoefficient) 
         then throw("invalid bft count")
     else {  
         WriteSet([

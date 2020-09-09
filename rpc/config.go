@@ -3,7 +3,6 @@ package rpc
 import (
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
-	"github.com/Gravity-Tech/gravity-core/common/storage"
 	"github.com/tendermint/tendermint/crypto"
 )
 
@@ -12,9 +11,6 @@ type Config struct {
 	pubKey  account.ConsulPubKey
 	privKey crypto.PrivKey
 	client  *gravity.Client
-}
-type VotesRq struct {
-	votes []storage.Vote
 }
 
 func NewConfig(host string, ghClientUrl string, privKey crypto.PrivKey) (*Config, error) {

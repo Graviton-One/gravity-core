@@ -1,6 +1,6 @@
 const wvs = 10 ** 8;
 
-let gravitySeed = "waves private node seed with waves tokens3"
+let gravitySeed = "waves private node seed with waves tokens6"
 
 let nebulaSeed = "waves private node seed with waves tokens nebula"
 let subMockSeed = "waves private node seed with waves tokens submock"
@@ -28,12 +28,12 @@ describe('Deploy script', async function () {
                 recipient: address(nebulaSeed)
             }, main)
             await broadcast(signedTranserTx)*/
-        signedTranserTx = transfer({
+     /*   signedTranserTx = transfer({
             amount: 10000000000,
             recipient: address("waves private node seed with waves tokens1")
         }, main)
         await broadcast(signedTranserTx)
-
+*/
 
         const setScriptGravityTx = setScript({ script: compile(file("../script/gravity.ride")), fee: 1400000, }, gravitySeed);
         await broadcast(setScriptGravityTx)
@@ -48,6 +48,7 @@ describe('Deploy script', async function () {
             data: [
                 { key: "consuls_0", value: consul[0] + "," + consul[1] + "," + consul[2] + "," + consul[3] + "," + consul[4] },
                 { key: "bft_coefficient", value: 1 },
+                { key: "last_round", value: 0 },
             ],
             fee: 500000
         }, gravitySeed);

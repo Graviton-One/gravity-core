@@ -319,7 +319,7 @@ func (adaptor *EthereumAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, or
 
 	return tx.Hash().Hex(), nil
 }
-func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses []account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
+func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
 	var r [][32]byte
 	var s [][32]byte
 	var v []uint8
@@ -337,6 +337,10 @@ func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses
 	var consulsAddress []common.Address
 
 	for _, v := range newConsulsAddresses {
+		if v == nil {
+			consulsAddress = append(consulsAddress, common.Address{})
+			continue
+		}
 		pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
 		if err != nil {
 			return "", err
@@ -351,9 +355,13 @@ func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses
 
 	return tx.Hash().Hex(), nil
 }
-func (adaptor *EthereumAdaptor) SignConsuls(consulsAddresses []account.OraclesPubKey, roundId int64) ([]byte, error) {
+func (adaptor *EthereumAdaptor) SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64) ([]byte, error) {
 	var oraclesAddresses []common.Address
 	for _, v := range consulsAddresses {
+		if v == nil {
+			oraclesAddresses = append(oraclesAddresses, common.Address{})
+			continue
+		}
 		pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
 		if err != nil {
 			return nil, err
