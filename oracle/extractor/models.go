@@ -1,6 +1,6 @@
 package extractor
 
-type ExtractorInfo struct {
+type Info struct {
 	Description string `json:"description"`
 	DataFeedTag string `json:"datafeedtag"`
 }

@@ -20,12 +20,31 @@ const (
 	NewRound          TxFunc = "newRound"
 	Vote              TxFunc = "vote"
 	SetNebula         TxFunc = "setNebula"
+	SignNewConsuls    TxFunc = "signNewConsuls"
+	SignNewOracles    TxFunc = "signNewOracles"
+	ApproveLastRound  TxFunc = "approveLastRound"
+
+	String Type = "string"
+	Int    Type = "int"
+	Bytes  Type = "bytes"
 )
 
 type ID [32]byte
 type TxFunc string
-type Args struct {
-	Value interface{}
+type Type string
+type Arg struct {
+	Type  Type
+	Value []byte
+}
+type Value interface{}
+type StringValue struct {
+	Value string
+}
+type IntValue struct {
+	Value int64
+}
+type BytesValue struct {
+	Value []byte
 }
 
 type Transaction struct {
@@ -34,13 +53,12 @@ type Transaction struct {
 	Signature    [72]byte
 	Func         TxFunc
 	Timestamp    uint64
-	Args         []Args
+	Args         []Arg
 }
 
-func New(pubKey account.ConsulPubKey, funcName TxFunc, privKey tCrypto.PrivKey, args []Args) (*Transaction, error) {
+func New(pubKey account.ConsulPubKey, funcName TxFunc, privKey tCrypto.PrivKey) (*Transaction, error) {
 	tx := &Transaction{
 		SenderPubKey: pubKey,
-		Args:         args,
 		Func:         funcName,
 		Timestamp:    uint64(time.Now().Unix()),
 	}
@@ -75,18 +93,7 @@ func (tx *Transaction) Bytes() []byte {
 	result = append(result, tx.Func...)
 
 	for _, v := range tx.Args {
-		var value []byte
-		switch v.Value.(type) {
-		case string:
-			value = []byte(v.Value.(string))
-		case int64:
-			var b [8]byte
-			binary.BigEndian.PutUint64(b[:], tx.Timestamp)
-			value = b[:]
-		case []byte:
-			value = v.Value.([]byte)
-		}
-		result = append(result, value...)
+		result = append(result, v.Value...)
 	}
 
 	var b [8]byte
@@ -108,4 +115,47 @@ func UnmarshalJson(data []byte) (*Transaction, error) {
 
 func (id ID) Bytes() []byte {
 	return id[:]
+}
+
+func (tx *Transaction) AddValue(value Value) {
+	var b []byte
+	var t Type
+	switch value.(type) {
+	case StringValue:
+		b = []byte(value.(StringValue).Value)
+		t = String
+	case IntValue:
+		var bInt [8]byte
+		binary.BigEndian.PutUint64(bInt[:], uint64(value.(IntValue).Value))
+		b = bInt[:]
+		t = Int
+	case BytesValue:
+		b = value.(BytesValue).Value
+		t = Bytes
+	}
+	tx.Args = append(tx.Args, Arg{
+		Type:  t,
+		Value: b,
+	})
+}
+
+func (tx *Transaction) AddValues(values []Value) {
+	for _, value := range values {
+		tx.AddValue(value)
+	}
+}
+
+func (tx *Transaction) Value(index int) interface{} {
+	v := tx.Args[index]
+
+	switch v.Type {
+	case String:
+		return string(v.Value)
+	case Int:
+		return int64(binary.BigEndian.Uint64(v.Value))
+	case Bytes:
+		return v.Value
+	}
+
+	return nil
 }

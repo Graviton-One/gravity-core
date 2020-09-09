@@ -6,14 +6,15 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
-	"github.com/Gravity-Tech/gravity-core/common/client"
 	"github.com/Gravity-Tech/gravity-core/common/contracts"
+	"github.com/Gravity-Tech/gravity-core/common/gravity"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -24,13 +25,15 @@ const (
 	Int64  SubType = 0
 	String SubType = 1
 	Bytes  SubType = 2
+
+	waitTimeout = 30
 )
 
 type SubType uint8
 type EthereumAdaptor struct {
 	privKey *ecdsa.PrivateKey
 
-	ghClient  *client.GravityClient
+	ghClient  *gravity.Client
 	ethClient *ethclient.Client
 
 	gravityContract *contracts.Gravity
@@ -53,7 +56,7 @@ func WithEthereumGravityContract(address string) EthereumAdapterOption {
 		return nil
 	}
 }
-func EthAdapterWithGhClient(ghClient *client.GravityClient) EthereumAdapterOption {
+func EthAdapterWithGhClient(ghClient *gravity.Client) EthereumAdapterOption {
 	return func(h *EthereumAdaptor) error {
 		h.ghClient = ghClient
 		return nil
@@ -106,14 +109,39 @@ func (adaptor *EthereumAdaptor) Sign(msg []byte) ([]byte, error) {
 	return sig, nil
 }
 func (adaptor *EthereumAdaptor) WaitTx(id string, ctx context.Context) error {
-	return nil
+	nCtx, _ := context.WithTimeout(ctx, waitTimeout*time.Second)
+	queryTicker := time.NewTicker(time.Second * 3)
+	defer queryTicker.Stop()
+
+	hash, err := hexutil.Decode(id)
+	if err != nil {
+		return err
+	}
+
+	var txHash common.Hash
+	copy(txHash[:], hash)
+
+	for {
+		select {
+		case <-nCtx.Done():
+			return nCtx.Err()
+		case <-queryTicker.C:
+		}
+		receipt, err := adaptor.ethClient.TransactionReceipt(nCtx, txHash)
+		if receipt != nil {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+	}
 }
 func (adaptor *EthereumAdaptor) PubKey() account.OraclesPubKey {
 	var oraclePubKey account.OraclesPubKey
 	copy(oraclePubKey[:], crypto.PubkeyToAddress(adaptor.privKey.PublicKey).Bytes())
 	return oraclePubKey
 }
-func (adaptor *EthereumAdaptor) GetExtractorType(nebulaId account.NebulaId, ctx context.Context) (contracts.ExtractorType, error) {
+func (adaptor *EthereumAdaptor) ValueType(nebulaId account.NebulaId, ctx context.Context) (contracts.ExtractorType, error) {
 	nebula, err := contracts.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return 0, err
@@ -127,7 +155,7 @@ func (adaptor *EthereumAdaptor) GetExtractorType(nebulaId account.NebulaId, ctx 
 	return contracts.ExtractorType(exType), nil
 }
 
-func (adaptor *EthereumAdaptor) SendDataResult(nebulaId account.NebulaId, pulseId uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
+func (adaptor *EthereumAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
 	nebula, err := contracts.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return "", err
@@ -204,7 +232,7 @@ func (adaptor *EthereumAdaptor) SendDataResult(nebulaId account.NebulaId, pulseI
 
 	return tx.Hash().String(), nil
 }
-func (adaptor *EthereumAdaptor) SendDataToSubs(nebulaId account.NebulaId, pulseId uint64, value interface{}, ctx context.Context) error {
+func (adaptor *EthereumAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId uint64, value interface{}, ctx context.Context) error {
 	var err error
 
 	nebula, err := contracts.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
@@ -246,7 +274,7 @@ func (adaptor *EthereumAdaptor) SendDataToSubs(nebulaId account.NebulaId, pulseI
 	return nil
 }
 
-func (adaptor *EthereumAdaptor) SendOraclesToNebula(nebulaId account.NebulaId, oracles []account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
+func (adaptor *EthereumAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracles []account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
 	nebula, err := contracts.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return "", err
@@ -263,7 +291,11 @@ func (adaptor *EthereumAdaptor) SendOraclesToNebula(nebulaId account.NebulaId, o
 
 	var oraclesAddresses []common.Address
 	for _, v := range oracles {
-		oraclesAddresses = append(oraclesAddresses, common.BytesToAddress(v.ToBytes(account.Ethereum)))
+		pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
+		if err != nil {
+			return "", err
+		}
+		oraclesAddresses = append(oraclesAddresses, crypto.PubkeyToAddress(*pubKey))
 	}
 
 	var r [][32]byte
@@ -288,15 +320,6 @@ func (adaptor *EthereumAdaptor) SendOraclesToNebula(nebulaId account.NebulaId, o
 	return tx.Hash().Hex(), nil
 }
 func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses []account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
-	lastRound, err := adaptor.gravityContract.Rounds(nil, big.NewInt(round))
-	if err != nil {
-		return "", err
-	}
-
-	if lastRound {
-		return "", nil
-	}
-
 	var r [][32]byte
 	var s [][32]byte
 	var v []uint8
@@ -314,22 +337,30 @@ func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses
 	var consulsAddress []common.Address
 
 	for _, v := range newConsulsAddresses {
-		consulsAddress = append(consulsAddress, common.BytesToAddress(v.ToBytes(account.Ethereum)))
+		pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
+		if err != nil {
+			return "", err
+		}
+		consulsAddress = append(consulsAddress, crypto.PubkeyToAddress(*pubKey))
 	}
 
 	tx, err := adaptor.gravityContract.UpdateConsuls(bind.NewKeyedTransactor(adaptor.privKey), consulsAddress, v, r, s, big.NewInt(round))
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	return tx.Hash().Hex(), nil
 }
-func (adaptor *EthereumAdaptor) SignConsuls(consulsAddresses []account.OraclesPubKey) ([]byte, error) {
+func (adaptor *EthereumAdaptor) SignConsuls(consulsAddresses []account.OraclesPubKey, roundId int64) ([]byte, error) {
 	var oraclesAddresses []common.Address
 	for _, v := range consulsAddresses {
-		oraclesAddresses = append(oraclesAddresses, common.BytesToAddress(v.ToBytes(account.Ethereum)))
+		pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
+		if err != nil {
+			return nil, err
+		}
+		oraclesAddresses = append(oraclesAddresses, crypto.PubkeyToAddress(*pubKey))
 	}
-	hash, err := adaptor.gravityContract.HashNewConsuls(nil, oraclesAddresses)
+	hash, err := adaptor.gravityContract.HashNewConsuls(nil, oraclesAddresses, big.NewInt(roundId))
 	if err != nil {
 		return nil, err
 	}
@@ -349,7 +380,11 @@ func (adaptor *EthereumAdaptor) SignOracles(nebulaId account.NebulaId, oracles [
 
 	var oraclesAddresses []common.Address
 	for _, v := range oracles {
-		oraclesAddresses = append(oraclesAddresses, common.BytesToAddress(v.ToBytes(account.Ethereum)))
+		pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
+		if err != nil {
+			return nil, err
+		}
+		oraclesAddresses = append(oraclesAddresses, crypto.PubkeyToAddress(*pubKey))
 	}
 
 	hash, err := nebula.HashNewOracles(nil, oraclesAddresses)
@@ -377,4 +412,24 @@ func (adaptor *EthereumAdaptor) LastPulseId(nebulaId account.NebulaId, ctx conte
 	}
 
 	return lastId.Uint64(), nil
+}
+func (adaptor *EthereumAdaptor) LastRound(ctx context.Context) (uint64, error) {
+	lastRound, err := adaptor.gravityContract.LastRound(nil)
+	if err != nil {
+		return 0, err
+	}
+
+	return lastRound.Uint64(), nil
+}
+func (adaptor *EthereumAdaptor) RoundExist(roundId int64, ctx context.Context) (bool, error) {
+	consuls, err := adaptor.gravityContract.GetConsulsByRoundId(nil, big.NewInt(roundId))
+	if err != nil {
+		return false, err
+	}
+
+	if len(consuls) > 0 {
+		return true, nil
+	} else {
+		return false, nil
+	}
 }

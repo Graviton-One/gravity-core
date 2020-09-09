@@ -61,3 +61,22 @@ func (storage *Storage) SetBftOracleInNebulaCount(bftOracleInNebulaCount int) er
 
 	return err
 }
+
+func (storage *Storage) SetLastRoundApproved(roundId uint64) error {
+	var b [8]byte
+	binary.BigEndian.PutUint64(b[:], roundId)
+	err := storage.setValue([]byte(LastRoundApproved), b[:])
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+func (storage *Storage) LastRoundApproved() (uint64, error) {
+	b, err := storage.getValue([]byte(LastRoundApproved))
+	if err != nil {
+		return 0, err
+	}
+
+	return binary.BigEndian.Uint64(b), nil
+}

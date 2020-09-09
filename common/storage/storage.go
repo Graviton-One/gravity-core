@@ -11,10 +11,11 @@ const (
 	Separator string = "_"
 
 	ConsulsKey                   Key = "consuls"
+	ConsulsCandidateKey          Key = "consuls_candidate"
 	LastHeightKey                Key = "last_height"
+	LastRoundApproved            Key = "last_round_approved"
 	ConsulsCountKey              Key = "consuls_count"
 	BftOracleInNebulaCountKey    Key = "bft_oracle_in_nebula_count"
-	PrevConsulsKey               Key = "prev_consuls"
 	SignConsulsResultByConsulKey Key = "consuls_sing"
 	SignOraclesResultByConsulKey Key = "oracles_sign"
 	NebulaeByOracleKey           Key = "nebulae_by_oracle"
@@ -43,6 +44,10 @@ type Storage struct {
 
 func formKey(args ...string) []byte {
 	return []byte(strings.Join(args, Separator))
+}
+
+func New() *Storage {
+	return &Storage{}
 }
 
 func (storage *Storage) getValue(key []byte) ([]byte, error) {

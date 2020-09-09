@@ -16,7 +16,10 @@ type OraclesMap map[account.OraclesPubKey]bool
 func formBftOraclesByNebulaKey(nebulaId account.NebulaId) []byte {
 	return formKey(string(BftOraclesByNebulaKey), hexutil.Encode(nebulaId[:]))
 }
-func formSignOraclesResultByConsulKey(consulPubKey account.ConsulPubKey, nebulaId account.NebulaId, roundId int64) []byte {
+func formNebulaOraclesIndexKey(nebulaId account.NebulaId) []byte {
+	return formKey(string(NebulaOraclesIndexKey), hexutil.Encode(nebulaId[:]))
+}
+func formSignOraclesByConsulKey(consulPubKey account.ConsulPubKey, nebulaId account.NebulaId, roundId int64) []byte {
 	return formKey(string(SignOraclesResultByConsulKey), hexutil.Encode(consulPubKey[:]), hexutil.Encode(nebulaId[:]), fmt.Sprintf("%d", roundId))
 }
 func formOraclesByConsulKey(consulPubKey account.ConsulPubKey) []byte {
@@ -65,18 +68,18 @@ func (storage *Storage) SetNebulaeByOracle(pubKey account.OraclesPubKey, nebulae
 	return storage.setValue(formNebulaeByOracleKey(pubKey), nebulae)
 }
 
-func (storage *Storage) NebulaOraclesIndex() (uint64, error) {
-	b, err := storage.getValue([]byte(NebulaOraclesIndexKey))
+func (storage *Storage) NebulaOraclesIndex(nebulaAddress account.NebulaId) (uint64, error) {
+	b, err := storage.getValue(formNebulaOraclesIndexKey(nebulaAddress))
 	if err != nil {
 		return 0, err
 	}
 
 	return binary.BigEndian.Uint64(b), nil
 }
-func (storage *Storage) SetNebulaOraclesIndex(index uint64) error {
+func (storage *Storage) SetNebulaOraclesIndex(nebulaAddress account.NebulaId, index uint64) error {
 	var b [8]byte
 	binary.BigEndian.PutUint64(b[:], index)
-	err := storage.setValue([]byte(NebulaOraclesIndexKey), b[:])
+	err := storage.setValue(formNebulaOraclesIndexKey(nebulaAddress), b[:])
 	if err != nil {
 		return err
 	}
@@ -102,8 +105,8 @@ func (storage *Storage) SetOraclesByConsul(pubKey account.ConsulPubKey, oracles 
 	return storage.setValue(formOraclesByConsulKey(pubKey), oracles)
 }
 
-func (storage *Storage) SignOraclesResultByConsul(pubKey account.ConsulPubKey, nebulaId account.NebulaId, roundId int64) ([]byte, error) {
-	key := formSignOraclesResultByConsulKey(pubKey, nebulaId, roundId)
+func (storage *Storage) SignOraclesByConsul(pubKey account.ConsulPubKey, nebulaId account.NebulaId, roundId int64) ([]byte, error) {
+	key := formSignOraclesByConsulKey(pubKey, nebulaId, roundId)
 	item, err := storage.txn.Get(key)
 	if err != nil {
 		return nil, err
@@ -116,8 +119,8 @@ func (storage *Storage) SignOraclesResultByConsul(pubKey account.ConsulPubKey, n
 
 	return b, err
 }
-func (storage *Storage) SetSignOraclesResult(pubKey account.ConsulPubKey, nebulaId account.NebulaId, roundId int64, sign []byte) error {
-	return storage.setValue(formSignOraclesResultByConsulKey(pubKey, nebulaId, roundId), sign)
+func (storage *Storage) SetSignOracles(pubKey account.ConsulPubKey, nebulaId account.NebulaId, roundId int64, sign []byte) error {
+	return storage.setValue(formSignOraclesByConsulKey(pubKey, nebulaId, roundId), sign)
 }
 
 func (storage *Storage) BftOraclesByNebula(nebulaId account.NebulaId) (OraclesMap, error) {

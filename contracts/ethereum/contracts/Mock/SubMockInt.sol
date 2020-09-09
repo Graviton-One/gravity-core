@@ -12,7 +12,7 @@ contract SubMockInt is ISubscriberInt {
     
     receive() external payable { } 
     
-    function attachValue(uint64 data) public {
+    function attachValue(int64 data) override public {
     }
 
 }

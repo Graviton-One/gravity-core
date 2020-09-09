@@ -4,7 +4,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	wavesplatform "github.com/wavesplatform/go-lib-crypto"
-	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
+	"github.com/wavesplatform/gowaves/pkg/crypto"
 )
 
 type ConsulPubKey ed25519.PubKeyEd25519
@@ -22,7 +22,7 @@ func StringToPrivKey(value string, chainType ChainType) ([]byte, error) {
 	case Waves:
 		wCrypto := wavesplatform.NewWavesCrypto()
 		seed := wavesplatform.Seed(value)
-		secret, err := wavesCrypto.NewSecretKeyFromBase58(string(wCrypto.PrivateKey(seed)))
+		secret, err := crypto.NewSecretKeyFromBase58(string(wCrypto.PrivateKey(seed)))
 		if err != nil {
 			return nil, err
 		}
@@ -64,7 +64,7 @@ func StringToOraclePubKey(value string, chainType ChainType) (OraclesPubKey, err
 			return [33]byte{}, err
 		}
 	case Waves:
-		wPubKey, err := wavesCrypto.NewPublicKeyFromBase58(value)
+		wPubKey, err := crypto.NewPublicKeyFromBase58(value)
 		pubKey = wPubKey[:]
 		if err != nil {
 			return [33]byte{}, err

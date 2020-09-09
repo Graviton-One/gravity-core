@@ -15,11 +15,15 @@ type ScoresByConsulMap map[account.ConsulPubKey]uint64
 func formScoreKey(pubKey account.ConsulPubKey) []byte {
 	return formKey(string(ScoreKey), hexutil.Encode(pubKey[:]))
 }
-func parseScoreKey(value []byte) account.ConsulPubKey {
-	b := []byte(strings.Split(string(value), Separator)[1])
+func parseScoreKey(value []byte) (account.ConsulPubKey, error) {
+	hex := []byte(strings.Split(string(value), Separator)[1])
+	key, err := hexutil.Decode(string(hex))
+	if err != nil {
+		return [32]byte{}, err
+	}
 	var pubKey account.ConsulPubKey
-	copy(pubKey[:], b[:])
-	return pubKey
+	copy(pubKey[:], key[:])
+	return pubKey, nil
 }
 
 func (storage *Storage) Score(pubKey account.ConsulPubKey) (uint64, error) {
@@ -51,7 +55,11 @@ func (storage *Storage) Scores() (ScoresByConsulMap, error) {
 		item := it.Item()
 		k := item.Key()
 		item.Value(func(v []byte) error {
-			scores[parseScoreKey(k)] = binary.BigEndian.Uint64(v)
+			pubKey, err := parseScoreKey(k)
+			if err != nil {
+				return err
+			}
+			scores[pubKey] = binary.BigEndian.Uint64(v)
 			return nil
 		})
 	}

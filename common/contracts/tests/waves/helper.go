@@ -6,9 +6,9 @@ import (
 	"errors"
 	"io/ioutil"
 
-	wavesClient "github.com/wavesplatform/gowaves/pkg/client"
+	"github.com/wavesplatform/gowaves/pkg/client"
 
-	wavesCrypto "github.com/wavesplatform/go-lib-crypto"
+	wavesplatform "github.com/wavesplatform/go-lib-crypto"
 	"github.com/wavesplatform/gowaves/pkg/crypto"
 )
 
@@ -61,9 +61,9 @@ func ScriptFromFile(filename string) ([]byte, error) {
 }
 
 func GenerateAddress(chainId byte) (*Account, error) {
-	wCrypto := wavesCrypto.NewWavesCrypto()
+	wCrypto := wavesplatform.NewWavesCrypto()
 	seed := wCrypto.RandomSeed()
-	address := string(wCrypto.AddressFromSeed(seed, wavesCrypto.WavesChainID(chainId)))
+	address := string(wCrypto.AddressFromSeed(seed, wavesplatform.WavesChainID(chainId)))
 	seedWaves, err := crypto.NewSecretKeyFromBase58(string(wCrypto.PrivateKey(seed)))
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func GenerateAddress(chainId byte) (*Account, error) {
 }
 
 func CheckRideError(rideErr error, msg string) error {
-	body := rideErr.(*wavesClient.RequestError).Body
+	body := rideErr.(*client.RequestError).Body
 	var rsError RideErr
 	err := json.Unmarshal([]byte(body), &rsError)
 	if err != nil {

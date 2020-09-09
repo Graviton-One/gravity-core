@@ -15,7 +15,7 @@ func main() {
 		Usage: "the gravity command line interface",
 		Commands: []*cli.Command{
 			commands.LedgerCommand,
-			commands.OracleCommand,
+			//commands.OracleCommand,
 		},
 	}
 

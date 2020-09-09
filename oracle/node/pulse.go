@@ -14,25 +14,25 @@ func (node *Node) commit(data interface{}, pulseId uint64) ([]byte, error) {
 	commit := crypto.Keccak256(dataBytes)
 	fmt.Printf("Commit: %s - %s \n", hexutil.Encode(dataBytes), hexutil.Encode(commit[:]))
 
-	args := []transactions.Args{
-		{
-			Value: node.nebulaId,
-		},
-		{
-			Value: pulseId,
-		},
-		{
-			Value: commit,
-		},
-		{
-			Value: node.oraclePubKey,
-		},
-	}
-
-	tx, err := transactions.New(node.validator.pubKey, transactions.Commit, node.validator.privKey, args)
+	tx, err := transactions.New(node.validator.pubKey, transactions.Commit, node.validator.privKey)
 	if err != nil {
 		return nil, err
 	}
+
+	tx.AddValues([]transactions.Value{
+		transactions.BytesValue{
+			Value: node.nebulaId[:],
+		},
+		transactions.IntValue{
+			Value: int64(pulseId),
+		},
+		transactions.BytesValue{
+			Value: commit,
+		},
+		transactions.BytesValue{
+			Value: node.oraclePubKey[:],
+		},
+	})
 
 	err = node.gravityClient.SendTx(tx)
 	if err != nil {
@@ -47,28 +47,27 @@ func (node *Node) reveal(pulseId uint64, reveal interface{}, commit []byte) erro
 	dataBytes := toBytes(reveal)
 	fmt.Printf("Reveal: %s  - %s \n", hexutil.Encode(dataBytes), hexutil.Encode(commit))
 
-	args := []transactions.Args{
-		{
-			Value: commit,
-		},
-		{
-			Value: node.nebulaId,
-		},
-		{
-			Value: pulseId,
-		},
-		{
-			Value: reveal,
-		},
-		{
-			Value: node.oraclePubKey,
-		},
-	}
-
-	tx, err := transactions.New(node.validator.pubKey, transactions.Reveal, node.validator.privKey, args)
+	tx, err := transactions.New(node.validator.pubKey, transactions.Reveal, node.validator.privKey)
 	if err != nil {
 		return err
 	}
+	tx.AddValues([]transactions.Value{
+		transactions.BytesValue{
+			Value: commit,
+		},
+		transactions.BytesValue{
+			Value: node.nebulaId[:],
+		},
+		transactions.IntValue{
+			Value: int64(pulseId),
+		},
+		transactions.BytesValue{
+			Value: dataBytes,
+		},
+		transactions.BytesValue{
+			Value: node.oraclePubKey[:],
+		},
+	})
 
 	err = node.gravityClient.SendTx(tx)
 	if err != nil {
@@ -101,27 +100,27 @@ func (node *Node) signResult(pulseId uint64, ctx context.Context) (interface{}, 
 	}
 	fmt.Printf("Result hash: %s \n", hexutil.Encode(hash))
 
-	args := []transactions.Args{
-		{
-			Value: node.nebulaId,
-		},
-		{
-			Value: pulseId,
-		},
-		{
-			Value: sign,
-		},
-		{
-			Value: byte(node.chainType),
-		},
-		{
-			Value: node.oraclePubKey,
-		},
-	}
-	tx, err := transactions.New(node.validator.pubKey, transactions.Result, node.validator.privKey, args)
+	tx, err := transactions.New(node.validator.pubKey, transactions.Result, node.validator.privKey)
 	if err != nil {
 		return nil, nil, err
 	}
+	tx.AddValues([]transactions.Value{
+		transactions.BytesValue{
+			Value: node.nebulaId[:],
+		},
+		transactions.IntValue{
+			Value: int64(pulseId),
+		},
+		transactions.BytesValue{
+			Value: sign,
+		},
+		transactions.BytesValue{
+			Value: []byte{byte(node.chainType)},
+		},
+		transactions.BytesValue{
+			Value: node.oraclePubKey[:],
+		},
+	})
 
 	err = node.gravityClient.SendTx(tx)
 	if err != nil {

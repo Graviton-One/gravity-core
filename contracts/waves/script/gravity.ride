@@ -18,15 +18,22 @@ func getStringByKey(key: String) = {
         case _ => ""
     }
 }
-
+func getBooleanByKey(key: String) = {
+    match (getBoolean(this, key)) {
+        case v:Boolean => v
+        case _ => false
+    }
+}
 #-----------------------Key-----------------------------
-let ConsulsKey = "consuls"
 let BftCoefficientKey = "bft_coefficient"
 let LastRoundKey = "last_round"
 
+func ConsulsKey(round: Int) = "consuls_" + toString(round)
 #-------------------Global vars-------------------------
-let consuls = getStringByKey(ConsulsKey).split(",")
 let bftCoefficient = getNumberByKey(BftCoefficientKey)
+let lastRound = getNumberByKey(LastRoundKey)
+
+func consulsByRound(round: Int) = getStringByKey(ConsulsKey(round)).split(",")
 
 func validateSign(hash: ByteVector, sign: String, oracle: String) = {
     if (sign != "nil") then 
@@ -37,19 +44,23 @@ func validateSign(hash: ByteVector, sign: String, oracle: String) = {
 #-------------------Callable----------------------------
 @Callable(i)
 func updateConsuls(newConsuls: String, stringSigns: String, round: Int) = {
+    let consuls = consulsByRound(lastRound)
+    let msg = toBytes(newConsuls + "," + toString(round))
     let signs = stringSigns.split(",")
-    let count = validateSign(toBytes(newConsuls), signs[0], consuls[0]) +
-                validateSign(toBytes(newConsuls), signs[1], consuls[1]) +
-                validateSign(toBytes(newConsuls), signs[2], consuls[2]) +
-                validateSign(toBytes(newConsuls), signs[3], consuls[3]) +
-                validateSign(toBytes(newConsuls), signs[4], consuls[4])
+    let count = validateSign(msg, signs[0], consuls[0]) +
+                validateSign(msg, signs[1], consuls[1]) +
+                validateSign(msg, signs[2], consuls[2]) +
+                validateSign(msg, signs[3], consuls[3]) +
+                validateSign(msg, signs[4], consuls[4])
 
-    if(count > bftCoefficient) 
+    if(round <= lastRound)
+        then throw("round less last round")
+    else if(count > bftCoefficient) 
         then throw("invalid bft count")
     else {  
         WriteSet([
-            DataEntry(ConsulsKey, newConsuls),
-            DataEntry(LastRoundKey + "_" + toString(round), round)
+            DataEntry(ConsulsKey(round), newConsuls),
+            DataEntry(LastRoundKey, round)
         ])
     }
 }

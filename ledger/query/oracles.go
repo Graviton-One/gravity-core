@@ -101,3 +101,23 @@ func results(store *storage.Storage, value []byte) ([][]byte, error) {
 
 	return v, nil
 }
+
+func nebulaOraclesIndex(store *storage.Storage, value []byte) (uint64, error) {
+	var rq ByNebulaRq
+	err := json.Unmarshal(value, &rq)
+	if err != nil {
+		return 0, err
+	}
+
+	nebula, err := account.StringToNebulaId(rq.NebulaAddress, rq.ChainType)
+	if err != nil {
+		return 0, err
+	}
+
+	v, err := store.NebulaOraclesIndex(nebula)
+	if err != nil {
+		return 0, err
+	}
+
+	return v, nil
+}

@@ -11,15 +11,17 @@ const (
 
 type AdaptorsConfig struct {
 	NodeUrl                string
+	ChainId                string
 	GravityContractAddress string
 }
 
 type LedgerConfig struct {
-	Moniker    string
-	IsFastSync bool
-	Mempool    *cfg.MempoolConfig
-	RPC        *cfg.RPCConfig
-	P2P        *cfg.P2PConfig
+	Moniker       string
+	SchedulerHost string
+	IsFastSync    bool
+	Mempool       *cfg.MempoolConfig
+	RPC           *cfg.RPCConfig
+	P2P           *cfg.P2PConfig
 
 	Adapters map[string]AdaptorsConfig
 }

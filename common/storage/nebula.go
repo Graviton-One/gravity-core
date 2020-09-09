@@ -16,6 +16,9 @@ type NebulaInfo struct {
 
 func (storage *Storage) Nebulae() (NebulaMap, error) {
 	b, err := storage.getValue([]byte(Nebulae))
+	if err == ErrKeyNotFound {
+		return make(NebulaMap), nil
+	}
 	if err != nil {
 		return nil, err
 	}

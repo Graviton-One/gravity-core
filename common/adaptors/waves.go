@@ -12,20 +12,24 @@ import (
 
 	"github.com/Gravity-Tech/gravity-core/common/helpers"
 
-	"github.com/Gravity-Tech/gravity-core/common/client"
+	"github.com/Gravity-Tech/gravity-core/common/gravity"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/btcsuite/btcutil/base58"
-	wavesClient "github.com/wavesplatform/gowaves/pkg/client"
-	wavesCrypto "github.com/wavesplatform/gowaves/pkg/crypto"
+	wclient "github.com/wavesplatform/gowaves/pkg/client"
+	"github.com/wavesplatform/gowaves/pkg/crypto"
 	"github.com/wavesplatform/gowaves/pkg/proto"
 )
 
-type WavesAdaptor struct {
-	secret wavesCrypto.SecretKey
+const (
+	ConsulsCount = 5
+)
 
-	ghClient    *client.GravityClient
-	wavesClient *wavesClient.Client
+type WavesAdaptor struct {
+	secret crypto.SecretKey
+
+	ghClient    *gravity.Client
+	wavesClient *wclient.Client
 	helper      helpers.ClientHelper
 
 	gravityContract string
@@ -39,24 +43,25 @@ func WithWavesGravityContract(address string) WavesAdapterOption {
 		return nil
 	}
 }
-func WavesAdapterWithGhClient(ghClient *client.GravityClient) WavesAdapterOption {
+func WavesAdapterWithGhClient(ghClient *gravity.Client) WavesAdapterOption {
 	return func(h *WavesAdaptor) error {
 		h.ghClient = ghClient
 		return nil
 	}
 }
 
-func NewWavesAdapter(seed []byte, nodeUrl string, opts ...WavesAdapterOption) (*WavesAdaptor, error) {
-	wClient, err := wavesClient.NewClient(wavesClient.Options{ApiKey: "", BaseUrl: nodeUrl})
+func NewWavesAdapter(seed []byte, nodeUrl string, chainId byte, opts ...WavesAdapterOption) (*WavesAdaptor, error) {
+	wClient, err := wclient.NewClient(wclient.Options{ApiKey: "", BaseUrl: nodeUrl})
 	if err != nil {
 		return nil, err
 	}
 
-	secret, err := wavesCrypto.NewSecretKeyFromBytes(seed)
+	secret, err := crypto.NewSecretKeyFromBytes(seed)
 	adapter := &WavesAdaptor{
 		secret:      secret,
 		wavesClient: wClient,
 		helper:      helpers.NewClientHelper(wClient),
+		chainID:     chainId,
 	}
 	for _, opt := range opts {
 		err := opt(adapter)
@@ -79,7 +84,7 @@ func (adaptor *WavesAdaptor) WaitTx(id string, ctx context.Context) error {
 	return <-adaptor.helper.WaitTx(id, ctx)
 }
 func (adaptor *WavesAdaptor) Sign(msg []byte) ([]byte, error) {
-	sig, err := wavesCrypto.Sign(adaptor.secret, msg)
+	sig, err := crypto.Sign(adaptor.secret, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -87,11 +92,11 @@ func (adaptor *WavesAdaptor) Sign(msg []byte) ([]byte, error) {
 }
 func (adaptor *WavesAdaptor) PubKey() account.OraclesPubKey {
 	var oraclePubKey account.OraclesPubKey
-	pubKey := wavesCrypto.GeneratePublicKey(adaptor.secret)
+	pubKey := crypto.GeneratePublicKey(adaptor.secret)
 	copy(oraclePubKey[:], pubKey.Bytes())
 	return oraclePubKey
 }
-func (adaptor *WavesAdaptor) GetExtractorType(nebulaId account.NebulaId, ctx context.Context) (contracts.ExtractorType, error) {
+func (adaptor *WavesAdaptor) ValueType(nebulaId account.NebulaId, ctx context.Context) (contracts.ExtractorType, error) {
 	nebulaAddress := base58.Encode(nebulaId.ToBytes(account.Waves))
 	state, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, "type", ctx)
 	if err != nil {
@@ -101,7 +106,7 @@ func (adaptor *WavesAdaptor) GetExtractorType(nebulaId account.NebulaId, ctx con
 	return contracts.ExtractorType(state.Value.(float64)), nil
 }
 
-func (adaptor *WavesAdaptor) SendDataResult(nebulaId account.NebulaId, pulseId uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
+func (adaptor *WavesAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
 	nebulaAddress := base58.Encode(nebulaId.ToBytes(account.Waves))
 
 	state, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, fmt.Sprintf("data_hash_%d", pulseId), ctx)
@@ -161,7 +166,7 @@ func (adaptor *WavesAdaptor) SendDataResult(nebulaId account.NebulaId, pulseId u
 	tx := &proto.InvokeScriptWithProofs{
 		Type:            proto.InvokeScriptTransaction,
 		Version:         1,
-		SenderPK:        wavesCrypto.GeneratePublicKey(adaptor.secret),
+		SenderPK:        crypto.GeneratePublicKey(adaptor.secret),
 		ChainID:         adaptor.chainID,
 		ScriptRecipient: contract,
 		FunctionCall: proto.FunctionCall{
@@ -171,7 +176,7 @@ func (adaptor *WavesAdaptor) SendDataResult(nebulaId account.NebulaId, pulseId u
 		Payments:  nil,
 		FeeAsset:  *asset,
 		Fee:       500000,
-		Timestamp: wavesClient.NewTimestampFromTime(time.Now()),
+		Timestamp: wclient.NewTimestampFromTime(time.Now()),
 	}
 
 	err = tx.Sign(adaptor.chainID, adaptor.secret)
@@ -186,7 +191,7 @@ func (adaptor *WavesAdaptor) SendDataResult(nebulaId account.NebulaId, pulseId u
 
 	return tx.ID.String(), nil
 }
-func (adaptor *WavesAdaptor) SendDataToSubs(nebulaId account.NebulaId, pulseId uint64, value interface{}, ctx context.Context) error {
+func (adaptor *WavesAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId uint64, value interface{}, ctx context.Context) error {
 	nebulaAddress := base58.Encode(nebulaId.ToBytes(account.Waves))
 	state, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, fmt.Sprintf("data_hash_%d", pulseId), ctx)
 	if err != nil {
@@ -215,7 +220,7 @@ func (adaptor *WavesAdaptor) SendDataToSubs(nebulaId account.NebulaId, pulseId u
 		return err
 	}
 
-	pubKey, err := wavesCrypto.NewPublicKeyFromBase58(pubKeyNebulaContract.Value.(string))
+	pubKey, err := crypto.NewPublicKeyFromBase58(pubKeyNebulaContract.Value.(string))
 	if err != nil {
 		return err
 	}
@@ -261,7 +266,7 @@ func (adaptor *WavesAdaptor) SendDataToSubs(nebulaId account.NebulaId, pulseId u
 		Payments:  nil,
 		FeeAsset:  *asset,
 		Fee:       500000,
-		Timestamp: wavesClient.NewTimestampFromTime(time.Now()),
+		Timestamp: wclient.NewTimestampFromTime(time.Now()),
 	}
 
 	err = tx.Sign(adaptor.chainID, adaptor.secret)
@@ -277,7 +282,7 @@ func (adaptor *WavesAdaptor) SendDataToSubs(nebulaId account.NebulaId, pulseId u
 	return nil
 }
 
-func (adaptor *WavesAdaptor) SendOraclesToNebula(nebulaId account.NebulaId, oracles []account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
+func (adaptor *WavesAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracles []account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
 	nebulaAddress := base58.Encode(nebulaId.ToBytes(account.Waves))
 	lastRoundState, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, "last_round_"+fmt.Sprintf("%d", round), ctx)
 	if err != nil {
@@ -302,7 +307,7 @@ func (adaptor *WavesAdaptor) SendOraclesToNebula(nebulaId account.NebulaId, orac
 		stringSigns = append(stringSigns, base58.Encode(v))
 	}
 
-	emptyCount := oracleCountState.Value.(int) - len(newOracles)
+	emptyCount := int(oracleCountState.Value.(float64)) - len(newOracles)
 	for i := 0; i < emptyCount; i++ {
 		newOracles = append(newOracles, base58.Encode([]byte{0}))
 	}
@@ -320,7 +325,7 @@ func (adaptor *WavesAdaptor) SendOraclesToNebula(nebulaId account.NebulaId, orac
 	tx := &proto.InvokeScriptWithProofs{
 		Type:            proto.InvokeScriptTransaction,
 		Version:         1,
-		SenderPK:        wavesCrypto.GeneratePublicKey(adaptor.secret),
+		SenderPK:        crypto.GeneratePublicKey(adaptor.secret),
 		ChainID:         adaptor.chainID,
 		ScriptRecipient: contract,
 		FunctionCall: proto.FunctionCall{
@@ -340,7 +345,7 @@ func (adaptor *WavesAdaptor) SendOraclesToNebula(nebulaId account.NebulaId, orac
 		Payments:  nil,
 		FeeAsset:  *asset,
 		Fee:       500000,
-		Timestamp: wavesClient.NewTimestampFromTime(time.Now()),
+		Timestamp: wclient.NewTimestampFromTime(time.Now()),
 	}
 
 	err = tx.Sign(adaptor.chainID, adaptor.secret)
@@ -356,19 +361,16 @@ func (adaptor *WavesAdaptor) SendOraclesToNebula(nebulaId account.NebulaId, orac
 	return tx.ID.String(), nil
 }
 func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
-	state, _, err := adaptor.helper.GetStateByAddressAndKey(adaptor.gravityContract, "last_round_"+fmt.Sprintf("%d", round), ctx)
-	if err != nil {
-		return "", err
-	}
-	if state != nil {
-		return "", err
-	}
-
 	var stringSigns []string
 	oneSigFound := false
 	for _, v := range signs {
 		oneSigFound = true
 		stringSigns = append(stringSigns, base58.Encode(v))
+	}
+
+	emptyCount := ConsulsCount - len(signs)
+	for i := 0; i < emptyCount; i++ {
+		stringSigns = append(stringSigns, base58.Encode([]byte{0}))
 	}
 
 	var newConsulsString []string
@@ -377,12 +379,7 @@ func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []
 		newConsulsString = append(newConsulsString, base58.Encode(v.ToBytes(account.Waves)))
 	}
 
-	consulsCountState, _, err := adaptor.helper.GetStateByAddressAndKey(adaptor.gravityContract, "consuls_count", ctx)
-	if err != nil {
-		return "", err
-	}
-
-	emptyCount := consulsCountState.Value.(int) - len(newConsulsString)
+	emptyCount = ConsulsCount - len(newConsulsString)
 	for i := 0; i < emptyCount; i++ {
 		newConsulsString = append(newConsulsString, base58.Encode([]byte{0}))
 	}
@@ -403,11 +400,11 @@ func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []
 	tx := &proto.InvokeScriptWithProofs{
 		Type:            proto.InvokeScriptTransaction,
 		Version:         1,
-		SenderPK:        wavesCrypto.GeneratePublicKey(adaptor.secret),
+		SenderPK:        crypto.GeneratePublicKey(adaptor.secret),
 		ChainID:         adaptor.chainID,
 		ScriptRecipient: contract,
 		FunctionCall: proto.FunctionCall{
-			Name: "setConsuls",
+			Name: "updateConsuls",
 			Arguments: proto.Arguments{
 				proto.StringArgument{
 					Value: strings.Join(newConsulsString, ","),
@@ -423,7 +420,7 @@ func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []
 		Payments:  nil,
 		FeeAsset:  *asset,
 		Fee:       500000,
-		Timestamp: wavesClient.NewTimestampFromTime(time.Now()),
+		Timestamp: wclient.NewTimestampFromTime(time.Now()),
 	}
 
 	err = tx.Sign(adaptor.chainID, adaptor.secret)
@@ -436,18 +433,34 @@ func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []
 		return "", err
 	}
 
-	err = <-adaptor.helper.WaitTx(tx.ID.String(), ctx)
-	if err != nil {
-		return "", err
-	}
-
 	return tx.ID.String(), nil
 }
-func (adaptor *WavesAdaptor) SignConsuls(consulsAddresses []account.OraclesPubKey) ([]byte, error) {
-	return adaptor.signOraclesPubKey(consulsAddresses)
+func (adaptor *WavesAdaptor) SignConsuls(consulsAddresses []account.OraclesPubKey, roundId int64) ([]byte, error) {
+	var msg []string
+	for _, v := range consulsAddresses {
+		msg = append(msg, base58.Encode(v.ToBytes(account.Waves)))
+	}
+	msg = append(msg, fmt.Sprintf("%d", roundId))
+
+	sign, err := adaptor.Sign([]byte(strings.Join(msg, ",")))
+	if err != nil {
+		return nil, err
+	}
+
+	return sign, err
 }
 func (adaptor *WavesAdaptor) SignOracles(nebulaId account.NebulaId, oracles []account.OraclesPubKey) ([]byte, error) {
-	return adaptor.signOraclesPubKey(oracles)
+	var stringOracles []string
+	for _, v := range oracles {
+		stringOracles = append(stringOracles, base58.Encode(v.ToBytes(account.Waves)))
+	}
+
+	sign, err := adaptor.Sign([]byte(strings.Join(stringOracles, ",")))
+	if err != nil {
+		return nil, err
+	}
+
+	return sign, err
 }
 
 func (adaptor *WavesAdaptor) LastPulseId(nebulaId account.NebulaId, ctx context.Context) (uint64, error) {
@@ -463,16 +476,26 @@ func (adaptor *WavesAdaptor) LastPulseId(nebulaId account.NebulaId, ctx context.
 
 	return uint64(state.Value.(float64)), nil
 }
-func (adaptor *WavesAdaptor) signOraclesPubKey(consulsAddresses []account.OraclesPubKey) ([]byte, error) {
-	var stringOracles []string
-	for _, v := range consulsAddresses {
-		stringOracles = append(stringOracles, base58.Encode(v.ToBytes(account.Waves)))
+func (adaptor *WavesAdaptor) LastRound(ctx context.Context) (uint64, error) {
+	state, _, err := adaptor.helper.GetStateByAddressAndKey(adaptor.gravityContract, "last_round", ctx)
+	if err != nil && err != storage.ErrKeyNotFound {
+		return 0, err
 	}
 
-	sign, err := adaptor.Sign([]byte(strings.Join(stringOracles, ",")))
+	if state == nil {
+		return 0, err
+	}
+
+	return uint64(state.Value.(float64)), nil
+}
+func (adaptor *WavesAdaptor) RoundExist(roundId int64, ctx context.Context) (bool, error) {
+	state, _, err := adaptor.helper.GetStateByAddressAndKey(adaptor.gravityContract, fmt.Sprintf("consuls_%d", roundId), ctx)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
-
-	return sign, nil
+	if state == nil {
+		return false, nil
+	} else {
+		return true, nil
+	}
 }

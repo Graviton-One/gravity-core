@@ -16,7 +16,7 @@ import (
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
-	"github.com/Gravity-Tech/gravity-core/common/client"
+	"github.com/Gravity-Tech/gravity-core/common/gravity"
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
 
 	tendermintCrypto "github.com/tendermint/tendermint/crypto/ed25519"
@@ -61,7 +61,7 @@ type Node struct {
 
 	validator     *Validator
 	oraclePubKey  account.OraclesPubKey
-	gravityClient *client.GravityClient
+	gravityClient *gravity.Client
 
 	adaptor   adaptors.IBlockchainAdaptor
 	extractor *Extractor
@@ -69,8 +69,8 @@ type Node struct {
 	MaxPulseCountInBlock uint64
 }
 
-func New(nebulaId account.NebulaId, chainType account.ChainType, oracleSecretKey []byte, validator *Validator, extractorUrl string, gravityNodeUrl string, targetChainNodeUrl string, ctx context.Context) (*Node, error) {
-	ghClient, err := client.NewGravityClient(gravityNodeUrl)
+func New(nebulaId account.NebulaId, chainType account.ChainType, chainId byte, oracleSecretKey []byte, validator *Validator, extractorUrl string, gravityNodeUrl string, targetChainNodeUrl string, ctx context.Context) (*Node, error) {
+	ghClient, err := gravity.New(gravityNodeUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -83,13 +83,13 @@ func New(nebulaId account.NebulaId, chainType account.ChainType, oracleSecretKey
 			return nil, err
 		}
 	case account.Waves:
-		adaptor, err = adaptors.NewWavesAdapter(oracleSecretKey, targetChainNodeUrl, adaptors.WavesAdapterWithGhClient(ghClient))
+		adaptor, err = adaptors.NewWavesAdapter(oracleSecretKey, targetChainNodeUrl, chainId, adaptors.WavesAdapterWithGhClient(ghClient))
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	exType, err := adaptor.GetExtractorType(nebulaId, ctx)
+	exType, err := adaptor.ValueType(nebulaId, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -116,20 +116,19 @@ func (node *Node) Init() error {
 
 	oracle, ok := oraclesByValidator[node.chainType]
 	if !ok || oracle == node.oraclePubKey {
-		args := []transactions.Args{
-			{
-				Value: node.chainType,
-			},
-			{
-				Value: node.oraclePubKey,
-			},
-		}
-
-		tx, err := transactions.New(node.validator.pubKey, transactions.AddOracle, node.validator.privKey, args)
+		tx, err := transactions.New(node.validator.pubKey, transactions.AddOracle, node.validator.privKey)
 		if err != nil {
 			return err
 		}
 
+		tx.AddValues([]transactions.Value{
+			transactions.BytesValue{
+				Value: []byte{byte(node.chainType)},
+			},
+			transactions.BytesValue{
+				Value: node.oraclePubKey[:],
+			},
+		})
 		err = node.gravityClient.SendTx(tx)
 		if err != nil {
 			return err
@@ -146,19 +145,19 @@ func (node *Node) Init() error {
 
 	_, ok = oraclesByNebulaKey[node.oraclePubKey]
 	if !ok {
-		args := []transactions.Args{
-			{
-				Value: node.nebulaId,
-			},
-			{
-				Value: node.oraclePubKey,
-			},
-		}
-
-		tx, err := transactions.New(node.validator.pubKey, transactions.AddOracleInNebula, node.validator.privKey, args)
+		tx, err := transactions.New(node.validator.pubKey, transactions.AddOracleInNebula, node.validator.privKey)
 		if err != nil {
 			return err
 		}
+
+		tx.AddValues([]transactions.Value{
+			transactions.BytesValue{
+				Value: node.nebulaId[:],
+			},
+			transactions.BytesValue{
+				Value: node.oraclePubKey[:],
+			},
+		})
 
 		err = node.gravityClient.SendTx(tx)
 		if err != nil {
@@ -236,43 +235,10 @@ func (node *Node) execute(ledgerHeight uint64, tcHeight uint64, roundState *Roun
 		return err
 	}
 
-	roundHeight, err := node.gravityClient.RoundHeight(node.chainType, ledgerHeight)
-	if err != nil && err != client.ErrValueNotFound {
-		return err
-	}
-
-	var startGhHeight uint64
-	if err != client.ErrValueNotFound {
-		startGhHeight = roundHeight
-	} else {
-		fmt.Printf("Target Chain Height: %d\n", tcHeight)
-
-		args := []transactions.Args{
-			{
-				Value: node.chainType,
-			},
-			{
-				Value: tcHeight,
-			},
-		}
-
-		tx, err := transactions.New(node.validator.pubKey, transactions.NewRound, node.validator.privKey, args)
-		if err != nil {
-			return err
-		}
-		err = node.gravityClient.SendTx(tx)
-		if err != nil {
-			return err
-		}
-
-		startGhHeight = ledgerHeight
-		fmt.Printf("Round Start (Height): %d\n", startGhHeight)
-	}
-
 	switch state.CalculateSubRound(ledgerHeight) {
 	case state.CommitSubRound:
 		_, err := node.gravityClient.CommitHash(node.chainType, node.nebulaId, int64(pulseId), node.oraclePubKey)
-		if err != nil && err != client.ErrValueNotFound {
+		if err != nil && err != gravity.ErrValueNotFound {
 			return err
 		} else if err == nil {
 			return nil
@@ -299,7 +265,7 @@ func (node *Node) execute(ledgerHeight uint64, tcHeight uint64, roundState *Roun
 			return nil
 		}
 		_, err := node.gravityClient.Reveal(node.chainType, node.nebulaId, int64(pulseId), roundState.commitHash)
-		if err != nil && err != client.ErrValueNotFound {
+		if err != nil && err != gravity.ErrValueNotFound {
 			return err
 		} else if err == nil {
 			return nil
@@ -315,14 +281,14 @@ func (node *Node) execute(ledgerHeight uint64, tcHeight uint64, roundState *Roun
 		}
 
 		_, err := node.gravityClient.Reveal(node.chainType, node.nebulaId, int64(pulseId), roundState.commitHash)
-		if err != nil && err != client.ErrValueNotFound {
+		if err != nil && err != gravity.ErrValueNotFound {
 			return err
-		} else if err == client.ErrValueNotFound {
+		} else if err == gravity.ErrValueNotFound {
 			return nil
 		}
 
 		_, err = node.gravityClient.Result(node.chainType, node.nebulaId, int64(pulseId), node.oraclePubKey)
-		if err != nil && err != client.ErrValueNotFound {
+		if err != nil && err != gravity.ErrValueNotFound {
 			return err
 		} else if err == nil {
 			return nil
@@ -364,7 +330,7 @@ func (node *Node) execute(ledgerHeight uint64, tcHeight uint64, roundState *Roun
 			return nil
 		}
 
-		txId, err := node.adaptor.SendDataResult(node.nebulaId, pulseId, oracles, roundState.resultHash, ctx)
+		txId, err := node.adaptor.AddPulse(node.nebulaId, pulseId, oracles, roundState.resultHash, ctx)
 		if err != nil {
 			return err
 		}
@@ -376,7 +342,7 @@ func (node *Node) execute(ledgerHeight uint64, tcHeight uint64, roundState *Roun
 
 		roundState.isSent = true
 
-		err = node.adaptor.SendDataToSubs(node.nebulaId, pulseId, roundState.resultValue, ctx)
+		err = node.adaptor.SendValueToSubs(node.nebulaId, pulseId, roundState.resultValue, ctx)
 		if err != nil {
 			return err
 		}

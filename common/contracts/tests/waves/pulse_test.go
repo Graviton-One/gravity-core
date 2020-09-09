@@ -10,17 +10,13 @@ import (
 	"testing"
 	"time"
 
-	wavesCrypto "github.com/wavesplatform/go-lib-crypto"
-
 	"github.com/Gravity-Tech/gravity-core/common/contracts"
-	"github.com/Gravity-Tech/gravity-core/deployer"
-
-	"github.com/wavesplatform/gowaves/pkg/proto"
-
-	"github.com/wavesplatform/gowaves/pkg/crypto"
-
 	"github.com/Gravity-Tech/gravity-core/common/helpers"
-	wavesClient "github.com/wavesplatform/gowaves/pkg/client"
+	"github.com/Gravity-Tech/gravity-core/deployer"
+	wavesplatform "github.com/wavesplatform/go-lib-crypto"
+	"github.com/wavesplatform/gowaves/pkg/client"
+	"github.com/wavesplatform/gowaves/pkg/crypto"
+	"github.com/wavesplatform/gowaves/pkg/proto"
 )
 
 const (
@@ -33,7 +29,7 @@ const (
 
 type TestPulseConfig struct {
 	Helper helpers.ClientHelper
-	Client *wavesClient.Client
+	Client *client.Client
 	Ctx    context.Context
 
 	Gravity *Account
@@ -83,7 +79,7 @@ func initTests() (*TestPulseConfig, error) {
 		return nil, err
 	}
 
-	wClient, err := wavesClient.NewClient(wavesClient.Options{ApiKey: "", BaseUrl: cfg.NodeUrl})
+	wClient, err := client.NewClient(client.Options{ApiKey: "", BaseUrl: cfg.NodeUrl})
 	if err != nil {
 		return nil, err
 	}
@@ -137,8 +133,8 @@ func initTests() (*TestPulseConfig, error) {
 		return nil, err
 	}
 
-	wCrypto := wavesCrypto.NewWavesCrypto()
-	distributionSeed, err := crypto.NewSecretKeyFromBase58(string(wCrypto.PrivateKey(wavesCrypto.Seed(cfg.DistributionSeed))))
+	wCrypto := wavesplatform.NewWavesCrypto()
+	distributionSeed, err := crypto.NewSecretKeyFromBase58(string(wCrypto.PrivateKey(wavesplatform.Seed(cfg.DistributionSeed))))
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +161,7 @@ func initTests() (*TestPulseConfig, error) {
 		Version:   1,
 		SenderPK:  crypto.GeneratePublicKey(distributionSeed),
 		Fee:       5000000,
-		Timestamp: wavesClient.NewTimestampFromTime(time.Now()),
+		Timestamp: client.NewTimestampFromTime(time.Now()),
 		Transfers: []proto.MassTransferEntry{
 			{
 				Amount:    2 * Wavelet,
@@ -270,7 +266,7 @@ func testSendHashPositive(t *testing.T) {
 			},
 		},
 		Fee:             5000000,
-		Timestamp:       wavesClient.NewTimestampFromTime(time.Now()),
+		Timestamp:       client.NewTimestampFromTime(time.Now()),
 		ScriptRecipient: proto.NewRecipientFromAddress(recipient),
 	}
 	err = tx.Sign(ChainId, config.Oracles[0].Secret)
@@ -334,7 +330,7 @@ func testSendHashInvalidSigns(t *testing.T) {
 			},
 		},
 		Fee:             5000000,
-		Timestamp:       wavesClient.NewTimestampFromTime(time.Now()),
+		Timestamp:       client.NewTimestampFromTime(time.Now()),
 		ScriptRecipient: proto.NewRecipientFromAddress(recipient),
 	}
 	err = tx.Sign(ChainId, config.Oracles[0].Secret)
@@ -396,7 +392,7 @@ func testSendSubPositive(t *testing.T) {
 			},
 		},
 		Fee:             5000000,
-		Timestamp:       wavesClient.NewTimestampFromTime(time.Now()),
+		Timestamp:       client.NewTimestampFromTime(time.Now()),
 		ScriptRecipient: proto.NewRecipientFromAddress(recipient),
 	}
 
@@ -440,7 +436,7 @@ func testSendSubPositive(t *testing.T) {
 			},
 		},
 		Fee:             5000000,
-		Timestamp:       wavesClient.NewTimestampFromTime(time.Now()),
+		Timestamp:       client.NewTimestampFromTime(time.Now()),
 		ScriptRecipient: proto.NewRecipientFromAddress(recipient),
 	}
 
@@ -513,7 +509,7 @@ func testSendSubInvalidHash(t *testing.T) {
 			},
 		},
 		Fee:             5000000,
-		Timestamp:       wavesClient.NewTimestampFromTime(time.Now()),
+		Timestamp:       client.NewTimestampFromTime(time.Now()),
 		ScriptRecipient: proto.NewRecipientFromAddress(recipient),
 	}
 
@@ -557,7 +553,7 @@ func testSendSubInvalidHash(t *testing.T) {
 			},
 		},
 		Fee:             5000000,
-		Timestamp:       wavesClient.NewTimestampFromTime(time.Now()),
+		Timestamp:       client.NewTimestampFromTime(time.Now()),
 		ScriptRecipient: proto.NewRecipientFromAddress(recipient),
 	}
 

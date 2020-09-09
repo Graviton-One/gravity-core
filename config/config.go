@@ -17,24 +17,36 @@ type PrivKeys struct {
 	TargetChains map[string]string
 }
 
-func GeneratePrivKeys() (PrivKeys, error) {
+type PubKeys struct {
+	Validator    string
+	TargetChains map[string]string
+}
+
+func GeneratePrivKeys() (PrivKeys, PubKeys, error) {
 	validatorPrivKey := ed25519.GenPrivKey()
 
 	ethPrivKey, err := ethCrypto.GenerateKey()
 	if err != nil {
-		return PrivKeys{}, err
+		return PrivKeys{}, PubKeys{}, err
 	}
 
-	wavesGen := wavesplatform.NewWavesCrypto()
-	wSeed := wavesGen.RandomSeed()
+	wCrypto := wavesplatform.NewWavesCrypto()
+	wSeed := wCrypto.RandomSeed()
 
 	return PrivKeys{
-		Validator: hexutil.Encode(validatorPrivKey[:]),
-		TargetChains: map[string]string{
-			account.Ethereum.String(): hexutil.Encode(ethCrypto.FromECDSA(ethPrivKey)),
-			account.Waves.String():    string(wSeed),
+			Validator: hexutil.Encode(validatorPrivKey[:]),
+			TargetChains: map[string]string{
+				account.Ethereum.String(): hexutil.Encode(ethCrypto.FromECDSA(ethPrivKey)),
+				account.Waves.String():    string(wSeed),
+			},
 		},
-	}, nil
+		PubKeys{
+			Validator: hexutil.Encode(validatorPrivKey.PubKey().Bytes()[5:]),
+			TargetChains: map[string]string{
+				account.Ethereum.String(): hexutil.Encode(ethCrypto.CompressPubkey(&ethPrivKey.PublicKey)),
+				account.Waves.String():    string(wCrypto.PublicKey(wSeed)),
+			},
+		}, nil
 }
 func ParseConfig(filename string, config interface{}) error {
 	file, err := ioutil.ReadFile(filename)

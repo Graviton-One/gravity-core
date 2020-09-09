@@ -10,11 +10,10 @@ import (
 	"time"
 
 	"github.com/mr-tron/base58"
-	wavesCrypto "github.com/wavesplatform/go-lib-crypto"
+	wavesplatform "github.com/wavesplatform/go-lib-crypto"
+	"github.com/wavesplatform/gowaves/pkg/client"
 	"github.com/wavesplatform/gowaves/pkg/crypto"
 	"github.com/wavesplatform/gowaves/pkg/proto"
-
-	wavesClient "github.com/wavesplatform/gowaves/pkg/client"
 )
 
 const (
@@ -32,7 +31,7 @@ const (
 
 type TestConfig struct {
 	Helper helpers.ClientHelper
-	Client *wavesClient.Client
+	Client *client.Client
 	Ctx    context.Context
 
 	LUPort  *Account
@@ -82,7 +81,7 @@ func initTests() (*TestConfig, error) {
 		return nil, err
 	}
 
-	wClient, err := wavesClient.NewClient(wavesClient.Options{ApiKey: "", BaseUrl: cfg.NodeUrl})
+	wClient, err := client.NewClient(client.Options{ApiKey: "", BaseUrl: cfg.NodeUrl})
 	if err != nil {
 		return nil, err
 	}
@@ -104,8 +103,8 @@ func initTests() (*TestConfig, error) {
 		return nil, err
 	}
 
-	wCrypto := wavesCrypto.NewWavesCrypto()
-	distributionSeed, err := crypto.NewSecretKeyFromBase58(string(wCrypto.PrivateKey(wavesCrypto.Seed(cfg.DistributionSeed))))
+	wCrypto := wavesplatform.NewWavesCrypto()
+	distributionSeed, err := crypto.NewSecretKeyFromBase58(string(wCrypto.PrivateKey(wavesplatform.Seed(cfg.DistributionSeed))))
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +114,7 @@ func initTests() (*TestConfig, error) {
 		Version:   1,
 		SenderPK:  crypto.GeneratePublicKey(distributionSeed),
 		Fee:       5000000,
-		Timestamp: wavesClient.NewTimestampFromTime(time.Now()),
+		Timestamp: client.NewTimestampFromTime(time.Now()),
 		Transfers: []proto.MassTransferEntry{
 			{
 				Amount:    2 * Wavelet,
@@ -179,7 +178,7 @@ func testCreateFiveRq(t *testing.T) {
 				},
 			},
 			Fee:             5000000,
-			Timestamp:       wavesClient.NewTimestampFromTime(time.Now()),
+			Timestamp:       client.NewTimestampFromTime(time.Now()),
 			ScriptRecipient: config.LUPort.Recipient,
 		}
 		err := tx.Sign(ChainId, config.Tester.Secret)
@@ -281,7 +280,7 @@ func testApproveMiddleRq(t *testing.T) {
 			},
 		},
 		Fee:             5000000,
-		Timestamp:       wavesClient.NewTimestampFromTime(time.Now()),
+		Timestamp:       client.NewTimestampFromTime(time.Now()),
 		ScriptRecipient: config.LUPort.Recipient,
 	}
 	err = tx.Sign(ChainId, config.Tester.Secret)
@@ -378,7 +377,7 @@ func testApproveFirstRq(t *testing.T) {
 			},
 		},
 		Fee:             5000000,
-		Timestamp:       wavesClient.NewTimestampFromTime(time.Now()),
+		Timestamp:       client.NewTimestampFromTime(time.Now()),
 		ScriptRecipient: config.LUPort.Recipient,
 	}
 	err = tx.Sign(ChainId, config.Tester.Secret)
@@ -461,7 +460,7 @@ func testApproveLastRq(t *testing.T) {
 			},
 		},
 		Fee:             5000000,
-		Timestamp:       wavesClient.NewTimestampFromTime(time.Now()),
+		Timestamp:       client.NewTimestampFromTime(time.Now()),
 		ScriptRecipient: config.LUPort.Recipient,
 	}
 	err = tx.Sign(ChainId, config.Tester.Secret)
@@ -538,7 +537,7 @@ func testUnlockRq(t *testing.T) {
 			},
 		},
 		Fee:             5000000,
-		Timestamp:       wavesClient.NewTimestampFromTime(time.Now()),
+		Timestamp:       client.NewTimestampFromTime(time.Now()),
 		ScriptRecipient: config.LUPort.Recipient,
 	}
 	err = tx.Sign(ChainId, config.Tester.Secret)

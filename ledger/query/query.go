@@ -20,6 +20,12 @@ const (
 	ResultPath            Path = "result"
 	ResultsPath           Path = "results"
 	NebulaePath           Path = "nebulae"
+
+	ConsulsPath                Path = "consuls"
+	ConsulsCandidatePath       Path = "consulsCandidate"
+	SignNewConsulsByConsulPath Path = "signNewConsulsByConsul"
+	SignNewOraclesByConsulPath Path = "signNewOraclesByConsul"
+	NebulaOraclesIndexPath     Path = "nebulaOraclesIndex"
 )
 
 var (
@@ -28,63 +34,42 @@ var (
 
 func Query(store *storage.Storage, path string, rq []byte) ([]byte, error) {
 	var value interface{}
+	var err error
 	switch Path(path) {
 	case OracleByValidatorPath:
-		v, err := oraclesByValidator(store, rq)
-		if err != nil {
-			return nil, err
-		}
-		value = v
+		value, err = oraclesByValidator(store, rq)
 	case OracleByNebulaPath:
-		v, err := oraclesByNebula(store, rq)
-		if err != nil {
-			return nil, err
-		}
-		value = v
+		value, err = oraclesByNebula(store, rq)
 	case RoundHeightPath:
-		v, err := roundHeight(store, rq)
-		if err != nil {
-			return nil, err
-		}
-		value = v
+		value, err = roundHeight(store, rq)
 	case CommitHashPath:
-		v, err := commitHash(store, rq)
-		if err != nil {
-			return nil, err
-		}
-		value = v
+		value, err = commitHash(store, rq)
 	case RevealPath:
-		v, err := reveal(store, rq)
-		if err != nil {
-			return nil, err
-		}
-		value = v
+		value, err = reveal(store, rq)
 	case ResultPath:
-		v, err := result(store, rq)
-		if err != nil {
-			return nil, err
-		}
-		value = v
+		value, err = result(store, rq)
 	case BftOracleByNebulaPath:
-		v, err := bftOraclesByNebula(store, rq)
-		if err != nil {
-			return nil, err
-		}
-		value = v
+		value, err = bftOraclesByNebula(store, rq)
 	case ResultsPath:
-		v, err := results(store, rq)
-		if err != nil {
-			return nil, err
-		}
-		value = v
+		value, err = results(store, rq)
 	case NebulaePath:
-		v, err := nebulae(store)
-		if err != nil {
-			return nil, err
-		}
-		value = v
+		value, err = nebulae(store)
+	case ConsulsPath:
+		value, err = consuls(store)
+	case ConsulsCandidatePath:
+		value, err = consulsCandidate(store)
+	case SignNewConsulsByConsulPath:
+		value, err = signNewConsulsByConsul(store, rq)
+	case SignNewOraclesByConsulPath:
+		value, err = signNewOraclesByConsul(store, rq)
+	case NebulaOraclesIndexPath:
+		value, err = nebulaOraclesIndex(store, rq)
 	default:
 		return nil, ErrInvalidPath
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	b, err := toBytes(value)

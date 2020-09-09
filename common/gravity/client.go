@@ -1,4 +1,4 @@
-package client
+package gravity
 
 import (
 	"encoding/binary"
@@ -23,20 +23,20 @@ var (
 	ErrInternalServer = errors.New("internal server error")
 )
 
-type GravityClient struct {
+type Client struct {
 	Host       string
 	HttpClient *rpchttp.HTTP
 }
 
-func NewGravityClient(host string) (*GravityClient, error) {
+func New(host string) (*Client, error) {
 	client, err := rpchttp.New(host, "/websocket")
 	if err != nil {
 		return nil, err
 	}
-	return &GravityClient{Host: host, HttpClient: client}, nil
+	return &Client{Host: host, HttpClient: client}, nil
 }
 
-func (client *GravityClient) SendTx(transaction *transactions.Transaction) error {
+func (client *Client) SendTx(transaction *transactions.Transaction) error {
 	txBytes, err := json.Marshal(transaction)
 	if err != nil {
 		return err
@@ -54,13 +54,13 @@ func (client *GravityClient) SendTx(transaction *transactions.Transaction) error
 	return err
 }
 
-func (client *GravityClient) OraclesByValidator(pubKey account.ConsulPubKey) (storage.OraclesByTypeMap, error) {
+func (client *Client) OraclesByValidator(pubKey account.ConsulPubKey) (storage.OraclesByTypeMap, error) {
 	rq := query.ByValidatorRq{
 		PubKey: hexutil.Encode(pubKey[:]),
 	}
 
 	rs, err := client.do(query.OracleByValidatorPath, rq)
-	if err != nil || err != ErrValueNotFound {
+	if err != nil || err == ErrValueNotFound {
 		return nil, err
 	}
 
@@ -77,7 +77,7 @@ func (client *GravityClient) OraclesByValidator(pubKey account.ConsulPubKey) (st
 	return oracles, nil
 }
 
-func (client *GravityClient) OraclesByNebula(nebulaId account.NebulaId, chainType account.ChainType) (storage.OraclesMap, error) {
+func (client *Client) OraclesByNebula(nebulaId account.NebulaId, chainType account.ChainType) (storage.OraclesMap, error) {
 	rq := query.ByNebulaRq{
 		ChainType:     chainType,
 		NebulaAddress: nebulaId.ToString(chainType),
@@ -101,7 +101,7 @@ func (client *GravityClient) OraclesByNebula(nebulaId account.NebulaId, chainTyp
 	return oracles, nil
 }
 
-func (client *GravityClient) BftOraclesByNebula(chainType account.ChainType, nebulaId account.NebulaId) (storage.OraclesMap, error) {
+func (client *Client) BftOraclesByNebula(chainType account.ChainType, nebulaId account.NebulaId) (storage.OraclesMap, error) {
 	rq := query.ByNebulaRq{
 		ChainType:     chainType,
 		NebulaAddress: nebulaId.ToString(chainType),
@@ -124,7 +124,7 @@ func (client *GravityClient) BftOraclesByNebula(chainType account.ChainType, neb
 
 	return oracles, nil
 }
-func (client *GravityClient) Results(height uint64, chainType account.ChainType, nebulaId account.NebulaId) ([][]byte, error) {
+func (client *Client) Results(height uint64, chainType account.ChainType, nebulaId account.NebulaId) ([][]byte, error) {
 	rq := query.ResultsRq{
 		Height:        height,
 		ChainType:     chainType,
@@ -149,7 +149,7 @@ func (client *GravityClient) Results(height uint64, chainType account.ChainType,
 	return oracles, nil
 }
 
-func (client *GravityClient) RoundHeight(chainType account.ChainType, ledgerHeight uint64) (uint64, error) {
+func (client *Client) RoundHeight(chainType account.ChainType, ledgerHeight uint64) (uint64, error) {
 	rq := query.RoundHeightRq{
 		ChainType:    chainType,
 		LedgerHeight: ledgerHeight,
@@ -162,7 +162,7 @@ func (client *GravityClient) RoundHeight(chainType account.ChainType, ledgerHeig
 
 	return binary.BigEndian.Uint64(rs), nil
 }
-func (client *GravityClient) CommitHash(chainType account.ChainType, nebulaId account.NebulaId, height int64, oraclePubKey account.OraclesPubKey) ([]byte, error) {
+func (client *Client) CommitHash(chainType account.ChainType, nebulaId account.NebulaId, height int64, oraclePubKey account.OraclesPubKey) ([]byte, error) {
 	rq := query.CommitHashRq{
 		ChainType:     chainType,
 		NebulaAddress: nebulaId.ToString(chainType),
@@ -177,7 +177,7 @@ func (client *GravityClient) CommitHash(chainType account.ChainType, nebulaId ac
 
 	return rs, nil
 }
-func (client *GravityClient) Reveal(chainType account.ChainType, nebulaId account.NebulaId, height int64, commitHash []byte) ([]byte, error) {
+func (client *Client) Reveal(chainType account.ChainType, nebulaId account.NebulaId, height int64, commitHash []byte) ([]byte, error) {
 	rq := query.RevealRq{
 		ChainType:     chainType,
 		NebulaAddress: nebulaId.ToString(chainType),
@@ -192,7 +192,7 @@ func (client *GravityClient) Reveal(chainType account.ChainType, nebulaId accoun
 
 	return rs, nil
 }
-func (client *GravityClient) Result(chainType account.ChainType, nebulaId account.NebulaId, height int64, oraclePubKey account.OraclesPubKey) ([]byte, error) {
+func (client *Client) Result(chainType account.ChainType, nebulaId account.NebulaId, height int64, oraclePubKey account.OraclesPubKey) ([]byte, error) {
 	rq := query.ResultRq{
 		ChainType:     chainType,
 		NebulaAddress: nebulaId.ToString(chainType),
@@ -207,7 +207,7 @@ func (client *GravityClient) Result(chainType account.ChainType, nebulaId accoun
 
 	return rs, nil
 }
-func (client *GravityClient) Nebulae() (storage.NebulaMap, error) {
+func (client *Client) Nebulae() (storage.NebulaMap, error) {
 	rs, err := client.do(query.NebulaePath, nil)
 	if err != nil || err != ErrValueNotFound {
 		return nil, err
@@ -225,8 +225,86 @@ func (client *GravityClient) Nebulae() (storage.NebulaMap, error) {
 
 	return nebulae, nil
 }
+func (client *Client) Consuls() ([]storage.Consul, error) {
+	rs, err := client.do(query.ConsulsPath, nil)
+	if err != nil || err != ErrValueNotFound {
+		return nil, err
+	}
 
-func (client *GravityClient) do(path query.Path, rq interface{}) ([]byte, error) {
+	var consuls []storage.Consul
+	if err == ErrValueNotFound {
+		return consuls, nil
+	}
+
+	err = json.Unmarshal(rs, &consuls)
+	if err != nil {
+		return nil, err
+	}
+
+	return consuls, nil
+}
+func (client *Client) ConsulsCandidate() ([]storage.Consul, error) {
+	rs, err := client.do(query.ConsulsCandidatePath, nil)
+	if err != nil || err != ErrValueNotFound {
+		return nil, err
+	}
+
+	var consuls []storage.Consul
+	if err == ErrValueNotFound {
+		return consuls, nil
+	}
+
+	err = json.Unmarshal(rs, &consuls)
+	if err != nil {
+		return nil, err
+	}
+
+	return consuls, nil
+}
+func (client *Client) SignNewConsulsByConsul(pubKey account.ConsulPubKey, chainId account.ChainType, roundId int64) ([]byte, error) {
+	rq := query.SignByConsulRq{
+		ConsulPubKey: hexutil.Encode(pubKey[:]),
+		ChainType:    chainId,
+		RoundId:      roundId,
+	}
+
+	rs, err := client.do(query.SignNewConsulsByConsulPath, rq)
+	if err != nil || err != ErrValueNotFound {
+		return nil, err
+	}
+
+	return rs, nil
+}
+func (client *Client) SignNewOraclesByConsul(pubKey account.ConsulPubKey, chainId account.ChainType, nebulaId account.NebulaId, roundId int64) ([]byte, error) {
+	rq := query.SignByConsulRq{
+		ConsulPubKey: hexutil.Encode(pubKey[:]),
+		ChainType:    chainId,
+		RoundId:      roundId,
+		NebulaId:     nebulaId.ToString(chainId),
+	}
+
+	rs, err := client.do(query.SignNewOraclesByConsulPath, rq)
+	if err != nil || err != ErrValueNotFound {
+		return nil, err
+	}
+
+	return rs, nil
+}
+func (client *Client) NebulaOraclesIndex(chainId account.ChainType, nebulaId account.NebulaId) (uint64, error) {
+	rq := query.ByNebulaRq{
+		ChainType:     chainId,
+		NebulaAddress: nebulaId.ToString(chainId),
+	}
+
+	rs, err := client.do(query.NebulaOraclesIndexPath, rq)
+	if err != nil || err != ErrValueNotFound {
+		return 0, err
+	}
+
+	return binary.BigEndian.Uint64(rs), nil
+}
+
+func (client *Client) do(path query.Path, rq interface{}) ([]byte, error) {
 	var err error
 	b, ok := rq.([]byte)
 	if !ok {

@@ -12,10 +12,8 @@ import (
 	"syscall"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
-	"github.com/Gravity-Tech/gravity-core/oracle/node"
-
 	"github.com/Gravity-Tech/gravity-core/config"
-
+	"github.com/Gravity-Tech/gravity-core/oracle/node"
 	"github.com/urfave/cli/v2"
 )
 
@@ -127,6 +125,7 @@ func startOracle(ctx *cli.Context) error {
 	oracleNode, err := node.New(
 		nebulaId,
 		chainType,
+		cfg.ChainId[0],
 		oracleSecretKey,
 		node.NewValidator(validatorPrivKey),
 		cfg.ExtractorUrl,
