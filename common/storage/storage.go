@@ -11,8 +11,11 @@ const (
 	Separator string = "_"
 
 	ConsulsKey                   Key = "consuls"
+	ConsulsCandidateKey          Key = "consuls_candidate"
 	LastHeightKey                Key = "last_height"
-	PrevConsulsKey               Key = "prev_consuls"
+	LastRoundApproved            Key = "last_round_approved"
+	ConsulsCountKey              Key = "consuls_count"
+	BftOracleInNebulaCountKey    Key = "bft_oracle_in_nebula_count"
 	SignConsulsResultByConsulKey Key = "consuls_sing"
 	SignOraclesResultByConsulKey Key = "oracles_sign"
 	NebulaeByOracleKey           Key = "nebulae_by_oracle"
@@ -27,6 +30,7 @@ const (
 	CommitKey     Key = "commit"
 	RevealKey     Key = "reveal"
 	SignResultKey Key = "signResult"
+	Nebulae       Key = "nebulae"
 )
 
 var (
@@ -40,6 +44,10 @@ type Storage struct {
 
 func formKey(args ...string) []byte {
 	return []byte(strings.Join(args, Separator))
+}
+
+func New() *Storage {
+	return &Storage{}
 }
 
 func (storage *Storage) getValue(key []byte) ([]byte, error) {

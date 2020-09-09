@@ -1,0 +1,34 @@
+package rpc
+
+import (
+	"github.com/Gravity-Tech/gravity-core/common/account"
+	"github.com/Gravity-Tech/gravity-core/common/gravity"
+	"github.com/Gravity-Tech/gravity-core/common/storage"
+	"github.com/tendermint/tendermint/crypto"
+)
+
+type Config struct {
+	Host    string
+	pubKey  account.ConsulPubKey
+	privKey crypto.PrivKey
+	client  *gravity.Client
+}
+type VotesRq struct {
+	votes []storage.Vote
+}
+
+func NewConfig(host string, ghClientUrl string, privKey crypto.PrivKey) (*Config, error) {
+	var ghPubKey account.ConsulPubKey
+	copy(ghPubKey[:], privKey.PubKey().Bytes()[5:])
+
+	ghClient, err := gravity.New(ghClientUrl)
+	if err != nil {
+		return nil, err
+	}
+	return &Config{
+		Host:    host,
+		privKey: privKey,
+		pubKey:  ghPubKey,
+		client:  ghClient,
+	}, nil
+}

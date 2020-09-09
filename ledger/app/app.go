@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Gravity-Tech/gravity-core/common/adaptors"
+
 	"github.com/Gravity-Tech/gravity-core/ledger/query"
 
 	"github.com/Gravity-Tech/gravity-core/common/state"
@@ -14,10 +16,6 @@ import (
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
 	"github.com/Gravity-Tech/gravity-core/ledger/scheduler"
 
-	"github.com/wavesplatform/gowaves/pkg/client"
-
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/dgraph-io/badger"
 	abcitypes "github.com/tendermint/tendermint/abci/types"
 )
@@ -25,40 +23,37 @@ import (
 const (
 	Success uint32 = 0
 	Error   uint32 = 500
-
-	ValidatorCount = 5
 )
 
+type OraclesAddresses struct {
+	account.ChainType
+	account.OraclesPubKey
+}
+type Genesis struct {
+	ConsulsCount              int
+	BftOracleInNebulaCount    int
+	OraclesAddressByValidator map[account.ConsulPubKey][]OraclesAddresses
+}
+
 type GHApplication struct {
-	db          *badger.DB
-	storage     *storage.Storage
-	ethClient   *ethclient.Client
-	wavesClient *client.Client
-	scheduler   *scheduler.Scheduler
-	ctx         context.Context
-	initScores  map[string]uint64
+	db        *badger.DB
+	storage   *storage.Storage
+	adaptors  map[account.ChainType]adaptors.IBlockchainAdaptor
+	scheduler *scheduler.Scheduler
+	ctx       context.Context
+	genesis   *Genesis
 }
 
 var _ abcitypes.Application = (*GHApplication)(nil)
 
-func NewGHApplication(ethClientHost string, wavesClientHost string, scheduler *scheduler.Scheduler, db *badger.DB, initScores map[string]uint64, ctx context.Context) (*GHApplication, error) {
-	ethClient, err := ethclient.DialContext(ctx, ethClientHost)
-	if err != nil {
-		return nil, err
-	}
-
-	wavesClient, err := client.NewClient(client.Options{ApiKey: "", BaseUrl: wavesClientHost})
-	if err != nil {
-		return nil, err
-	}
-
+func NewGHApplication(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, scheduler *scheduler.Scheduler, db *badger.DB, genesis *Genesis, ctx context.Context) (*GHApplication, error) {
 	return &GHApplication{
-		db:          db,
-		ethClient:   ethClient,
-		wavesClient: wavesClient,
-		scheduler:   scheduler,
-		ctx:         ctx,
-		initScores:  initScores,
+		db:        db,
+		adaptors:  adaptors,
+		scheduler: scheduler,
+		ctx:       ctx,
+		genesis:   genesis,
+		storage:   storage.New(),
 	}, nil
 }
 
@@ -76,7 +71,7 @@ func (app *GHApplication) DeliverTx(req abcitypes.RequestDeliverTx) abcitypes.Re
 		return abcitypes.ResponseDeliverTx{Code: Error}
 	}
 
-	err = state.SetState(tx, app.storage, app.ethClient, app.wavesClient, app.ctx)
+	err = state.SetState(tx, app.storage, app.adaptors, app.ctx)
 	if err != nil {
 		return abcitypes.ResponseDeliverTx{Code: Error}
 	}
@@ -99,7 +94,9 @@ func (app *GHApplication) Commit() abcitypes.ResponseCommit {
 func (app *GHApplication) Query(reqQuery abcitypes.RequestQuery) (resQuery abcitypes.ResponseQuery) {
 	var err error
 
-	b, err := query.Query(app.storage, reqQuery.Path, resQuery.Value)
+	store := storage.New()
+	store.NewTransaction(app.db)
+	b, err := query.Query(store, reqQuery.Path, reqQuery.Data)
 	if err != nil {
 		resQuery.Code = Error
 	}
@@ -111,18 +108,17 @@ func (app *GHApplication) Query(reqQuery abcitypes.RequestQuery) (resQuery abcit
 
 func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.ResponseInitChain {
 	app.storage.NewTransaction(app.db)
-	for key, value := range app.initScores {
-		pubKey, err := account.HexToPubKey(key)
-		if err != nil {
-			fmt.Printf("Error: %s", err.Error())
-		}
 
-		err = app.storage.SetScore(pubKey, value)
-		if err != nil {
-			panic(err)
-		}
+	err := app.storage.SetBftOracleInNebulaCount(app.genesis.BftOracleInNebulaCount)
+	if err != nil {
+		panic(err)
+	}
+	err = app.storage.SetConsulsCount(app.genesis.ConsulsCount)
+	if err != nil {
+		panic(err)
 	}
 
+	var consuls []storage.Consul
 	for _, value := range req.Validators {
 		var pubKey account.ConsulPubKey
 		copy(pubKey[:], value.PubKey.GetData())
@@ -130,9 +126,30 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 		if err != nil {
 			panic(err)
 		}
+		consuls = append(consuls, storage.Consul{
+			PubKey: pubKey,
+			Value:  uint64(value.Power),
+		})
 	}
 
-	err := app.storage.Commit()
+	err = app.storage.SetConsuls(consuls)
+	if err != nil {
+		panic(err)
+	}
+
+	for validator, value := range app.genesis.OraclesAddressByValidator {
+		oracles := make(storage.OraclesByTypeMap)
+		for _, oracle := range value {
+			oracles[oracle.ChainType] = oracle.OraclesPubKey
+		}
+
+		err = app.storage.SetOraclesByConsul(validator, oracles)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	err = app.storage.Commit()
 	if err != nil {
 		panic(err)
 	}
@@ -152,14 +169,18 @@ func (app *GHApplication) BeginBlock(req abcitypes.RequestBeginBlock) abcitypes.
 }
 
 func (app *GHApplication) EndBlock(req abcitypes.RequestEndBlock) abcitypes.ResponseEndBlock {
-	//TODO LastHeight
+	err := app.storage.SetLastHeight(uint64(req.Height))
+	if err != nil {
+		panic(err)
+	}
+
 	consuls, err := app.storage.Consuls()
 	if err != nil {
 		panic(err)
 	}
 
 	var newValidators []abcitypes.ValidatorUpdate
-	for i := 0; i < ValidatorCount && i < len(consuls); i++ {
+	for i := 0; i < app.genesis.ConsulsCount && i < len(consuls); i++ {
 		if consuls[i].Value == 0 {
 			continue
 		}

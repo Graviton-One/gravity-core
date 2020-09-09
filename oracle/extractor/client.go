@@ -25,13 +25,13 @@ func New(hostUrl string) *Client {
 	}
 }
 
-func (client *Client) ExtractorInfo(ctx context.Context) (*ExtractorInfo, error) {
+func (client *Client) ExtractorInfo(ctx context.Context) (*Info, error) {
 	rs, err := client.do(GetExtractorInfo, http.MethodGet, nil, ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var result ExtractorInfo
+	var result Info
 	err = json.Unmarshal(rs, &result)
 	if err != nil {
 		return nil, err

@@ -21,11 +21,15 @@ type VoteByConsulMap map[account.ConsulPubKey][]Vote
 func formVoteKey(pubKey account.ConsulPubKey) []byte {
 	return formKey(string(VoteKey), hexutil.Encode(pubKey[:]))
 }
-func parseVoteKey(value []byte) account.ConsulPubKey {
-	b := []byte(strings.Split(string(value), Separator)[1])
+func parseVoteKey(value []byte) (account.ConsulPubKey, error) {
+	hex := []byte(strings.Split(string(value), Separator)[1])
+	key, err := hexutil.Decode(string(hex))
+	if err != nil {
+		return [32]byte{}, err
+	}
 	var pubKey account.ConsulPubKey
-	copy(pubKey[:], b[:])
-	return pubKey
+	copy(pubKey[:], key[:])
+	return pubKey, nil
 }
 
 func (storage *Storage) Vote(pubKey account.ConsulPubKey) ([]Vote, error) {
@@ -60,7 +64,11 @@ func (storage *Storage) Votes() (VoteByConsulMap, error) {
 			if err != nil {
 				return err
 			}
-			votes[parseVoteKey(k)] = vote
+			pubKey, err := parseVoteKey(k)
+			if err != nil {
+				return err
+			}
+			votes[pubKey] = vote
 			return nil
 		})
 	}

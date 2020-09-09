@@ -14,7 +14,7 @@ type Consul struct {
 	Value  uint64
 }
 
-func formSignConsulsResultByConsulKey(pubKey account.ConsulPubKey, chainType account.ChainType, roundId int64) []byte {
+func formSignConsulsByConsulKey(pubKey account.ConsulPubKey, chainType account.ChainType, roundId int64) []byte {
 	prefix := ""
 	switch chainType {
 	case account.Waves:
@@ -50,10 +50,10 @@ func (storage *Storage) SetConsuls(consuls []Consul) error {
 	return storage.setValue([]byte(ConsulsKey), consuls)
 }
 
-func (storage *Storage) PrevConsuls() ([]Consul, error) {
+func (storage *Storage) ConsulsCandidate() ([]Consul, error) {
 	var consuls []Consul
 
-	key := []byte(PrevConsulsKey)
+	key := []byte(ConsulsCandidateKey)
 	item, err := storage.txn.Get(key)
 	if err != nil {
 		return nil, err
@@ -71,12 +71,12 @@ func (storage *Storage) PrevConsuls() ([]Consul, error) {
 
 	return consuls, err
 }
-func (storage *Storage) SetPrevConsuls(consuls []Consul) error {
-	return storage.setValue([]byte(PrevConsulsKey), consuls)
+func (storage *Storage) SetConsulsCandidate(consuls []Consul) error {
+	return storage.setValue([]byte(ConsulsCandidateKey), consuls)
 }
 
-func (storage *Storage) SignConsulsResultByConsul(consulPubKey account.ConsulPubKey, chainType account.ChainType, roundId int64) ([]byte, error) {
-	key := formSignConsulsResultByConsulKey(consulPubKey, chainType, roundId)
+func (storage *Storage) SignConsulsByConsul(consulPubKey account.ConsulPubKey, chainType account.ChainType, roundId int64) ([]byte, error) {
+	key := formSignConsulsByConsulKey(consulPubKey, chainType, roundId)
 	item, err := storage.txn.Get(key)
 	if err != nil {
 		return nil, err
@@ -89,6 +89,6 @@ func (storage *Storage) SignConsulsResultByConsul(consulPubKey account.ConsulPub
 
 	return b, err
 }
-func (storage *Storage) SetSignConsulsResult(consulsPubKey account.ConsulPubKey, chainType account.ChainType, roundId int64, sign []byte) error {
-	return storage.setValue(formSignConsulsResultByConsulKey(consulsPubKey, chainType, roundId), sign)
+func (storage *Storage) SetSignConsuls(consulsPubKey account.ConsulPubKey, chainType account.ChainType, roundId int64, sign []byte) error {
+	return storage.setValue(formSignConsulsByConsulKey(consulsPubKey, chainType, roundId), sign)
 }

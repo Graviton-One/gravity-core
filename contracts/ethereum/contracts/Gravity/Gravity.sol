@@ -1,43 +1,47 @@
-pragma solidity >=0.4.21 <0.7.0;
-
-import "../libs/Queue.sol";
-import "./Models.sol";
+pragma solidity ^0.7.0;
 
 contract Gravity {
-    mapping(uint256=>bool) public rounds;
-    address[] public consuls;
+    mapping(uint256=>address[]) public rounds;
     uint256 public bftValue;
+    uint256 public lastRound;
 
-    constructor(address[] memory newConsuls, uint256 newBftValue) public {
-        consuls = newConsuls;
+    constructor(address[] memory consuls, uint256 newBftValue) public {
+        rounds[0] = consuls;
         bftValue = newBftValue;
     }
 
     function getConsuls() external view returns(address[] memory) {
-        return consuls;
+        return rounds[lastRound];
     }
 
-    function updateConsuls(address[] memory newConsuls, uint8[] memory v, bytes32[] memory r, bytes32[] memory s, uint256 newLastRound) public {
+    function getConsulsByRoundId(uint256 roundId) external view returns(address[] memory) {
+        return rounds[roundId];
+    }
+
+    function updateConsuls(address[] memory newConsuls, uint8[] memory v, bytes32[] memory r, bytes32[] memory s, uint256 roundId) public {
         uint256 count = 0;
 
-        bytes32 dataHash = hashNewConsuls(newConsuls);
+        require(roundId > lastRound, "round less last round");
 
+        bytes32 dataHash = hashNewConsuls(newConsuls, roundId);
+
+        address[] memory consuls = rounds[lastRound];
         for(uint i = 0; i < consuls.length; i++) {
             count += ecrecover(dataHash, v[i], r[i], s[i]) == consuls[i] ? 1 : 0;
         }
         require(count >= bftValue, "invalid bft count");
 
-       consuls = newConsuls;
-       rounds[newLastRound] = true;
+        rounds[roundId] = newConsuls;
     }
 
-    function hashNewConsuls(address[] memory newConsuls) public pure returns(bytes32) {
+    function hashNewConsuls(address[] memory newConsuls, uint256 roundId) public pure returns(bytes32) {
         bytes memory data;
         for(uint i = 0; i < newConsuls.length; i++) {
             data = abi.encodePacked(data, newConsuls[i]);
         }
+        
 
-        return keccak256(data);
+        return keccak256(abi.encodePacked(data, roundId));
     }
 
 }

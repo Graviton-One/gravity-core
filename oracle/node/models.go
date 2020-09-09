@@ -6,5 +6,4 @@ type RoundState struct {
 	resultValue interface{}
 	resultHash  []byte
 	isSent      bool
-	isSentSub   bool
 }

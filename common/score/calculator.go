@@ -24,39 +24,58 @@ type Actor struct {
 
 func Calculate(initScores storage.ScoresByConsulMap, votes storage.VoteByConsulMap) (storage.ScoresByConsulMap, error) {
 	group := trustgraph.NewGroup()
+
+	var newValidators []int
 	idByValidator := make(map[account.ConsulPubKey]int)
 	validatorById := make(map[int]account.ConsulPubKey)
-	count := 0
+
+	index := 0
 	for k, v := range initScores {
-		idByValidator[k] = count
-		validatorById[count] = k
+		idByValidator[k] = index
+		validatorById[index] = k
 		err := group.InitialTrust(idByValidator[k], UInt64ToFloat32Score(v))
 		if err != nil {
 			return nil, err
 		}
-		count++
+		index++
 	}
 
-	for k, _ := range initScores {
+	for voter, _ := range initScores {
 		existVote := make(map[account.ConsulPubKey]bool)
-		for _, scoreV := range votes[k] {
-			if k == scoreV.PubKey {
+		for _, vote := range votes[voter] {
+			if voter == vote.PubKey {
 				continue
 			}
-			err := group.Add(idByValidator[k], idByValidator[scoreV.PubKey], UInt64ToFloat32Score(scoreV.Score))
+			if _, ok := idByValidator[vote.PubKey]; !ok {
+				idByValidator[vote.PubKey] = index
+				validatorById[index] = vote.PubKey
+				err := group.InitialTrust(idByValidator[vote.PubKey], 0)
+				if err != nil {
+					return nil, err
+				}
+				newValidators = append(newValidators, index)
+				index++
+			}
+			err := group.Add(idByValidator[voter], idByValidator[vote.PubKey], UInt64ToFloat32Score(vote.Score))
 			if err != nil {
 				return nil, err
 			}
-			existVote[scoreV.PubKey] = true
+			existVote[vote.PubKey] = true
 		}
 		for validator, _ := range initScores {
-			if existVote[validator] {
+			if existVote[validator] || voter == validator {
 				continue
 			}
-			if k == validator {
-				continue
+
+			err := group.Add(idByValidator[voter], idByValidator[validator], UInt64ToFloat32Score(initScores[validator]))
+			if err != nil {
+				return nil, err
 			}
-			err := group.Add(idByValidator[k], idByValidator[validator], 0)
+		}
+	}
+	for _, v := range newValidators {
+		for validator, _ := range initScores {
+			err := group.Add(v, idByValidator[validator], UInt64ToFloat32Score(initScores[validator]))
 			if err != nil {
 				return nil, err
 			}

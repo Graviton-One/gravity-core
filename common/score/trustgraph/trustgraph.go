@@ -24,7 +24,7 @@ func NewGroup() Group {
 	return Group{
 		trustGrid:    map[int]map[int]float32{},
 		initialTrust: map[int]float32{},
-		Certainty:    0.001,
+		Certainty:    0.0001,
 		Max:          200,
 		Alpha:        1,
 	}
