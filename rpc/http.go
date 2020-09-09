@@ -14,6 +14,12 @@ import (
 
 var cfg *Config
 
+type SetNebulaRq struct {
+	NebulaId             string
+	ChainType            string
+	MaxPulseCountInBlock uint64
+	MinScore             uint64
+}
 type VotesRq struct {
 	Votes []VoteRq
 }
@@ -32,6 +38,49 @@ func ListenRpcServer(config *Config) {
 }
 
 func vote(w http.ResponseWriter, r *http.Request) {
+	var request VotesRq
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	tx, err := transactions.New(cfg.pubKey, transactions.Vote, cfg.privKey)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var votes []storage.Vote
+	for _, v := range request.Votes {
+		pubKey, err := account.HexToValidatorPubKey(v.PubKey)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		votes = append(votes, storage.Vote{
+			PubKey: pubKey,
+			Score:  v.Score,
+		})
+	}
+	b, err := json.Marshal(votes)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	tx.AddValue(transactions.BytesValue{Value: b})
+	err = cfg.client.SendTx(tx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	return
+}
+
+func setNebula(w http.ResponseWriter, r *http.Request) {
 	var request VotesRq
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&request)
