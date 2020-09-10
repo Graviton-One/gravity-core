@@ -168,13 +168,11 @@ func (node *Node) Init() error {
 		time.Sleep(time.Duration(5) * time.Second)
 	}
 
-	nebulae, err := node.gravityClient.Nebulae()
-	if err != nil {
-		return err
-	}
-	nebulaInfo, ok := nebulae[node.nebulaId]
-	if !ok {
+	nebulaInfo, err := node.gravityClient.NebulaInfo(node.nebulaId, node.chainType)
+	if err == gravity.ErrValueNotFound {
 		return errors.New("nebula not found")
+	} else if err != nil {
+		return err
 	}
 
 	node.MaxPulseCountInBlock = nebulaInfo.MaxPulseCountInBlock

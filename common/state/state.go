@@ -161,14 +161,9 @@ func addOracleInNebula(store *storage.Storage, tx *transactions.Transaction) err
 	var pubKey account.OraclesPubKey
 	copy(pubKey[:], pubKeyBytes)
 
-	nebulae, err := store.Nebulae()
-	if err != nil && err != storage.ErrKeyNotFound {
+	nebula, err := store.NebulaInfo(nebulaAddress)
+	if err != nil {
 		return err
-	}
-
-	nebula, ok := nebulae[nebulaAddress]
-	if !ok {
-		return ErrNebulaNotFound
 	}
 
 	oraclesByNebula, err := store.OraclesByNebula(nebulaAddress)
@@ -248,17 +243,15 @@ func vote(store *storage.Storage, tx *transactions.Transaction) error {
 
 func setNebula(store *storage.Storage, tx *transactions.Transaction) error {
 	nebulaId := account.BytesToNebulaId(tx.Value(0).([]byte))
-	nebulaInfoBytes := tx.Value(0).([]byte)
+	nebulaInfoBytes := tx.Value(1).([]byte)
 
-	nebulae, err := store.Nebulae()
-	if err != nil {
+	nebula, err := store.NebulaInfo(nebulaId)
+	if err != nil && err != storage.ErrKeyNotFound {
 		return err
 	}
 
-	if v, ok := nebulae[nebulaId]; ok {
-		if v.Owner != tx.SenderPubKey {
-			return ErrInvalidNebulaOwner
-		}
+	if err == nil && nebula.Owner != tx.SenderPubKey {
+		return ErrInvalidNebulaOwner
 	}
 
 	var nebulaInfo storage.NebulaInfo
@@ -266,8 +259,6 @@ func setNebula(store *storage.Storage, tx *transactions.Transaction) error {
 	if err != nil {
 		return err
 	}
-
-	nebulae[nebulaId] = nebulaInfo
 
 	return store.SetNebula(nebulaId, nebulaInfo)
 }

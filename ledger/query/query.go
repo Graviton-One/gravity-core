@@ -20,6 +20,7 @@ const (
 	ResultPath                 Path = "result"
 	ResultsPath                Path = "results"
 	NebulaePath                Path = "nebulae"
+	NebulaInfoPath             Path = "nebula_info"
 	LastRoundApprovedPath      Path = "lastRoundApproved"
 	ConsulsPath                Path = "consuls"
 	ConsulsCandidatePath       Path = "consulsCandidate"
@@ -55,6 +56,8 @@ func Query(store *storage.Storage, path string, rq []byte) ([]byte, error) {
 		value, err = results(store, rq)
 	case NebulaePath:
 		value, err = nebulae(store)
+	case NebulaInfoPath:
+		value, err = nebulaInfo(store, rq)
 	case ConsulsPath:
 		value, err = consuls(store)
 	case ConsulsCandidatePath:

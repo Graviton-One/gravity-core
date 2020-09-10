@@ -46,8 +46,13 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 				return err
 			}
 
-			for nebulaId, _ := range nebulae {
-				err := scheduler.signOraclesByNebula(roundId, nebulaId, k)
+			for k, v := range nebulae {
+				nebulaId, err := account.StringToNebulaId(k, v.ChainType)
+				if err != nil {
+					fmt.Printf("Error:%s\n", err.Error())
+					continue
+				}
+				err = scheduler.signOraclesByNebula(roundId, nebulaId, v.ChainType)
 				if err != nil {
 					continue
 				}
@@ -67,8 +72,14 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 				return err
 			}
 
-			for nebulaId, _ := range nebulae {
-				err := scheduler.sendOraclesToNebula(nebulaId, k, roundId)
+			for k, v := range nebulae {
+				nebulaId, err := account.StringToNebulaId(k, v.ChainType)
+				if err != nil {
+					fmt.Printf("Error:%s\n", err.Error())
+					continue
+				}
+
+				err = scheduler.sendOraclesToNebula(nebulaId, v.ChainType, roundId)
 				if err != nil {
 					continue
 				}

@@ -160,8 +160,6 @@ func sendValueToSub() = {
             else {
                 true
             }
-        case scriptTx:SetAssetScriptTransaction => sigVerify(scriptTx.bodyBytes, scriptTx.proofs[0], scriptTx.senderPublicKey)
-        case dataTx:DataTransaction => sigVerify(dataTx.bodyBytes, dataTx.proofs[0], dataTx.senderPublicKey)
-        case _ => false
+        case _ => sigVerify(i.bodyBytes, i.proofs[0], i.senderPublicKey)
       }
 }

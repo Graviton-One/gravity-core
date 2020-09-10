@@ -56,5 +56,5 @@ func ParseConfig(filename string, config interface{}) error {
 	if err := json.Unmarshal(file, config); err != nil {
 		return err
 	}
-	return err
+	return nil
 }

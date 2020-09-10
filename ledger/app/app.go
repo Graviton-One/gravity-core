@@ -77,11 +77,22 @@ func (app *GHApplication) DeliverTx(req abcitypes.RequestDeliverTx) abcitypes.Re
 	if err != nil {
 		return abcitypes.ResponseDeliverTx{Code: Error}
 	}
-
 	return abcitypes.ResponseDeliverTx{Code: 0}
 }
 
 func (app *GHApplication) CheckTx(req abcitypes.RequestCheckTx) abcitypes.ResponseCheckTx {
+	tx, err := transactions.UnmarshalJson(req.Tx)
+	if err != nil {
+		return abcitypes.ResponseCheckTx{Code: Error}
+	}
+
+	mock := *app.storage
+	mock.NewTransaction(app.db)
+	err = state.SetState(tx, &mock, app.adaptors, app.ctx)
+	if err != nil {
+		return abcitypes.ResponseCheckTx{Code: Error}
+	}
+
 	return abcitypes.ResponseCheckTx{Code: Success}
 }
 

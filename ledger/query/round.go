@@ -125,3 +125,23 @@ func nebulae(store *storage.Storage) (storage.NebulaMap, error) {
 
 	return v, nil
 }
+
+func nebulaInfo(store *storage.Storage, value []byte) (*storage.NebulaInfo, error) {
+	var rq ByNebulaRq
+	err := json.Unmarshal(value, &rq)
+	if err != nil {
+		return nil, err
+	}
+
+	nebulaAddress, err := account.StringToNebulaId(rq.NebulaAddress, rq.ChainType)
+	if err != nil {
+		return nil, err
+	}
+
+	v, err := store.NebulaInfo(nebulaAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	return v, nil
+}

@@ -216,6 +216,24 @@ func (client *Client) Result(chainType account.ChainType, nebulaId account.Nebul
 
 	return rs, nil
 }
+func (client *Client) NebulaInfo(id account.NebulaId, chainType account.ChainType) (*storage.NebulaInfo, error) {
+	rq := query.ByNebulaRq{
+		ChainType:     chainType,
+		NebulaAddress: id.ToString(chainType),
+	}
+
+	rs, err := client.do(query.NebulaOraclesIndexPath, rq)
+	if err != nil {
+		return nil, err
+	}
+	var nebulaInfo *storage.NebulaInfo
+	err = json.Unmarshal(rs, nebulaInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return nebulaInfo, nil
+}
 func (client *Client) Nebulae() (storage.NebulaMap, error) {
 	rs, err := client.do(query.NebulaePath, nil)
 	if err != nil && err != ErrValueNotFound {

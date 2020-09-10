@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
@@ -65,8 +66,13 @@ func (scheduler *Scheduler) HandleBlock(height int64, store *storage.Storage, is
 			return err
 		}
 
-		for k, _ := range nebulae {
-			err = scheduler.updateOracles(k, store)
+		for k, v := range nebulae {
+			nebulaId, err := account.StringToNebulaId(k, v.ChainType)
+			if err != nil {
+				fmt.Printf("Error:%s\n", err.Error())
+				continue
+			}
+			err = scheduler.updateOracles(nebulaId, store)
 			if err != nil {
 				return err
 			}
@@ -148,10 +154,10 @@ func (scheduler *Scheduler) calculateScores(store *storage.Storage) error {
 		return err
 	}
 
-	nebulaeInfo, err := store.Nebulae()
+	/*nebulaeInfo, err := store.Nebulae()
 	if err != nil {
 		return err
-	}
+	}*/
 
 	for k, v := range newScores {
 		err := store.SetScore(k, v)
@@ -159,43 +165,44 @@ func (scheduler *Scheduler) calculateScores(store *storage.Storage) error {
 			return err
 		}
 
-		oracles, err := store.OraclesByConsul(k)
-		if err != nil && err != storage.ErrKeyNotFound {
-			return err
-		}
-
-		for _, oracle := range oracles {
-			nebulae, err := store.NebulaeByOracle(oracle)
+		/*
+			oracles, err := store.OraclesByConsul(k)
 			if err != nil && err != storage.ErrKeyNotFound {
 				return err
 			}
-			if err == storage.ErrKeyNotFound {
-				break
-			}
 
-			var newNebulae []account.NebulaId
-			for _, nebulaId := range nebulae {
-				oracles, err := store.OraclesByNebula(nebulaId)
-				if err != nil {
+			for _, oracle := range oracles {
+				nebulae, err := store.NebulaeByOracle(oracle)
+				if err != nil && err != storage.ErrKeyNotFound {
 					return err
 				}
+				if err == storage.ErrKeyNotFound {
+					break
+				}
 
-				if v < nebulaeInfo[nebulaId].MinScore || v <= 0 {
-					delete(oracles, oracle)
-					err = store.SetOraclesByNebula(nebulaId, oracles)
+				var newNebulae []account.NebulaId
+				for _, nebulaId := range nebulae {
+					oracles, err := store.OraclesByNebula(nebulaId)
 					if err != nil {
 						return err
 					}
-					continue
-				}
-				newNebulae = append(newNebulae, nebulaId)
-			}
 
-			err = store.SetNebulaeByOracle(oracle, newNebulae)
-			if err != nil {
-				return err
-			}
-		}
+					if v < nebulaeInfo[nebulaId.ToString(nebulaeInfo)].MinScore || v <= 0 {
+						delete(oracles, oracle)
+						err = store.SetOraclesByNebula(nebulaId, oracles)
+						if err != nil {
+							return err
+						}
+						continue
+					}
+					newNebulae = append(newNebulae, nebulaId)
+				}
+
+				err = store.SetNebulaeByOracle(oracle, newNebulae)
+				if err != nil {
+					return err
+				}
+			}*/
 	}
 
 	return nil
