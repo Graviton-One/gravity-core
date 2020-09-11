@@ -17,6 +17,7 @@ const (
 	RoundHeightPath            Path = "roundHeight"
 	CommitHashPath             Path = "commitHash"
 	RevealPath                 Path = "reveal"
+	RevealsPath                Path = "reveals"
 	ResultPath                 Path = "result"
 	ResultsPath                Path = "results"
 	NebulaePath                Path = "nebulae"
@@ -48,6 +49,8 @@ func Query(store *storage.Storage, path string, rq []byte) ([]byte, error) {
 		value, err = commitHash(store, rq)
 	case RevealPath:
 		value, err = reveal(store, rq)
+	case RevealsPath:
+		value, err = reveals(store, rq)
 	case ResultPath:
 		value, err = result(store, rq)
 	case BftOracleByNebulaPath:

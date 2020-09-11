@@ -195,10 +195,18 @@ func (scheduler *Scheduler) signOraclesByNebula(roundId int64, nebulaId account.
 	if err != nil {
 		return err
 	}
-	var newOracles []account.OraclesPubKey
-	for pubKey := range bftOraclesByNebula {
-		newOracles = append(newOracles, pubKey)
+	var newOracles []*account.OraclesPubKey
+	for k, v := range bftOraclesByNebula {
+		oracleAddress, err := account.StringToOraclePubKey(k, v)
+		if err != nil {
+			return err
+		}
+		newOracles = append(newOracles, &oracleAddress)
 	}
+	for i := len(newOracles); i < OracleCount; i++ {
+		newOracles = append(newOracles, nil)
+	}
+
 	sign, err := scheduler.Adaptors[chainType].SignOracles(nebulaId, newOracles)
 	if err != nil {
 		return err
@@ -251,6 +259,8 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 		return err
 	}
 
+	realSignCount := 0
+
 	var signs [][]byte
 	var empty [65]byte
 	for i := 0; i < OracleCount; i++ {
@@ -270,6 +280,11 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 		}
 
 		signs = append(signs, sign)
+		realSignCount++
+	}
+
+	if realSignCount < len(consuls)*2/3 {
+		return nil
 	}
 
 	newConsuls, err := scheduler.client.ConsulsCandidate()
@@ -279,7 +294,7 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 
 	var newConsulsAddresses []*account.OraclesPubKey
 	for i := 0; i < OracleCount; i++ {
-		if i >= len(consuls) {
+		if i >= len(newConsuls) {
 			newConsulsAddresses = append(newConsulsAddresses, nil)
 			continue
 		}
@@ -316,37 +331,61 @@ func (scheduler *Scheduler) sendOraclesToNebula(nebulaId account.NebulaId, chain
 		return err
 	}
 
+	realSignsCount := 0
 	var signs [][]byte
-	for _, v := range consuls {
+	var empty [65]byte
+	for i := 0; i < OracleCount; i++ {
+		if i >= len(consuls) {
+			signs = append(signs, empty[:])
+			continue
+		}
+
+		v := consuls[i]
 		sign, err := scheduler.client.SignNewOraclesByConsul(v.PubKey, chainType, nebulaId, round)
 		if err != nil && err != gravity.ErrValueNotFound {
 			return err
 		}
-
 		if err == gravity.ErrValueNotFound {
-			var empty [32]byte
 			signs = append(signs, empty[:])
 			continue
 		}
 
 		signs = append(signs, sign)
+		realSignsCount++
 	}
 
-	oracles, err := scheduler.client.OraclesByNebula(nebulaId, chainType)
+	if realSignsCount < len(consuls)*2/3 {
+		return nil
+	}
+
+	bftOraclesByNebula, err := scheduler.client.BftOraclesByNebula(chainType, nebulaId)
 	if err != nil {
 		return err
 	}
-
-	var oraclesAddresses []account.OraclesPubKey
-	for k, _ := range oracles {
-		oraclesAddresses = append(oraclesAddresses, k)
+	var newOracles []*account.OraclesPubKey
+	for k, v := range bftOraclesByNebula {
+		oracleAddress, err := account.StringToOraclePubKey(k, v)
+		if err != nil {
+			return err
+		}
+		newOracles = append(newOracles, &oracleAddress)
+	}
+	for i := len(newOracles); i < OracleCount; i++ {
+		newOracles = append(newOracles, nil)
 	}
 
-	tx, err := scheduler.Adaptors[chainType].SetOraclesToNebula(nebulaId, oraclesAddresses, signs, round, scheduler.ctx)
+	tx, err := scheduler.Adaptors[chainType].SetOraclesToNebula(nebulaId, newOracles, signs, round, scheduler.ctx)
 	if err != nil {
 		return err
 	}
+	if tx != "" {
+		err := scheduler.Adaptors[chainType].WaitTx(tx, scheduler.ctx)
+		if err != nil {
+			return err
+		}
 
-	fmt.Printf("Tx nebula (%s) oracles update: %s \n", nebulaId, tx)
+		fmt.Printf("Tx nebula (%s) oracles update: %s \n", nebulaId.ToString(chainType), tx)
+	}
+
 	return nil
 }

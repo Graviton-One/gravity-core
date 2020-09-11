@@ -208,13 +208,20 @@ func (scheduler *Scheduler) calculateScores(store *storage.Storage) error {
 	return nil
 }
 func (scheduler *Scheduler) updateOracles(nebulaId account.NebulaId, store *storage.Storage) error {
-	oraclesByNebula, err := store.OraclesByNebula(nebulaId)
+	nebulaInfo, err := store.NebulaInfo(nebulaId)
 	if err != nil {
 		return err
 	}
 
+	oraclesByNebula, err := store.OraclesByNebula(nebulaId)
+	if err == storage.ErrKeyNotFound {
+		return nil
+	} else if err != nil {
+		return err
+	}
+
 	lastIndex, err := store.NebulaOraclesIndex(nebulaId)
-	if err != nil {
+	if err != nil && err != storage.ErrKeyNotFound {
 		return err
 	}
 
@@ -222,8 +229,12 @@ func (scheduler *Scheduler) updateOracles(nebulaId account.NebulaId, store *stor
 	var oracles []account.OraclesPubKey
 	newOraclesMap := make(storage.OraclesMap)
 
-	for k, _ := range oraclesByNebula {
-		oracles = append(oracles, k)
+	for k, v := range oraclesByNebula {
+		oracleAddress, err := account.StringToOraclePubKey(k, v)
+		if err != nil {
+			return err
+		}
+		oracles = append(oracles, oracleAddress)
 	}
 
 	newIndex := lastIndex + 1
@@ -231,15 +242,18 @@ func (scheduler *Scheduler) updateOracles(nebulaId account.NebulaId, store *stor
 		newIndex = 0
 	}
 
-	if newIndex+OracleCount > uint64(len(oracles)) {
+	if len(oracles) <= OracleCount {
+		newOracles = append(newOracles, oracles...)
+	} else if newIndex+OracleCount > uint64(len(oracles)) {
 		newOracles = oracles[newIndex:]
-		newOracles = append(newOracles, newOracles[:OracleCount-len(newOracles)]...)
+		count := OracleCount - len(newOracles)
+		newOracles = append(newOracles, oracles[:count]...)
 	} else {
 		newOracles = oracles[newIndex : newIndex+OracleCount]
 	}
 
 	for _, v := range newOracles {
-		newOraclesMap[v] = true
+		newOraclesMap[v.ToString(nebulaInfo.ChainType)] = nebulaInfo.ChainType
 	}
 
 	err = store.SetBftOraclesByNebula(nebulaId, newOraclesMap)

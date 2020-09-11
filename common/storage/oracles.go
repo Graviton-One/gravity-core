@@ -11,7 +11,7 @@ import (
 )
 
 type OraclesByTypeMap map[account.ChainType]account.OraclesPubKey
-type OraclesMap map[account.OraclesPubKey]bool
+type OraclesMap map[string]account.ChainType
 
 func formBftOraclesByNebulaKey(nebulaId account.NebulaId) []byte {
 	return formKey(string(BftOraclesByNebulaKey), hexutil.Encode(nebulaId[:]))

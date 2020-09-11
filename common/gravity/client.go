@@ -107,7 +107,7 @@ func (client *Client) BftOraclesByNebula(chainType account.ChainType, nebulaId a
 		NebulaAddress: nebulaId.ToString(chainType),
 	}
 
-	rs, err := client.do(query.OracleByNebulaPath, rq)
+	rs, err := client.do(query.BftOracleByNebulaPath, rq)
 	if err != nil && err != ErrValueNotFound {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func (client *Client) Results(height uint64, chainType account.ChainType, nebula
 		NebulaAddress: nebulaId.ToString(chainType),
 	}
 
-	rs, err := client.do(query.OracleByNebulaPath, rq)
+	rs, err := client.do(query.ResultsPath, rq)
 	if err != nil && err != ErrValueNotFound {
 		return nil, err
 	}
@@ -171,46 +171,74 @@ func (client *Client) LastRoundApproved() (uint64, error) {
 
 	return binary.BigEndian.Uint64(rs), nil
 }
-func (client *Client) CommitHash(chainType account.ChainType, nebulaId account.NebulaId, height int64, oraclePubKey account.OraclesPubKey) ([]byte, error) {
+func (client *Client) CommitHash(chainType account.ChainType, nebulaId account.NebulaId, height int64, pulseId int64, oraclePubKey account.OraclesPubKey) ([]byte, error) {
 	rq := query.CommitHashRq{
 		ChainType:     chainType,
 		NebulaAddress: nebulaId.ToString(chainType),
 		Height:        height,
-		OraclePubKey:  hexutil.Encode(oraclePubKey[:]),
+		PulseId:       pulseId,
+		OraclePubKey:  oraclePubKey.ToString(chainType),
 	}
 
 	rs, err := client.do(query.CommitHashPath, rq)
-	if err != nil && err != ErrValueNotFound {
+	if err != nil {
 		return nil, err
 	}
 
 	return rs, nil
 }
-func (client *Client) Reveal(chainType account.ChainType, nebulaId account.NebulaId, height int64, commitHash []byte) ([]byte, error) {
+func (client *Client) Reveal(chainType account.ChainType, oraclePubKey account.OraclesPubKey, nebulaId account.NebulaId, height int64, pulseId int64, commitHash []byte) ([]byte, error) {
 	rq := query.RevealRq{
 		ChainType:     chainType,
 		NebulaAddress: nebulaId.ToString(chainType),
 		Height:        height,
+		PulseId:       pulseId,
+		OraclePubKey:  oraclePubKey.ToString(chainType),
 		CommitHash:    hexutil.Encode(commitHash),
 	}
 
 	rs, err := client.do(query.RevealPath, rq)
-	if err != nil && err != ErrValueNotFound {
+	if err != nil {
 		return nil, err
 	}
 
 	return rs, nil
+}
+func (client *Client) Reveals(chainType account.ChainType, nebulaId account.NebulaId, height int64, pulseId int64) ([][]byte, error) {
+	rq := query.RevealRq{
+		ChainType:     chainType,
+		NebulaAddress: nebulaId.ToString(chainType),
+		Height:        height,
+		PulseId:       pulseId,
+	}
+
+	rs, err := client.do(query.RevealsPath, rq)
+	if err != nil {
+		return nil, err
+	}
+
+	var reveals [][]byte
+	if err == ErrValueNotFound {
+		return reveals, nil
+	}
+
+	err = json.Unmarshal(rs, &reveals)
+	if err != nil {
+		return nil, err
+	}
+
+	return reveals, nil
 }
 func (client *Client) Result(chainType account.ChainType, nebulaId account.NebulaId, height int64, oraclePubKey account.OraclesPubKey) ([]byte, error) {
 	rq := query.ResultRq{
 		ChainType:     chainType,
 		NebulaAddress: nebulaId.ToString(chainType),
 		Height:        height,
-		OraclePubKey:  hexutil.Encode(oraclePubKey[:]),
+		OraclePubKey:  oraclePubKey.ToString(chainType),
 	}
 
 	rs, err := client.do(query.ResultPath, rq)
-	if err != nil && err != ErrValueNotFound {
+	if err != nil {
 		return nil, err
 	}
 
@@ -222,17 +250,17 @@ func (client *Client) NebulaInfo(id account.NebulaId, chainType account.ChainTyp
 		NebulaAddress: id.ToString(chainType),
 	}
 
-	rs, err := client.do(query.NebulaOraclesIndexPath, rq)
+	rs, err := client.do(query.NebulaInfoPath, rq)
 	if err != nil {
 		return nil, err
 	}
-	var nebulaInfo *storage.NebulaInfo
-	err = json.Unmarshal(rs, nebulaInfo)
+	var nebulaInfo storage.NebulaInfo
+	err = json.Unmarshal(rs, &nebulaInfo)
 	if err != nil {
 		return nil, err
 	}
 
-	return nebulaInfo, nil
+	return &nebulaInfo, nil
 }
 func (client *Client) Nebulae() (storage.NebulaMap, error) {
 	rs, err := client.do(query.NebulaePath, nil)
@@ -350,5 +378,5 @@ func (client *Client) do(path query.Path, rq interface{}) ([]byte, error) {
 		return nil, ErrValueNotFound
 	}
 
-	return rs.Response.Value, err
+	return rs.Response.Value, nil
 }

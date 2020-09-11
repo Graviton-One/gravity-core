@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"log"
 
 	"github.com/Gravity-Tech/gravity-core/common/contracts"
@@ -23,7 +25,7 @@ import (
 )
 
 const (
-	TimeoutMs = 200
+	TimeoutMs = 1000
 )
 
 var (
@@ -134,7 +136,7 @@ func (node *Node) Init() error {
 			return err
 		}
 
-		fmt.Printf("Add oracle (TXID): %s\n", tx.Id)
+		fmt.Printf("Add oracle (TXID): %s\n", hexutil.Encode(tx.Id[:]))
 		time.Sleep(time.Duration(5) * time.Second)
 	}
 
@@ -143,7 +145,7 @@ func (node *Node) Init() error {
 		return err
 	}
 
-	_, ok = oraclesByNebulaKey[node.oraclePubKey]
+	_, ok = oraclesByNebulaKey[node.oraclePubKey.ToString(node.chainType)]
 	if !ok {
 		tx, err := transactions.New(node.validator.pubKey, transactions.AddOracleInNebula, node.validator.privKey)
 		if err != nil {
@@ -164,7 +166,7 @@ func (node *Node) Init() error {
 			return err
 		}
 
-		fmt.Printf("Add oracle in nebula (TXID): %s\n", tx.Id)
+		fmt.Printf("Add oracle in nebula (TXID): %s\n", hexutil.Encode(tx.Id[:]))
 		time.Sleep(time.Duration(5) * time.Second)
 	}
 
@@ -187,6 +189,15 @@ func (node *Node) Start(ctx context.Context) {
 	for {
 		time.Sleep(time.Duration(TimeoutMs) * time.Millisecond)
 
+		oraclesMap, err := node.gravityClient.BftOraclesByNebula(node.chainType, node.nebulaId)
+		if err != nil {
+			errorLogger.Print(err)
+			continue
+		}
+		if _, ok := oraclesMap[node.oraclePubKey.ToString(node.chainType)]; !ok {
+			continue
+		}
+
 		info, err := node.gravityClient.HttpClient.Status()
 		if err != nil {
 			errorLogger.Print(err)
@@ -205,14 +216,12 @@ func (node *Node) Start(ctx context.Context) {
 		}
 
 		if tcHeight != lastTcHeight {
+			fmt.Printf("Tc Height: %d\n", tcHeight)
 			pulseCountInBlock = 0
+			roundState = new(RoundState)
 		}
 		if pulseCountInBlock >= node.MaxPulseCountInBlock {
 			continue
-		}
-
-		if state.CalculateSubRound(ledgerHeight) == state.CommitSubRound {
-			roundState = new(RoundState)
 		}
 
 		err = node.execute(ledgerHeight, tcHeight, roundState, ctx)
@@ -220,9 +229,10 @@ func (node *Node) Start(ctx context.Context) {
 			errorLogger.Print(err)
 		}
 
-		tcHeight = lastTcHeight
-		if state.CalculateSubRound(ledgerHeight) == state.SendToTargetChain {
+		lastTcHeight = tcHeight
+		if state.CalculateSubRound(ledgerHeight) == state.SendToTargetChain && roundState.isSent {
 			pulseCountInBlock++
+			roundState = new(RoundState)
 		}
 	}
 }
@@ -235,7 +245,10 @@ func (node *Node) execute(ledgerHeight uint64, tcHeight uint64, roundState *Roun
 
 	switch state.CalculateSubRound(ledgerHeight) {
 	case state.CommitSubRound:
-		_, err := node.gravityClient.CommitHash(node.chainType, node.nebulaId, int64(pulseId), node.oraclePubKey)
+		if roundState.commitHash != nil {
+			return nil
+		}
+		_, err := node.gravityClient.CommitHash(node.chainType, node.nebulaId, int64(tcHeight), int64(pulseId), node.oraclePubKey)
 		if err != nil && err != gravity.ErrValueNotFound {
 			return err
 		} else if err == nil {
@@ -251,7 +264,7 @@ func (node *Node) execute(ledgerHeight uint64, tcHeight uint64, roundState *Roun
 			return nil
 		}
 
-		commit, err := node.commit(data, pulseId)
+		commit, err := node.commit(data, tcHeight, pulseId)
 		if err != nil {
 			return err
 		}
@@ -259,40 +272,27 @@ func (node *Node) execute(ledgerHeight uint64, tcHeight uint64, roundState *Roun
 		roundState.commitHash = commit
 		roundState.data = data
 	case state.RevealSubRound:
-		if roundState.commitHash == nil {
+		if roundState.commitHash == nil || roundState.RevealExist {
 			return nil
 		}
-		_, err := node.gravityClient.Reveal(node.chainType, node.nebulaId, int64(pulseId), roundState.commitHash)
+		_, err := node.gravityClient.Reveal(node.chainType, node.oraclePubKey, node.nebulaId, int64(tcHeight), int64(pulseId), roundState.commitHash)
 		if err != nil && err != gravity.ErrValueNotFound {
 			return err
 		} else if err == nil {
 			return nil
 		}
 
-		err = node.reveal(pulseId, roundState.data, roundState.commitHash)
+		err = node.reveal(tcHeight, pulseId, roundState.data, roundState.commitHash)
 		if err != nil {
 			return err
 		}
+		roundState.RevealExist = true
 	case state.ResultSubRound:
-		if roundState.data == nil {
+		if roundState.data == nil && !roundState.RevealExist {
 			return nil
 		}
 
-		_, err := node.gravityClient.Reveal(node.chainType, node.nebulaId, int64(pulseId), roundState.commitHash)
-		if err != nil && err != gravity.ErrValueNotFound {
-			return err
-		} else if err == gravity.ErrValueNotFound {
-			return nil
-		}
-
-		_, err = node.gravityClient.Result(node.chainType, node.nebulaId, int64(pulseId), node.oraclePubKey)
-		if err != nil && err != gravity.ErrValueNotFound {
-			return err
-		} else if err == nil {
-			return nil
-		}
-
-		value, hash, err := node.signResult(pulseId, ctx)
+		value, hash, err := node.signResult(tcHeight, pulseId, ctx)
 		if err != nil {
 			return err
 		}
@@ -303,16 +303,24 @@ func (node *Node) execute(ledgerHeight uint64, tcHeight uint64, roundState *Roun
 		var oracles []account.OraclesPubKey
 		var myRound uint64
 
-		if roundState.isSent {
+		if roundState.isSent || roundState.resultValue == nil {
 			return nil
 		}
 
 		oraclesMap, err := node.gravityClient.BftOraclesByNebula(node.chainType, node.nebulaId)
 		if err != nil {
-			return err
+			return nil
 		}
+		if _, ok := oraclesMap[node.oraclePubKey.ToString(node.chainType)]; !ok {
+			return nil
+		}
+
 		var count uint64
-		for oracle, _ := range oraclesMap {
+		for k, v := range oraclesMap {
+			oracle, err := account.StringToOraclePubKey(k, v)
+			if err != nil {
+				return err
+			}
 			oracles = append(oracles, oracle)
 			if node.oraclePubKey == oracle {
 				myRound = count
@@ -320,11 +328,10 @@ func (node *Node) execute(ledgerHeight uint64, tcHeight uint64, roundState *Roun
 			count++
 		}
 
-		if tcHeight%uint64(len(oracles)) != myRound {
+		if len(oracles) == 0 {
 			return nil
 		}
-
-		if roundState.resultValue == nil {
+		if tcHeight%uint64(len(oracles)) != myRound {
 			return nil
 		}
 
@@ -333,16 +340,20 @@ func (node *Node) execute(ledgerHeight uint64, tcHeight uint64, roundState *Roun
 			return err
 		}
 
-		err = node.adaptor.WaitTx(txId, ctx)
-		if err != nil {
-			return err
-		}
+		if txId != "" {
+			err = node.adaptor.WaitTx(txId, ctx)
+			if err != nil {
+				return err
+			}
 
-		roundState.isSent = true
+			fmt.Printf("Result tx id : %s\n", txId)
 
-		err = node.adaptor.SendValueToSubs(node.nebulaId, pulseId, roundState.resultValue, ctx)
-		if err != nil {
-			return err
+			roundState.isSent = true
+
+			err = node.adaptor.SendValueToSubs(node.nebulaId, pulseId, roundState.resultValue, ctx)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

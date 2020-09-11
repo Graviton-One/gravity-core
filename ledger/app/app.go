@@ -32,7 +32,6 @@ type OraclesAddresses struct {
 }
 type Genesis struct {
 	ConsulsCount              int
-	BftOracleInNebulaCount    int
 	OraclesAddressByValidator map[account.ConsulPubKey][]OraclesAddresses
 }
 
@@ -70,12 +69,12 @@ func (app *GHApplication) SetOption(req abcitypes.RequestSetOption) abcitypes.Re
 func (app *GHApplication) DeliverTx(req abcitypes.RequestDeliverTx) abcitypes.ResponseDeliverTx {
 	tx, err := transactions.UnmarshalJson(req.Tx)
 	if err != nil {
-		return abcitypes.ResponseDeliverTx{Code: Error}
+		return abcitypes.ResponseDeliverTx{Code: Error, Info: err.Error()}
 	}
 
 	err = state.SetState(tx, app.storage, app.adaptors, app.ctx)
 	if err != nil {
-		return abcitypes.ResponseDeliverTx{Code: Error}
+		return abcitypes.ResponseDeliverTx{Code: Error, Info: err.Error()}
 	}
 	return abcitypes.ResponseDeliverTx{Code: 0}
 }
@@ -83,14 +82,14 @@ func (app *GHApplication) DeliverTx(req abcitypes.RequestDeliverTx) abcitypes.Re
 func (app *GHApplication) CheckTx(req abcitypes.RequestCheckTx) abcitypes.ResponseCheckTx {
 	tx, err := transactions.UnmarshalJson(req.Tx)
 	if err != nil {
-		return abcitypes.ResponseCheckTx{Code: Error}
+		return abcitypes.ResponseCheckTx{Code: Error, Info: err.Error()}
 	}
 
-	mock := *app.storage
-	mock.NewTransaction(app.db)
-	err = state.SetState(tx, &mock, app.adaptors, app.ctx)
+	store := storage.New()
+	store.NewTransaction(app.db)
+	err = state.SetState(tx, store, app.adaptors, app.ctx)
 	if err != nil {
-		return abcitypes.ResponseCheckTx{Code: Error}
+		return abcitypes.ResponseCheckTx{Code: Error, Info: err.Error()}
 	}
 
 	return abcitypes.ResponseCheckTx{Code: Success}
@@ -124,11 +123,7 @@ func (app *GHApplication) Query(reqQuery abcitypes.RequestQuery) (resQuery abcit
 func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.ResponseInitChain {
 	app.storage.NewTransaction(app.db)
 
-	err := app.storage.SetBftOracleInNebulaCount(app.genesis.BftOracleInNebulaCount)
-	if err != nil {
-		panic(err)
-	}
-	err = app.storage.SetConsulsCount(app.genesis.ConsulsCount)
+	err := app.storage.SetConsulsCount(app.genesis.ConsulsCount)
 	if err != nil {
 		panic(err)
 	}
@@ -141,6 +136,7 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 		if err != nil {
 			panic(err)
 		}
+
 		consuls = append(consuls, storage.Consul{
 			PubKey: pubKey,
 			Value:  uint64(value.Power),

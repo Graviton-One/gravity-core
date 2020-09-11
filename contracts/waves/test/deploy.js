@@ -1,6 +1,6 @@
 const wvs = 10 ** 8;
 
-let gravitySeed = "waves private node seed with waves tokens7"
+let gravitySeed = "waves private node seed with waves tokens8"
 
 let nebulaSeed = "waves private node seed with waves tokens nebula2"
 let subMockSeed = "waves private node seed with waves tokens submock"

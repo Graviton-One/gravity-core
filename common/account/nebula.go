@@ -44,8 +44,7 @@ func BytesToNebulaId(value []byte) NebulaId {
 }
 
 func (id NebulaId) ToString(chainType ChainType) string {
-	var nebula NebulaId
-
+	nebula := id.ToBytes(chainType)
 	switch chainType {
 	case Ethereum:
 		return hexutil.Encode(nebula[:])

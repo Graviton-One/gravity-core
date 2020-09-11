@@ -36,10 +36,14 @@ func getStringByAddressAndKey(address: Address,key: String) = {
         case _ => ""
     }
 }
-
+func getNumberByAddressAndKey(address: Address, key: String) = {
+    match (getInteger(address, key)) {
+        case v:Int => v
+        case _ => 0
+      } 
+}
 #-----------------------Key-----------------------------
 let OraclesKey = "oracles"
-let ConsulsKey = "consuls"
 let SubscriberAddressKey = "subscriber_address"
 let TypeKey = "type"
 let GravityContractKey = "gravity_contract"
@@ -51,12 +55,14 @@ let LastPulseIdKey = "last_pulse_id"
 
 func getHashDataKey(pulseId: Int) = "data_hash_" + toString(pulseId)
 func getHeightByPulseKey(pulseId: Int) = "height_" + toString(pulseId)
+func ConsulsKey(round: Int) = "consuls_" + toString(round)
 
 #-------------------Global vars-------------------------
 let oracles = getStringByKey(OraclesKey).split(",")
 let bftCoefficient = getNumberByKey(BftCoefficientKey)
 let gracityContract = addressFromStringValue(getStringByKey(GravityContractKey))
-let consuls = getStringByAddressAndKey(gracityContract, ConsulsKey).split(",")
+let lastGravityRound = getNumberByAddressAndKey(gracityContract, LastRoundKey)
+let consuls = getStringByAddressAndKey(gracityContract, ConsulsKey(lastGravityRound)).split(",")
 let subscriberAddress = getStringByKey(SubscriberAddressKey)
 let type = getNumberByKey(TypeKey)
 let lastPulseId = getNumberByKey(LastPulseIdKey)
@@ -87,8 +93,8 @@ func sendHashValue(hash: ByteVector, signs: String) = {
     else {
         let pulseId = lastPulseId + 1
         WriteSet([
-            DataEntry(getHashDataKey(pulseId), hash),
-            DataEntry(getHeightByPulseKey(pulseId), height),
+            DataEntry(getHashDataKey(lastPulseId), hash),
+            DataEntry(getHeightByPulseKey(lastPulseId), height),
             DataEntry(LastHeightKey, height),
             DataEntry(LastPulseIdKey, pulseId)
         ])

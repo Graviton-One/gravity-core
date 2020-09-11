@@ -37,6 +37,6 @@ func (storage *Storage) Results(nebulaId account.NebulaId, pulseId uint64) ([][]
 
 	return values, nil
 }
-func (storage *Storage) SetResult(nebulaId account.NebulaId, pulseId int64, oraclePubKey account.OraclesPubKey, reveal []byte) error {
-	return storage.setValue(formResultKey(nebulaId, pulseId, oraclePubKey), reveal)
+func (storage *Storage) SetResult(nebulaId account.NebulaId, pulseId int64, oraclePubKey account.OraclesPubKey, sign []byte) error {
+	return storage.setValue(formResultKey(nebulaId, pulseId, oraclePubKey), sign)
 }

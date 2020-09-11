@@ -21,12 +21,14 @@ import (
 type SubRound int64
 
 const (
-	SubRoundCount = 4
-
 	CommitSubRound SubRound = iota
 	RevealSubRound
 	ResultSubRound
 	SendToTargetChain
+
+	SubRoundCount = 4
+
+	RoundInterval = 2
 )
 
 var (
@@ -64,19 +66,10 @@ func SetState(tx *transactions.Transaction, store *storage.Storage, adaptors map
 
 	switch tx.Func {
 	case transactions.Commit:
-		if CalculateSubRound(height) != CommitSubRound {
-			return ErrInvalidSubRound
-		}
 		return commit(store, tx)
 	case transactions.Reveal:
-		if CalculateSubRound(height) != RevealSubRound {
-			return ErrInvalidSubRound
-		}
 		return reveal(store, tx)
 	case transactions.Result:
-		if CalculateSubRound(height) != ResultSubRound {
-			return ErrInvalidSubRound
-		}
 		return result(store, tx)
 	case transactions.AddOracleInNebula:
 		return addOracleInNebula(store, tx)
@@ -102,14 +95,15 @@ func SetState(tx *transactions.Transaction, store *storage.Storage, adaptors map
 func commit(store *storage.Storage, tx *transactions.Transaction) error {
 	nebula := account.BytesToNebulaId(tx.Value(0).([]byte))
 	pulseId := tx.Value(1).(int64)
-	commit := tx.Value(2).([]byte)
-	pubKeyBytes := tx.Value(3).([]byte)
+	tcHeight := tx.Value(2).(int64)
+	commit := tx.Value(3).([]byte)
+	pubKeyBytes := tx.Value(4).([]byte)
 	var pubKey account.OraclesPubKey
 	copy(pubKey[:], pubKeyBytes)
 
-	_, err := store.CommitHash(nebula, pulseId, pubKey)
+	_, err := store.CommitHash(nebula, tcHeight, pulseId, pubKey)
 	if err == storage.ErrKeyNotFound {
-		err := store.SetCommitHash(nebula, pulseId, pubKey, commit)
+		err := store.SetCommitHash(nebula, tcHeight, pulseId, pubKey, commit)
 		if err != nil {
 			return err
 		}
@@ -126,15 +120,15 @@ func reveal(store *storage.Storage, tx *transactions.Transaction) error {
 	commit := tx.Value(0).([]byte)
 	nebula := account.BytesToNebulaId(tx.Value(1).([]byte))
 	pulseId := tx.Value(2).(int64)
-	reveal := tx.Value(3).([]byte)
-	pubKeyBytes := tx.Value(4).([]byte)
+	height := tx.Value(3).(int64)
+	reveal := tx.Value(4).([]byte)
+	pubKeyBytes := tx.Value(5).([]byte)
 	var pubKey account.OraclesPubKey
 	copy(pubKey[:], pubKeyBytes)
 
-	_, err := store.Reveal(nebula, pulseId, commit)
+	_, err := store.Reveal(nebula, height, pulseId, commit, pubKey)
 	if err == storage.ErrKeyNotFound {
-		var commitBytes []byte
-		_, err := store.CommitHash(nebula, pulseId, pubKey)
+		commitBytes, err := store.CommitHash(nebula, height, pulseId, pubKey)
 
 		if err == storage.ErrKeyNotFound {
 			return ErrCommitIsNotExist
@@ -147,7 +141,7 @@ func reveal(store *storage.Storage, tx *transactions.Transaction) error {
 			return ErrInvalidReveal
 		}
 
-		return store.SetReveal(nebula, pulseId, commit, reveal)
+		return store.SetReveal(nebula, height, pulseId, commit, pubKey, reveal)
 	} else if err != nil {
 		return err
 	} else {
@@ -167,11 +161,13 @@ func addOracleInNebula(store *storage.Storage, tx *transactions.Transaction) err
 	}
 
 	oraclesByNebula, err := store.OraclesByNebula(nebulaAddress)
-	if err != nil && err != storage.ErrKeyNotFound {
+	if err == storage.ErrKeyNotFound {
+		oraclesByNebula = make(storage.OraclesMap)
+	} else if err != nil {
 		return err
 	}
 
-	if _, ok := oraclesByNebula[pubKey]; ok {
+	if _, ok := oraclesByNebula[pubKey.ToString(nebula.ChainType)]; ok {
 		return ErrAddOracleInNebula
 	}
 
@@ -184,7 +180,7 @@ func addOracleInNebula(store *storage.Storage, tx *transactions.Transaction) err
 		return ErrInvalidScore
 	}
 
-	oraclesByNebula[pubKey] = true
+	oraclesByNebula[pubKey.ToString(nebula.ChainType)] = nebula.ChainType
 
 	err = store.SetOraclesByNebula(nebulaAddress, oraclesByNebula)
 	if err != nil {
