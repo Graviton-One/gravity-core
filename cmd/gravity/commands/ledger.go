@@ -453,7 +453,6 @@ func crateApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys 
 
 	genesis := app.Genesis{
 		ConsulsCount:              genesisCfg.ConsulsCount,
-		BftOracleInNebulaCount:    DefaultBftOracleInNebulaCount,
 		OraclesAddressByValidator: make(map[account.ConsulPubKey][]app.OraclesAddresses),
 	}
 
