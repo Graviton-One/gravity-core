@@ -21,8 +21,9 @@ import (
 )
 
 const (
-	Success uint32 = 0
-	Error   uint32 = 500
+	Success      uint32 = 0
+	Error        uint32 = 500
+	NotFoundCode uint32 = 404
 )
 
 type OraclesAddresses struct {
@@ -31,11 +32,11 @@ type OraclesAddresses struct {
 }
 type Genesis struct {
 	ConsulsCount              int
-	BftOracleInNebulaCount    int
 	OraclesAddressByValidator map[account.ConsulPubKey][]OraclesAddresses
 }
 
 type GHApplication struct {
+	IsSync    bool
 	db        *badger.DB
 	storage   *storage.Storage
 	adaptors  map[account.ChainType]adaptors.IBlockchainAdaptor
@@ -68,18 +69,29 @@ func (app *GHApplication) SetOption(req abcitypes.RequestSetOption) abcitypes.Re
 func (app *GHApplication) DeliverTx(req abcitypes.RequestDeliverTx) abcitypes.ResponseDeliverTx {
 	tx, err := transactions.UnmarshalJson(req.Tx)
 	if err != nil {
-		return abcitypes.ResponseDeliverTx{Code: Error}
+		return abcitypes.ResponseDeliverTx{Code: Error, Info: err.Error()}
 	}
 
 	err = state.SetState(tx, app.storage, app.adaptors, app.ctx)
 	if err != nil {
-		return abcitypes.ResponseDeliverTx{Code: Error}
+		return abcitypes.ResponseDeliverTx{Code: Error, Info: err.Error()}
 	}
-
 	return abcitypes.ResponseDeliverTx{Code: 0}
 }
 
 func (app *GHApplication) CheckTx(req abcitypes.RequestCheckTx) abcitypes.ResponseCheckTx {
+	tx, err := transactions.UnmarshalJson(req.Tx)
+	if err != nil {
+		return abcitypes.ResponseCheckTx{Code: Error, Info: err.Error()}
+	}
+
+	store := storage.New()
+	store.NewTransaction(app.db)
+	err = state.SetState(tx, store, app.adaptors, app.ctx)
+	if err != nil {
+		return abcitypes.ResponseCheckTx{Code: Error, Info: err.Error()}
+	}
+
 	return abcitypes.ResponseCheckTx{Code: Success}
 }
 
@@ -97,7 +109,9 @@ func (app *GHApplication) Query(reqQuery abcitypes.RequestQuery) (resQuery abcit
 	store := storage.New()
 	store.NewTransaction(app.db)
 	b, err := query.Query(store, reqQuery.Path, reqQuery.Data)
-	if err != nil {
+	if err == query.ErrValueNotFound {
+		resQuery.Code = NotFoundCode
+	} else if err != nil {
 		resQuery.Code = Error
 	}
 
@@ -109,11 +123,7 @@ func (app *GHApplication) Query(reqQuery abcitypes.RequestQuery) (resQuery abcit
 func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.ResponseInitChain {
 	app.storage.NewTransaction(app.db)
 
-	err := app.storage.SetBftOracleInNebulaCount(app.genesis.BftOracleInNebulaCount)
-	if err != nil {
-		panic(err)
-	}
-	err = app.storage.SetConsulsCount(app.genesis.ConsulsCount)
+	err := app.storage.SetConsulsCount(app.genesis.ConsulsCount)
 	if err != nil {
 		panic(err)
 	}
@@ -126,6 +136,7 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 		if err != nil {
 			panic(err)
 		}
+
 		consuls = append(consuls, storage.Consul{
 			PubKey: pubKey,
 			Value:  uint64(value.Power),
@@ -133,6 +144,11 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 	}
 
 	err = app.storage.SetConsuls(consuls)
+	if err != nil {
+		panic(err)
+	}
+
+	err = app.storage.SetConsulsCandidate(consuls)
 	if err != nil {
 		panic(err)
 	}
@@ -160,7 +176,7 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 func (app *GHApplication) BeginBlock(req abcitypes.RequestBeginBlock) abcitypes.ResponseBeginBlock {
 	app.storage.NewTransaction(app.db)
 
-	err := app.scheduler.HandleBlock(req.Header.Height, app.storage)
+	err := app.scheduler.HandleBlock(req.Header.Height, app.storage, app.IsSync)
 	if err != nil {
 		fmt.Printf("Error: %s \n", err.Error())
 	}

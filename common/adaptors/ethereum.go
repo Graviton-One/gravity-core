@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
-	"fmt"
 	"math/big"
 	"time"
 
@@ -137,8 +136,8 @@ func (adaptor *EthereumAdaptor) WaitTx(id string, ctx context.Context) error {
 	}
 }
 func (adaptor *EthereumAdaptor) PubKey() account.OraclesPubKey {
-	var oraclePubKey account.OraclesPubKey
-	copy(oraclePubKey[:], crypto.PubkeyToAddress(adaptor.privKey.PublicKey).Bytes())
+	pubKey := crypto.CompressPubkey(&adaptor.privKey.PublicKey)
+	oraclePubKey := account.BytesToOraclePubKey(pubKey[:], account.Ethereum)
 	return oraclePubKey
 }
 func (adaptor *EthereumAdaptor) ValueType(nebulaId account.NebulaId, ctx context.Context) (contracts.ExtractorType, error) {
@@ -227,9 +226,6 @@ func (adaptor *EthereumAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint
 	if err != nil {
 		return "", err
 	}
-
-	fmt.Printf("Tx finilize: %s \n", tx.Hash().String())
-
 	return tx.Hash().String(), nil
 }
 func (adaptor *EthereumAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId uint64, value interface{}, ctx context.Context) error {
@@ -274,7 +270,7 @@ func (adaptor *EthereumAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulse
 	return nil
 }
 
-func (adaptor *EthereumAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracles []account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
+func (adaptor *EthereumAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
 	nebula, err := contracts.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return "", err
@@ -291,6 +287,11 @@ func (adaptor *EthereumAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, or
 
 	var oraclesAddresses []common.Address
 	for _, v := range oracles {
+		if v == nil {
+			oraclesAddresses = append(oraclesAddresses, common.Address{})
+			continue
+		}
+
 		pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
 		if err != nil {
 			return "", err
@@ -319,7 +320,7 @@ func (adaptor *EthereumAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, or
 
 	return tx.Hash().Hex(), nil
 }
-func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses []account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
+func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
 	var r [][32]byte
 	var s [][32]byte
 	var v []uint8
@@ -337,6 +338,10 @@ func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses
 	var consulsAddress []common.Address
 
 	for _, v := range newConsulsAddresses {
+		if v == nil {
+			consulsAddress = append(consulsAddress, common.Address{})
+			continue
+		}
 		pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
 		if err != nil {
 			return "", err
@@ -351,9 +356,13 @@ func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses
 
 	return tx.Hash().Hex(), nil
 }
-func (adaptor *EthereumAdaptor) SignConsuls(consulsAddresses []account.OraclesPubKey, roundId int64) ([]byte, error) {
+func (adaptor *EthereumAdaptor) SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64) ([]byte, error) {
 	var oraclesAddresses []common.Address
 	for _, v := range consulsAddresses {
+		if v == nil {
+			oraclesAddresses = append(oraclesAddresses, common.Address{})
+			continue
+		}
 		pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
 		if err != nil {
 			return nil, err
@@ -372,7 +381,7 @@ func (adaptor *EthereumAdaptor) SignConsuls(consulsAddresses []account.OraclesPu
 
 	return sign, nil
 }
-func (adaptor *EthereumAdaptor) SignOracles(nebulaId account.NebulaId, oracles []account.OraclesPubKey) ([]byte, error) {
+func (adaptor *EthereumAdaptor) SignOracles(nebulaId account.NebulaId, oracles []*account.OraclesPubKey) ([]byte, error) {
 	nebula, err := contracts.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return nil, err
@@ -380,6 +389,10 @@ func (adaptor *EthereumAdaptor) SignOracles(nebulaId account.NebulaId, oracles [
 
 	var oraclesAddresses []common.Address
 	for _, v := range oracles {
+		if v == nil {
+			oraclesAddresses = append(oraclesAddresses, common.Address{})
+			continue
+		}
 		pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
 		if err != nil {
 			return nil, err

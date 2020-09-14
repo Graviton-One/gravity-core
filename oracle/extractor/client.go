@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	GetExtractedData = "/extracted"
-	GetExtractorInfo = "/info"
-	GetAggregated    = "/aggregate"
+	GetExtractedData = "extracted"
+	GetExtractorInfo = "info"
+	GetAggregated    = "aggregate"
 )
 
 type Client struct {
@@ -41,9 +41,7 @@ func (client *Client) ExtractorInfo(ctx context.Context) (*Info, error) {
 }
 
 func (client *Client) Aggregate(values []interface{}, ctx context.Context) (interface{}, error) {
-	rs, err := client.do(GetAggregated, http.MethodPost, AggregationRequestBody{
-		Values: values,
-	}, ctx)
+	rs, err := client.do(GetAggregated, http.MethodPost, values, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -76,19 +74,24 @@ func (client *Client) do(route string, method string, rqBody interface{}, ctx co
 	rqUrl := fmt.Sprintf("%v/%v", client.hostUrl, route)
 
 	var buf *bytes.Buffer
+	var req *http.Request
+	var err error
 	if rqBody != nil {
 		b, err := json.Marshal(&rqBody)
 		if err != nil {
 			return nil, err
 		}
 		buf = bytes.NewBuffer(b)
+		req, err = http.NewRequestWithContext(ctx, method, rqUrl, buf)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		req, err = http.NewRequestWithContext(ctx, method, rqUrl, nil)
+		if err != nil {
+			return nil, err
+		}
 	}
-
-	req, err := http.NewRequestWithContext(ctx, method, rqUrl, buf)
-	if err != nil {
-		return nil, err
-	}
-
 	response, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err

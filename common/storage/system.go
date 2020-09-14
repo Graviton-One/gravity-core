@@ -42,26 +42,6 @@ func (storage *Storage) SetConsulsCount(consulsCount int) error {
 	return err
 }
 
-func (storage *Storage) BftOracleInNebulaCount() (int, error) {
-	b, err := storage.getValue([]byte(BftOracleInNebulaCountKey))
-	if err != nil {
-		return 0, err
-	}
-
-	return int(binary.BigEndian.Uint64(b)), nil
-}
-
-func (storage *Storage) SetBftOracleInNebulaCount(bftOracleInNebulaCount int) error {
-	var b [8]byte
-	binary.BigEndian.PutUint64(b[:], uint64(bftOracleInNebulaCount))
-	err := storage.setValue([]byte(BftOracleInNebulaCountKey), b[:])
-	if err != nil {
-		return err
-	}
-
-	return err
-}
-
 func (storage *Storage) SetLastRoundApproved(roundId uint64) error {
 	var b [8]byte
 	binary.BigEndian.PutUint64(b[:], roundId)

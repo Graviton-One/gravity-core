@@ -11,16 +11,18 @@ import (
 type Path string
 
 const (
-	OracleByValidatorPath Path = "oraclesByValidator"
-	OracleByNebulaPath    Path = "oraclesByNebula"
-	BftOracleByNebulaPath Path = "bftOraclesByNebula"
-	RoundHeightPath       Path = "roundHeight"
-	CommitHashPath        Path = "commitHash"
-	RevealPath            Path = "reveal"
-	ResultPath            Path = "result"
-	ResultsPath           Path = "results"
-	NebulaePath           Path = "nebulae"
-
+	OracleByValidatorPath      Path = "oraclesByValidator"
+	OracleByNebulaPath         Path = "oraclesByNebula"
+	BftOracleByNebulaPath      Path = "bftOraclesByNebula"
+	RoundHeightPath            Path = "roundHeight"
+	CommitHashPath             Path = "commitHash"
+	RevealPath                 Path = "reveal"
+	RevealsPath                Path = "reveals"
+	ResultPath                 Path = "result"
+	ResultsPath                Path = "results"
+	NebulaePath                Path = "nebulae"
+	NebulaInfoPath             Path = "nebula_info"
+	LastRoundApprovedPath      Path = "lastRoundApproved"
 	ConsulsPath                Path = "consuls"
 	ConsulsCandidatePath       Path = "consulsCandidate"
 	SignNewConsulsByConsulPath Path = "signNewConsulsByConsul"
@@ -29,7 +31,8 @@ const (
 )
 
 var (
-	ErrInvalidPath = errors.New("invalid path")
+	ErrInvalidPath   = errors.New("invalid path")
+	ErrValueNotFound = errors.New("value not found")
 )
 
 func Query(store *storage.Storage, path string, rq []byte) ([]byte, error) {
@@ -46,6 +49,8 @@ func Query(store *storage.Storage, path string, rq []byte) ([]byte, error) {
 		value, err = commitHash(store, rq)
 	case RevealPath:
 		value, err = reveal(store, rq)
+	case RevealsPath:
+		value, err = reveals(store, rq)
 	case ResultPath:
 		value, err = result(store, rq)
 	case BftOracleByNebulaPath:
@@ -54,6 +59,8 @@ func Query(store *storage.Storage, path string, rq []byte) ([]byte, error) {
 		value, err = results(store, rq)
 	case NebulaePath:
 		value, err = nebulae(store)
+	case NebulaInfoPath:
+		value, err = nebulaInfo(store, rq)
 	case ConsulsPath:
 		value, err = consuls(store)
 	case ConsulsCandidatePath:
@@ -64,12 +71,16 @@ func Query(store *storage.Storage, path string, rq []byte) ([]byte, error) {
 		value, err = signNewOraclesByConsul(store, rq)
 	case NebulaOraclesIndexPath:
 		value, err = nebulaOraclesIndex(store, rq)
+	case LastRoundApprovedPath:
+		value, err = store.LastRoundApproved()
 	default:
 		return nil, ErrInvalidPath
 	}
 
-	if err != nil {
+	if err != nil && err != storage.ErrKeyNotFound {
 		return nil, err
+	} else if err == storage.ErrKeyNotFound {
+		return nil, ErrValueNotFound
 	}
 
 	b, err := toBytes(value)
@@ -85,6 +96,7 @@ func toBytes(v interface{}) ([]byte, error) {
 	var b []byte
 	switch v.(type) {
 	case uint64:
+		b = make([]byte, 8, 8)
 		binary.BigEndian.PutUint64(b, v.(uint64))
 	case []byte:
 		b = v.([]byte)

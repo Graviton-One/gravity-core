@@ -9,6 +9,8 @@ import "../interfaces/ISubscriberString.sol";
 
 contract Nebula {
     event NewPulse(uint256 pulseId, uint256 height, bytes32 dataHash);
+    event NewSubscriber(bytes32 id);
+
     mapping(uint256=>bool) public rounds;
 
     QueueLib.Queue public oracleQueue;
@@ -26,13 +28,11 @@ contract Nebula {
     mapping(uint256 => NModels.Pulse) public pulses;
     mapping(uint256 => mapping(bytes32 => bool)) public isPublseSubSent;
 
-    constructor(NModels.DataType newDataType, address newGravityContract, address[] memory newOracle, uint256 newBftValue, address payable subscriber) public {
+    constructor(NModels.DataType newDataType, address newGravityContract, address[] memory newOracle, uint256 newBftValue) public {
         dataType = newDataType;
         oracles = newOracle;
         bftValue = newBftValue;
         gravityContract = newGravityContract;
-
-        subscribe(subscriber, 0, 0);
     }
     
     receive() external payable { } 
@@ -68,10 +68,10 @@ contract Nebula {
 
         require(count >= bftValue, "invalid bft count");
         
-        uint256 newPulseId = lastPulseId + 1;
-        pulses[newPulseId] = NModels.Pulse(dataHash, block.number);
+        pulses[lastPulseId] = NModels.Pulse(dataHash, block.number);
 
-        emit NewPulse(newPulseId, block.number, dataHash);
+        emit NewPulse(lastPulseId, block.number, dataHash);
+        lastPulseId = lastPulseId + 1;
     }
 
     function updateOracles(address[] memory newOracles, uint8[] memory v, bytes32[] memory r, bytes32[] memory s, uint256 newRound) public {
@@ -119,5 +119,6 @@ contract Nebula {
         subscriptions[id] = NModels.Subscription(msg.sender, contractAddress, minConfirmations, reward);
         QueueLib.push(subscriptionsQueue, id);
         subscriptionIds.push(id);
+        emit NewSubscriber(id);
     }
 }

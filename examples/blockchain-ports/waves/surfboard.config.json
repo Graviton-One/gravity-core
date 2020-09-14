@@ -1,5 +1,5 @@
 {
-    "ride_directory": "script",
+    "ride_directory": "scripts",
     "test_directory": "test",
     "envs": {
         "custom": {

@@ -168,8 +168,12 @@ func testCreateFiveRq(t *testing.T) {
 			SenderPK: config.Tester.PubKey,
 			ChainID:  ChainId,
 			FunctionCall: proto.FunctionCall{
-				Name:      "createTransferUnwrapRq",
-				Arguments: proto.Arguments{},
+				Name: "createTransferWrapRq",
+				Arguments: proto.Arguments{
+					proto.StringArgument{
+						Value: "test",
+					},
+				},
 			},
 			Payments: proto.ScriptPayments{
 				proto.ScriptPayment{

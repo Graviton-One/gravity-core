@@ -1,6 +1,7 @@
 package account
 
 import (
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	wavesplatform "github.com/wavesplatform/go-lib-crypto"
@@ -52,6 +53,17 @@ func (pubKey *OraclesPubKey) ToBytes(chainType ChainType) []byte {
 		v = pubKey[1:33]
 	}
 	return v
+}
+func (pubKey *OraclesPubKey) ToString(chainType ChainType) string {
+	b := pubKey.ToBytes(chainType)
+	switch chainType {
+	case Ethereum:
+		return hexutil.Encode(b)
+	case Waves:
+		return base58.Encode(b)
+	}
+
+	return ""
 }
 
 func StringToOraclePubKey(value string, chainType ChainType) (OraclesPubKey, error) {

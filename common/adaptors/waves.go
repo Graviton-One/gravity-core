@@ -91,9 +91,8 @@ func (adaptor *WavesAdaptor) Sign(msg []byte) ([]byte, error) {
 	return sig.Bytes(), nil
 }
 func (adaptor *WavesAdaptor) PubKey() account.OraclesPubKey {
-	var oraclePubKey account.OraclesPubKey
 	pubKey := crypto.GeneratePublicKey(adaptor.secret)
-	copy(oraclePubKey[:], pubKey.Bytes())
+	oraclePubKey := account.BytesToOraclePubKey(pubKey[:], account.Waves)
 	return oraclePubKey
 }
 func (adaptor *WavesAdaptor) ValueType(nebulaId account.NebulaId, ctx context.Context) (contracts.ExtractorType, error) {
@@ -128,9 +127,13 @@ func (adaptor *WavesAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64,
 	}
 
 	for _, oracle := range strings.Split(oracles.Value.(string), ",") {
-		var pubKey account.OraclesPubKey
-		copy(pubKey[:], base58.Decode(oracle))
-		sign, err := adaptor.ghClient.Result(account.Ethereum, nebulaId, int64(pulseId), pubKey)
+		pubKey, err := account.StringToOraclePubKey(oracle, account.Waves)
+		if err != nil {
+			signs = append(signs, "nil")
+			continue
+		}
+
+		sign, err := adaptor.ghClient.Result(account.Waves, nebulaId, int64(pulseId), pubKey)
 		if err != nil {
 			signs = append(signs, "nil")
 			continue
@@ -231,7 +234,7 @@ func (adaptor *WavesAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId 
 	}
 
 	args := proto.Arguments{}
-	switch SubType(nebulaType.Value.(int8)) {
+	switch SubType(int8(nebulaType.Value.(float64))) {
 	case Int64:
 		args.Append(
 			proto.IntegerArgument{
@@ -282,7 +285,7 @@ func (adaptor *WavesAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId 
 	return nil
 }
 
-func (adaptor *WavesAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracles []account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
+func (adaptor *WavesAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
 	nebulaAddress := base58.Encode(nebulaId.ToBytes(account.Waves))
 	lastRoundState, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, "last_round_"+fmt.Sprintf("%d", round), ctx)
 	if err != nil {
@@ -293,23 +296,17 @@ func (adaptor *WavesAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracl
 		return "", err
 	}
 
-	oracleCountState, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, "oracle_count", ctx)
-	if err != nil {
-		return "", err
-	}
-
 	var newOracles []string
 	var stringSigns []string
 	for _, v := range oracles {
+		if v == nil {
+			newOracles = append(newOracles, base58.Encode([]byte{1}))
+			continue
+		}
 		newOracles = append(newOracles, base58.Encode(v.ToBytes(account.Waves)))
 	}
 	for _, v := range signs {
 		stringSigns = append(stringSigns, base58.Encode(v))
-	}
-
-	emptyCount := int(oracleCountState.Value.(float64)) - len(newOracles)
-	for i := 0; i < emptyCount; i++ {
-		newOracles = append(newOracles, base58.Encode([]byte{0}))
 	}
 
 	asset, err := proto.NewOptionalAssetFromString("WAVES")
@@ -329,7 +326,7 @@ func (adaptor *WavesAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracl
 		ChainID:         adaptor.chainID,
 		ScriptRecipient: contract,
 		FunctionCall: proto.FunctionCall{
-			Name: "setSortedOracles",
+			Name: "updateOracles",
 			Arguments: proto.Arguments{
 				proto.StringArgument{
 					Value: strings.Join(newOracles, ","),
@@ -360,11 +357,14 @@ func (adaptor *WavesAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracl
 
 	return tx.ID.String(), nil
 }
-func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
+func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
 	var stringSigns []string
-	oneSigFound := false
+
+	if len(signs) == 0 {
+		return "", nil
+	}
+
 	for _, v := range signs {
-		oneSigFound = true
 		stringSigns = append(stringSigns, base58.Encode(v))
 	}
 
@@ -376,15 +376,16 @@ func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []
 	var newConsulsString []string
 
 	for _, v := range newConsulsAddresses {
+		if v == nil {
+			newConsulsString = append(newConsulsString, base58.Encode([]byte{0}))
+			continue
+		}
 		newConsulsString = append(newConsulsString, base58.Encode(v.ToBytes(account.Waves)))
 	}
 
 	emptyCount = ConsulsCount - len(newConsulsString)
 	for i := 0; i < emptyCount; i++ {
 		newConsulsString = append(newConsulsString, base58.Encode([]byte{0}))
-	}
-	if !oneSigFound {
-		return "", nil
 	}
 
 	asset, err := proto.NewOptionalAssetFromString("WAVES")
@@ -435,9 +436,13 @@ func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []
 
 	return tx.ID.String(), nil
 }
-func (adaptor *WavesAdaptor) SignConsuls(consulsAddresses []account.OraclesPubKey, roundId int64) ([]byte, error) {
+func (adaptor *WavesAdaptor) SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64) ([]byte, error) {
 	var msg []string
 	for _, v := range consulsAddresses {
+		if v == nil {
+			msg = append(msg, base58.Encode([]byte{0}))
+			continue
+		}
 		msg = append(msg, base58.Encode(v.ToBytes(account.Waves)))
 	}
 	msg = append(msg, fmt.Sprintf("%d", roundId))
@@ -449,9 +454,13 @@ func (adaptor *WavesAdaptor) SignConsuls(consulsAddresses []account.OraclesPubKe
 
 	return sign, err
 }
-func (adaptor *WavesAdaptor) SignOracles(nebulaId account.NebulaId, oracles []account.OraclesPubKey) ([]byte, error) {
+func (adaptor *WavesAdaptor) SignOracles(nebulaId account.NebulaId, oracles []*account.OraclesPubKey) ([]byte, error) {
 	var stringOracles []string
 	for _, v := range oracles {
+		if v == nil {
+			stringOracles = append(stringOracles, base58.Encode([]byte{1}))
+			continue
+		}
 		stringOracles = append(stringOracles, base58.Encode(v.ToBytes(account.Waves)))
 	}
 

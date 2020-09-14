@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -10,6 +9,8 @@ import (
 	"os/signal"
 	"path"
 	"syscall"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/config"
@@ -74,14 +75,21 @@ func initOracleConfig(ctx *cli.Context) error {
 	cfg := config.OracleConfig{
 		TargetChainNodeUrl: targetChainUrl,
 		GravityNodeUrl:     gravityUrl,
+		ChainId:            "R",
 		ChainType:          chainTypeStr,
 		ExtractorUrl:       extractorUrl,
 	}
-	b, err := json.Marshal(&cfg)
+	b, err := json.MarshalIndent(&cfg, "", " ")
 	if err != nil {
 		return err
 	}
 
+	if _, err := os.Stat(path.Join(home, DefaultNebulaeDir)); os.IsNotExist(err) {
+		err = os.Mkdir(path.Join(home, DefaultNebulaeDir), 0644)
+		if err != nil {
+			return err
+		}
+	}
 	return ioutil.WriteFile(path.Join(home, DefaultNebulaeDir, fmt.Sprintf("%s.json", nebulaId)), b, 0644)
 }
 
@@ -90,18 +98,18 @@ func startOracle(ctx *cli.Context) error {
 	nebulaIdStr := ctx.Args().First()
 
 	var cfg config.OracleConfig
-	err := config.ParseConfig(path.Join(home, DefaultNebulaeDir, fmt.Sprintf("%s.json", nebulaIdStr)), cfg)
+	err := config.ParseConfig(path.Join(home, DefaultNebulaeDir, fmt.Sprintf("%s.json", nebulaIdStr)), &cfg)
 	if err != nil {
 		return err
 	}
 
 	var privKeysCfg config.PrivKeys
-	err = config.ParseConfig(path.Join(home, PrivKeysConfigFileName), privKeysCfg)
+	err = config.ParseConfig(path.Join(home, PrivKeysConfigFileName), &privKeysCfg)
 	if err != nil {
 		return err
 	}
 
-	validatorPrivKey, err := base64.StdEncoding.DecodeString(privKeysCfg.Validator)
+	validatorPrivKey, err := hexutil.Decode(privKeysCfg.Validator)
 	if err != nil {
 		return err
 	}

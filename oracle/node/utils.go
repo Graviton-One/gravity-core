@@ -6,16 +6,16 @@ import (
 	"github.com/Gravity-Tech/gravity-core/common/contracts"
 )
 
-func toBytes(value interface{}) []byte {
-	switch v := value.(type) {
-	case int64:
-		var b []byte
-		binary.BigEndian.PutUint64(b, uint64(v))
-		return b
-	case string:
-		return []byte(v)
-	case []byte:
-		return v
+func toBytes(value interface{}, dataType contracts.ExtractorType) []byte {
+	switch dataType {
+	case contracts.Int64Type:
+		var b [8]byte
+		binary.BigEndian.PutUint64(b[:], uint64(value.(float64)))
+		return b[:]
+	case contracts.StringType:
+		return []byte(value.(string))
+	case contracts.BytesType:
+		return value.([]byte)
 	}
 	return nil
 }
