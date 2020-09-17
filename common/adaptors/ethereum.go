@@ -270,7 +270,7 @@ func (adaptor *EthereumAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulse
 	return nil
 }
 
-func (adaptor *EthereumAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
+func (adaptor *EthereumAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
 	nebula, err := contracts.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return "", err
@@ -299,44 +299,56 @@ func (adaptor *EthereumAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, or
 		oraclesAddresses = append(oraclesAddresses, crypto.PubkeyToAddress(*pubKey))
 	}
 
-	var r [][32]byte
-	var s [][32]byte
-	var v []uint8
-	for _, sign := range signs {
+	consuls, err := adaptor.gravityContract.GetConsuls(nil)
+	if err != nil {
+		return "", err
+	}
+
+	var r [5][32]byte
+	var s [5][32]byte
+	var v [5]uint8
+	for pubKey, sign := range signs {
+		index := -1
+		ethPubKey, err := crypto.DecompressPubkey(pubKey.ToBytes(account.Ethereum))
+		if err != nil {
+			return "", err
+		}
+		validatorAddress := crypto.PubkeyToAddress(*ethPubKey)
+		for i, v := range consuls {
+			if v == validatorAddress {
+				index = i
+				break
+			}
+		}
+
+		if index == -1 {
+			continue
+		}
+
 		var bytes32R [32]byte
 		copy(bytes32R[:], sign[:32])
 		var bytes32S [32]byte
 		copy(bytes32S[:], sign[32:64])
 
-		r = append(r, bytes32R)
-		s = append(s, bytes32S)
-		v = append(v, sign[64:][0]+27)
+		r[index] = bytes32R
+		s[index] = bytes32S
+		v[index] = sign[64:][0] + 27
 	}
 
-	tx, err := nebula.UpdateOracles(bind.NewKeyedTransactor(adaptor.privKey), oraclesAddresses, v, r, s, big.NewInt(round))
+	tx, err := nebula.UpdateOracles(bind.NewKeyedTransactor(adaptor.privKey), oraclesAddresses, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
 		return "", err
 	}
 
 	return tx.Hash().Hex(), nil
 }
-func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
-	var r [][32]byte
-	var s [][32]byte
-	var v []uint8
-	for _, sign := range signs {
-		var bytes32R [32]byte
-		copy(bytes32R[:], sign[:32])
-		var bytes32S [32]byte
-		copy(bytes32S[:], sign[32:64])
-
-		r = append(r, bytes32R)
-		s = append(s, bytes32S)
-		v = append(v, sign[64:][0]+27)
+func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
+	consuls, err := adaptor.gravityContract.GetConsuls(nil)
+	if err != nil {
+		return "", err
 	}
 
 	var consulsAddress []common.Address
-
 	for _, v := range newConsulsAddresses {
 		if v == nil {
 			consulsAddress = append(consulsAddress, common.Address{})
@@ -349,7 +361,38 @@ func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses
 		consulsAddress = append(consulsAddress, crypto.PubkeyToAddress(*pubKey))
 	}
 
-	tx, err := adaptor.gravityContract.UpdateConsuls(bind.NewKeyedTransactor(adaptor.privKey), consulsAddress, v, r, s, big.NewInt(round))
+	var r [5][32]byte
+	var s [5][32]byte
+	var v [5]uint8
+	for pubKey, sign := range signs {
+		index := -1
+		ethPubKey, err := crypto.DecompressPubkey(pubKey.ToBytes(account.Ethereum))
+		if err != nil {
+			return "", err
+		}
+		validatorAddress := crypto.PubkeyToAddress(*ethPubKey)
+		for i, v := range consuls {
+			if v == validatorAddress {
+				index = i
+				break
+			}
+		}
+
+		if index == -1 {
+			continue
+		}
+
+		var bytes32R [32]byte
+		copy(bytes32R[:], sign[:32])
+		var bytes32S [32]byte
+		copy(bytes32S[:], sign[32:64])
+
+		r[index] = bytes32R
+		s[index] = bytes32S
+		v[index] = sign[64:][0] + 27
+	}
+
+	tx, err := adaptor.gravityContract.UpdateConsuls(bind.NewKeyedTransactor(adaptor.privKey), consulsAddress, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
 		return "", err
 	}

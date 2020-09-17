@@ -4,49 +4,57 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
+	"github.com/Gravity-Tech/gravity-core/common/account"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/Gravity-Tech/gravity-core/common/account"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	wavesplatform "github.com/wavesplatform/go-lib-crypto"
 )
 
-type PrivKeys struct {
-	Validator    string
-	TargetChains map[string]string
+type Keys struct {
+	Validator    Key
+	TargetChains map[string]Key
 }
 
-type PubKeys struct {
-	Validator    string
-	TargetChains map[string]string
+type Key struct {
+	Address string
+	PubKey  string
+	PrivKey string
 }
 
-func GeneratePrivKeys() (PrivKeys, PubKeys, error) {
+func GeneratePrivKeys() (*Keys, error) {
 	validatorPrivKey := ed25519.GenPrivKey()
 
 	ethPrivKey, err := ethCrypto.GenerateKey()
 	if err != nil {
-		return PrivKeys{}, PubKeys{}, err
+		return nil, err
 	}
 
 	wCrypto := wavesplatform.NewWavesCrypto()
 	wSeed := wCrypto.RandomSeed()
 
-	return PrivKeys{
-			Validator: hexutil.Encode(validatorPrivKey[:]),
-			TargetChains: map[string]string{
-				account.Ethereum.String(): hexutil.Encode(ethCrypto.FromECDSA(ethPrivKey)),
-				account.Waves.String():    string(wSeed),
+	return &Keys{
+		Validator: Key{
+			Address: hexutil.Encode(validatorPrivKey.PubKey().Bytes()[5:]),
+			PubKey:  hexutil.Encode(validatorPrivKey.PubKey().Bytes()[5:]),
+			PrivKey: hexutil.Encode(validatorPrivKey[:]),
+		},
+		TargetChains: map[string]Key{
+			account.Ethereum.String(): Key{
+				Address: ethCrypto.PubkeyToAddress(ethPrivKey.PublicKey).String(),
+				PubKey:  hexutil.Encode(ethCrypto.CompressPubkey(&ethPrivKey.PublicKey)),
+				PrivKey: hexutil.Encode(ethCrypto.FromECDSA(ethPrivKey)),
+			},
+			account.Waves.String(): Key{
+				Address: string(wCrypto.AddressFromSeed(wSeed, 'S')),
+				PubKey:  string(wCrypto.PublicKey(wSeed)),
+				PrivKey: string(wSeed),
 			},
 		},
-		PubKeys{
-			Validator: hexutil.Encode(validatorPrivKey.PubKey().Bytes()[5:]),
-			TargetChains: map[string]string{
-				account.Ethereum.String(): hexutil.Encode(ethCrypto.CompressPubkey(&ethPrivKey.PublicKey)),
-				account.Waves.String():    string(wCrypto.PublicKey(wSeed)),
-			},
-		}, nil
+	}, nil
 }
 func ParseConfig(filename string, config interface{}) error {
 	file, err := ioutil.ReadFile(filename)

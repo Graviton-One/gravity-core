@@ -60,9 +60,9 @@ const (
 	CustomId ChainId = "gravity-custom"
 
 	DefaultBootstrapUrl   = "http://127.0.0.1:5001"
-	DefaultPrivateRpcHost = "http://127.0.0.1:2500"
+	DefaultPrivateRpcHost = "127.0.0.1:2500"
 
-	DefaultSeeds = "asdasd@127.0.0.1:26667"
+	DefaultPersistentPeers = "2a0d75cc7833ad4780a1035b633c5bf4ef94ea4c@104.248.255.124:26656,32a091dfea2b4191d710d2609ca21a8abfe585ac@164.90.184.213:26656,34f38d98e78ed7965a56399998d9c1dccba24fe1@164.90.185.82:26656,c22e04514ce4ae0feb3480d03593d34e4713c86d@161.35.207.224:26656\n\n\n\n\n\n\n"
 )
 
 var (
@@ -183,32 +183,33 @@ func initLedgerConfig(ctx *cli.Context) error {
 
 	privKeysFile := path.Join(home, PrivKeysConfigFileName)
 	if tOs.FileExists(privKeysFile) {
-		var privKeysCfg config.PrivKeys
+		var privKeysCfg config.Keys
 		err = config.ParseConfig(privKeysFile, privKeysCfg)
 		if err != nil {
 			return err
 		}
 	} else {
-		privKeysCfg, pubKeys, err := config.GeneratePrivKeys()
+		keysKfg, err := config.GeneratePrivKeys()
 		if err != nil {
 			return err
 		}
 
-		b, err := json.MarshalIndent(&privKeysCfg, "", " ")
+		b, err := json.MarshalIndent(&keysKfg, "", " ")
 		err = ioutil.WriteFile(path.Join(home, PrivKeysConfigFileName), b, 0644)
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("Validator PubKey: %s\n", pubKeys.Validator)
-		for k, v := range pubKeys.TargetChains {
-			fmt.Printf("%s PubKey: %s\n", k, v)
+		fmt.Printf("Validator PubKey: %s\n", keysKfg.Validator.PubKey)
+		for k, v := range keysKfg.TargetChains {
+			fmt.Printf("%s PubKey: %s\n", k, v.PubKey)
 		}
 	}
 
 	var genesis config.Genesis
 	if network == DevNet {
 		genesis = DevNetGenesis
+
 	} else {
 		genesis = CustomNetGenesis
 	}
@@ -225,7 +226,8 @@ func initLedgerConfig(ctx *cli.Context) error {
 	if network == DevNet {
 		ledgerConf = DevNetConfig
 		ledgerConf.P2P = cfg.DefaultP2PConfig()
-		ledgerConf.P2P.Seeds = DefaultSeeds
+		ledgerConf.P2P.PersistentPeers = DefaultPersistentPeers
+		ledgerConf.P2P.ListenAddress = "0.0.0.0:26657"
 	} else {
 		ledgerConf = config.DefaultLedgerConfig()
 	}
@@ -272,7 +274,7 @@ func startLedger(ctx *cli.Context) error {
 	}
 	defer db.Close()
 
-	var privKeysCfg config.PrivKeys
+	var privKeysCfg config.Keys
 	err = config.ParseConfig(path.Join(home, PrivKeysConfigFileName), &privKeysCfg)
 	if err != nil {
 		return err
@@ -304,11 +306,8 @@ func startLedger(ctx *cli.Context) error {
 	tConfig.RPC = ledgerConf.RPC
 
 	tConfig.RootDir = home
-	tConfig.P2P.RootDir = home
 	tConfig.Consensus.RootDir = home
 	tConfig.Consensus.TimeoutCommit = time.Second * 3
-	tConfig.RPC.RootDir = home
-	tConfig.Mempool.RootDir = home
 
 	logger, err := tmflags.ParseLogLevel(tConfig.LogLevel, log.NewTMLogger(log.NewSyncWriter(os.Stdout)), cfg.DefaultLogLevel())
 	if err != nil {
@@ -316,7 +315,7 @@ func startLedger(ctx *cli.Context) error {
 	}
 
 	var ledgerPrivKey ed25519.PrivKeyEd25519
-	ledgerPrivKeyBytes, err := hexutil.Decode(privKeysCfg.Validator)
+	ledgerPrivKeyBytes, err := hexutil.Decode(privKeysCfg.Validator.PrivKey)
 	if err != nil {
 		return err
 	}
@@ -410,7 +409,7 @@ func startLedger(ctx *cli.Context) error {
 	return nil
 }
 
-func crateApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys map[string]string, cfg config.LedgerConfig, genesisCfg config.Genesis, bootstrap string, localHost string, ctx context.Context) (*app.GHApplication, error) {
+func crateApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys map[string]config.Key, cfg config.LedgerConfig, genesisCfg config.Genesis, bootstrap string, localHost string, ctx context.Context) (*app.GHApplication, error) {
 	bAdaptors := make(map[account.ChainType]adaptors.IBlockchainAdaptor)
 	for k, v := range cfg.Adapters {
 		chainType, err := account.ParseChainType(k)
@@ -418,7 +417,7 @@ func crateApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys 
 			return nil, err
 		}
 
-		privKey, err := account.StringToPrivKey(privKeys[k], chainType)
+		privKey, err := account.StringToPrivKey(privKeys[k].PrivKey, chainType)
 		if err != nil {
 			return nil, err
 		}

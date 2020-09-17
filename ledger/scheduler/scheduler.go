@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sort"
@@ -72,7 +73,7 @@ func (scheduler *Scheduler) HandleBlock(height int64, store *storage.Storage, is
 				fmt.Printf("Error:%s\n", err.Error())
 				continue
 			}
-			err = scheduler.updateOracles(nebulaId, store)
+			err = scheduler.updateOracles(roundId, nebulaId, store)
 			if err != nil {
 				return err
 			}
@@ -123,7 +124,11 @@ func (scheduler *Scheduler) updateConsulsAndCandidate(store *storage.Storage, ro
 	}
 
 	sort.SliceStable(sortedScores, func(i, j int) bool {
-		return sortedScores[i].Value > sortedScores[j].Value
+		if sortedScores[i].Value == sortedScores[j].Value {
+			return bytes.Compare(sortedScores[i].PubKey[:], sortedScores[j].PubKey[:]) == 1
+		} else {
+			return sortedScores[i].Value > sortedScores[j].Value
+		}
 	})
 	var consulsCandidate []storage.Consul
 	for _, v := range sortedScores {
@@ -154,60 +159,16 @@ func (scheduler *Scheduler) calculateScores(store *storage.Storage) error {
 		return err
 	}
 
-	/*nebulaeInfo, err := store.Nebulae()
-	if err != nil {
-		return err
-	}*/
-
 	for k, v := range newScores {
 		err := store.SetScore(k, v)
 		if err != nil {
 			return err
 		}
-
-		/*
-			oracles, err := store.OraclesByConsul(k)
-			if err != nil && err != storage.ErrKeyNotFound {
-				return err
-			}
-
-			for _, oracle := range oracles {
-				nebulae, err := store.NebulaeByOracle(oracle)
-				if err != nil && err != storage.ErrKeyNotFound {
-					return err
-				}
-				if err == storage.ErrKeyNotFound {
-					break
-				}
-
-				var newNebulae []account.NebulaId
-				for _, nebulaId := range nebulae {
-					oracles, err := store.OraclesByNebula(nebulaId)
-					if err != nil {
-						return err
-					}
-
-					if v < nebulaeInfo[nebulaId.ToString(nebulaeInfo)].MinScore || v <= 0 {
-						delete(oracles, oracle)
-						err = store.SetOraclesByNebula(nebulaId, oracles)
-						if err != nil {
-							return err
-						}
-						continue
-					}
-					newNebulae = append(newNebulae, nebulaId)
-				}
-
-				err = store.SetNebulaeByOracle(oracle, newNebulae)
-				if err != nil {
-					return err
-				}
-			}*/
 	}
 
 	return nil
 }
-func (scheduler *Scheduler) updateOracles(nebulaId account.NebulaId, store *storage.Storage) error {
+func (scheduler *Scheduler) updateOracles(roundId int64, nebulaId account.NebulaId, store *storage.Storage) error {
 	nebulaInfo, err := store.NebulaInfo(nebulaId)
 	if err != nil {
 		return err
@@ -217,11 +178,6 @@ func (scheduler *Scheduler) updateOracles(nebulaId account.NebulaId, store *stor
 	if err == storage.ErrKeyNotFound {
 		return nil
 	} else if err != nil {
-		return err
-	}
-
-	lastIndex, err := store.NebulaOraclesIndex(nebulaId)
-	if err != nil && err != storage.ErrKeyNotFound {
 		return err
 	}
 
@@ -237,14 +193,11 @@ func (scheduler *Scheduler) updateOracles(nebulaId account.NebulaId, store *stor
 		oracles = append(oracles, oracleAddress)
 	}
 
-	newIndex := lastIndex + 1
-	if newIndex >= uint64(len(oracles)) {
-		newIndex = 0
-	}
+	newIndex := int(roundId) % (len(oracles) - 1)
 
 	if len(oracles) <= OracleCount {
 		newOracles = append(newOracles, oracles...)
-	} else if newIndex+OracleCount > uint64(len(oracles)) {
+	} else if newIndex+OracleCount > len(oracles) {
 		newOracles = oracles[newIndex:]
 		count := OracleCount - len(newOracles)
 		newOracles = append(newOracles, oracles[:count]...)

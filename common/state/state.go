@@ -32,22 +32,22 @@ const (
 )
 
 var (
-	ErrInvalidSign         = errors.New("invalid signature")
-	ErrFuncNotFound        = errors.New("function is not found")
-	ErrRevealIsExist       = errors.New("reveal is exist")
-	ErrCommitIsExist       = errors.New("commit is exist")
-	ErrCommitIsNotExist    = errors.New("commit is not exist")
-	ErrInvalidReveal       = errors.New("invalid reveal")
-	ErrNewRound            = errors.New("round is exist")
-	ErrAddOracleInNebula   = errors.New("oracle was added in nebula")
-	ErrInvalidScore        = errors.New("invalid score. score <= 0")
-	ErrInvalidChainType    = errors.New("invalid chain type")
-	ErrInvalidHeight       = errors.New("invalid height")
-	ErrInvalidSubRound     = errors.New("invalid sub round")
-	ErrInvalidNebulaOwner  = errors.New("invalid nebula owner")
-	ErrNebulaNotFound      = errors.New("nebula not found")
-	ErrSignIsExistNotFound = errors.New("sign is exist")
-	ErrRoundIsExist        = errors.New("round is exist")
+	ErrInvalidSign        = errors.New("invalid signature")
+	ErrFuncNotFound       = errors.New("function is not found")
+	ErrRevealIsExist      = errors.New("reveal is exist")
+	ErrCommitIsExist      = errors.New("commit is exist")
+	ErrCommitIsNotExist   = errors.New("commit is not exist")
+	ErrInvalidReveal      = errors.New("invalid reveal")
+	ErrNewRound           = errors.New("round is exist")
+	ErrAddOracleInNebula  = errors.New("oracle was added in nebula")
+	ErrInvalidScore       = errors.New("invalid score. score <= 0")
+	ErrInvalidChainType   = errors.New("invalid chain type")
+	ErrInvalidHeight      = errors.New("invalid height")
+	ErrInvalidSubRound    = errors.New("invalid sub round")
+	ErrInvalidNebulaOwner = errors.New("invalid nebula owner")
+	ErrNebulaNotFound     = errors.New("nebula not found")
+	ErrSignIsExist        = errors.New("sign is exist")
+	ErrRoundIsExist       = errors.New("round is exist")
 )
 
 func CalculateSubRound(id uint64) SubRound {
@@ -303,7 +303,7 @@ func signNewConsuls(store *storage.Storage, tx *transactions.Transaction) error 
 	if err != nil && err != storage.ErrKeyNotFound {
 		return err
 	} else if err == nil {
-		return ErrSignIsExistNotFound
+		return ErrSignIsExist
 	}
 
 	err = store.SetSignConsuls(tx.SenderPubKey, chainType, roundId, sign)
@@ -322,7 +322,7 @@ func signNewOracles(store *storage.Storage, tx *transactions.Transaction) error 
 	if err != nil && err != storage.ErrKeyNotFound {
 		return err
 	} else if err == nil {
-		return ErrSignIsExistNotFound
+		return ErrSignIsExist
 	}
 
 	err = store.SetSignOracles(tx.SenderPubKey, nebulaAddress, roundId, sign)

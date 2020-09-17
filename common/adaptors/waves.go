@@ -285,7 +285,7 @@ func (adaptor *WavesAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId 
 	return nil
 }
 
-func (adaptor *WavesAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
+func (adaptor *WavesAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
 	nebulaAddress := base58.Encode(nebulaId.ToBytes(account.Waves))
 	lastRoundState, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, "last_round_"+fmt.Sprintf("%d", round), ctx)
 	if err != nil {
@@ -357,20 +357,44 @@ func (adaptor *WavesAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracl
 
 	return tx.ID.String(), nil
 }
-func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs [][]byte, round int64, ctx context.Context) (string, error) {
-	var stringSigns []string
-
-	if len(signs) == 0 {
-		return "", nil
+func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
+	var stringSigns [5]string
+	lastRoundState, _, err := adaptor.helper.GetStateByAddressAndKey(adaptor.gravityContract, "last_round", ctx)
+	if err != nil {
+		return "", err
 	}
 
-	for _, v := range signs {
-		stringSigns = append(stringSigns, base58.Encode(v))
+	lastRound := uint64(lastRoundState.Value.(float64))
+	consulsState, _, err := adaptor.helper.GetStateByAddressAndKey(adaptor.gravityContract, fmt.Sprintf("consuls_%d", lastRound), ctx)
+	if err != nil {
+		return "", err
 	}
 
-	emptyCount := ConsulsCount - len(signs)
-	for i := 0; i < emptyCount; i++ {
-		stringSigns = append(stringSigns, base58.Encode([]byte{0}))
+	consuls := strings.Split(consulsState.Value.(string), ",")
+	for k, v := range signs {
+		pubKey := k.ToString(account.Waves)
+		index := -1
+
+		for i, v := range consuls {
+			if v == pubKey {
+				index = i
+				break
+			}
+		}
+
+		if index == -1 {
+			continue
+		}
+
+		stringSigns[index] = base58.Encode(v)
+	}
+
+	for i, v := range stringSigns {
+		if v != "" {
+			continue
+		}
+
+		stringSigns[i] = base58.Encode([]byte{0})
 	}
 
 	var newConsulsString []string
@@ -383,7 +407,7 @@ func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []
 		newConsulsString = append(newConsulsString, base58.Encode(v.ToBytes(account.Waves)))
 	}
 
-	emptyCount = ConsulsCount - len(newConsulsString)
+	emptyCount := ConsulsCount - len(newConsulsString)
 	for i := 0; i < emptyCount; i++ {
 		newConsulsString = append(newConsulsString, base58.Encode([]byte{0}))
 	}
@@ -411,7 +435,7 @@ func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []
 					Value: strings.Join(newConsulsString, ","),
 				},
 				proto.StringArgument{
-					Value: strings.Join(stringSigns, ","),
+					Value: strings.Join(stringSigns[:], ","),
 				},
 				proto.IntegerArgument{
 					Value: round,

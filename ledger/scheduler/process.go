@@ -261,25 +261,32 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 
 	realSignCount := 0
 
-	var signs [][]byte
-	var empty [65]byte
+	signs := make(map[account.OraclesPubKey][]byte)
 	for i := 0; i < OracleCount; i++ {
 		if i >= len(consuls) {
-			signs = append(signs, empty[:])
+			break
+		}
+		v := consuls[i]
+
+		oracles, err := scheduler.client.OraclesByValidator(v.PubKey)
+		if err != nil && err != gravity.ErrValueNotFound {
+			return err
+		}
+
+		oraclePubKey, ok := oracles[chainType]
+		if !ok {
 			continue
 		}
 
-		v := consuls[i]
 		sign, err := scheduler.client.SignNewConsulsByConsul(v.PubKey, chainType, round)
 		if err != nil && err != gravity.ErrValueNotFound {
 			return err
 		}
 		if err == gravity.ErrValueNotFound {
-			signs = append(signs, empty[:])
 			continue
 		}
 
-		signs = append(signs, sign)
+		signs[oraclePubKey] = sign
 		realSignCount++
 	}
 
@@ -331,30 +338,37 @@ func (scheduler *Scheduler) sendOraclesToNebula(nebulaId account.NebulaId, chain
 		return err
 	}
 
-	realSignsCount := 0
-	var signs [][]byte
-	var empty [65]byte
+	realSignCount := 0
+	signs := make(map[account.OraclesPubKey][]byte)
 	for i := 0; i < OracleCount; i++ {
 		if i >= len(consuls) {
-			signs = append(signs, empty[:])
+			break
+		}
+		v := consuls[i]
+
+		oracles, err := scheduler.client.OraclesByValidator(v.PubKey)
+		if err != nil && err != gravity.ErrValueNotFound {
+			return err
+		}
+
+		oraclePubKey, ok := oracles[chainType]
+		if !ok {
 			continue
 		}
 
-		v := consuls[i]
 		sign, err := scheduler.client.SignNewOraclesByConsul(v.PubKey, chainType, nebulaId, round)
 		if err != nil && err != gravity.ErrValueNotFound {
 			return err
 		}
 		if err == gravity.ErrValueNotFound {
-			signs = append(signs, empty[:])
 			continue
 		}
 
-		signs = append(signs, sign)
-		realSignsCount++
+		signs[oraclePubKey] = sign
+		realSignCount++
 	}
 
-	if realSignsCount < len(consuls)*2/3 {
+	if realSignCount < len(consuls)*2/3 {
 		return nil
 	}
 

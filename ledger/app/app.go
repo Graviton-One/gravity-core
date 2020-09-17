@@ -1,8 +1,10 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
 
@@ -142,6 +144,14 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 			Value:  uint64(value.Power),
 		})
 	}
+
+	sort.SliceStable(consuls, func(i, j int) bool {
+		if consuls[i].Value == consuls[j].Value {
+			return bytes.Compare(consuls[i].PubKey[:], consuls[j].PubKey[:]) == 1
+		} else {
+			return consuls[i].Value > consuls[j].Value
+		}
+	})
 
 	err = app.storage.SetConsuls(consuls)
 	if err != nil {

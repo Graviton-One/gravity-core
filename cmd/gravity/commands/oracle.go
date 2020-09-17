@@ -103,13 +103,13 @@ func startOracle(ctx *cli.Context) error {
 		return err
 	}
 
-	var privKeysCfg config.PrivKeys
+	var privKeysCfg config.Keys
 	err = config.ParseConfig(path.Join(home, PrivKeysConfigFileName), &privKeysCfg)
 	if err != nil {
 		return err
 	}
 
-	validatorPrivKey, err := hexutil.Decode(privKeysCfg.Validator)
+	validatorPrivKey, err := hexutil.Decode(privKeysCfg.Validator.PrivKey)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func startOracle(ctx *cli.Context) error {
 		return err
 	}
 
-	oracleSecretKey, err := account.StringToPrivKey(privKeysCfg.TargetChains[chainType.String()], chainType)
+	oracleSecretKey, err := account.StringToPrivKey(privKeysCfg.TargetChains[chainType.String()].PrivKey, chainType)
 	if err != nil {
 		return err
 	}
