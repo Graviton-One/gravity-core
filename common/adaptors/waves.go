@@ -297,16 +297,46 @@ func (adaptor *WavesAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracl
 	}
 
 	var newOracles []string
-	var stringSigns []string
+	var stringSigns [5]string
+
+	lastRound := uint64(lastRoundState.Value.(float64))
+	consulsState, _, err := adaptor.helper.GetStateByAddressAndKey(adaptor.gravityContract, fmt.Sprintf("consuls_%d", lastRound), ctx)
+	if err != nil {
+		return "", err
+	}
+
+	consuls := strings.Split(consulsState.Value.(string), ",")
+	for k, v := range signs {
+		pubKey := k.ToString(account.Waves)
+		index := -1
+
+		for i, v := range consuls {
+			if v == pubKey {
+				index = i
+				break
+			}
+		}
+
+		if index == -1 {
+			continue
+		}
+
+		stringSigns[index] = base58.Encode(v)
+	}
+	for i, v := range stringSigns {
+		if v != "" {
+			continue
+		}
+
+		stringSigns[i] = base58.Encode([]byte{0})
+	}
+
 	for _, v := range oracles {
 		if v == nil {
 			newOracles = append(newOracles, base58.Encode([]byte{1}))
 			continue
 		}
 		newOracles = append(newOracles, base58.Encode(v.ToBytes(account.Waves)))
-	}
-	for _, v := range signs {
-		stringSigns = append(stringSigns, base58.Encode(v))
 	}
 
 	asset, err := proto.NewOptionalAssetFromString("WAVES")
@@ -332,7 +362,7 @@ func (adaptor *WavesAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracl
 					Value: strings.Join(newOracles, ","),
 				},
 				proto.StringArgument{
-					Value: strings.Join(stringSigns, ","),
+					Value: strings.Join(stringSigns[:], ","),
 				},
 				proto.IntegerArgument{
 					Value: round,

@@ -24,45 +24,24 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 	}
 
 	isExist := true
-	senderIndex := height % int64(consulInfo.TotalCount)
-	for k, v := range scheduler.Adaptors {
-		lastRound, err := v.LastRound(scheduler.ctx)
-		if err != nil {
-			return err
-		}
-		isExist = uint64(roundId) == lastRound
-		if uint64(roundId) <= lastRound {
-			continue
-		}
+	if height%CalculateScoreInterval == 0 {
+		roundId := (height / CalculateScoreInterval) - 1
 
-		if height%CalculateScoreInterval < CalculateScoreInterval/2 {
-			err := scheduler.signConsulsResult(roundId, k)
+		index := roundId % int64(consulInfo.TotalCount)
+		for k, v := range scheduler.Adaptors {
+			lastRound, err := v.LastRound(scheduler.ctx)
 			if err != nil {
 				return err
 			}
-
-			nebulae, err := scheduler.client.Nebulae()
-			if err != nil {
-				return err
-			}
-
-			for k, v := range nebulae {
-				nebulaId, err := account.StringToNebulaId(k, v.ChainType)
-				if err != nil {
-					fmt.Printf("Error:%s\n", err.Error())
-					continue
-				}
-				err = scheduler.signOraclesByNebula(roundId, nebulaId, v.ChainType)
-				if err != nil {
-					continue
-				}
-			}
-		} else {
-			if senderIndex != int64(consulInfo.ConsulIndex) {
+			if uint64(roundId) <= lastRound {
 				continue
 			}
 
-			err := scheduler.sendConsulsToGravityContract(roundId, k)
+			if index != int64(consulInfo.ConsulIndex) {
+				continue
+			}
+
+			err = scheduler.sendConsulsToGravityContract(roundId, k)
 			if err != nil {
 				return err
 			}
@@ -87,10 +66,45 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 		}
 	}
 
+	for k, v := range scheduler.Adaptors {
+		lastRound, err := v.LastRound(scheduler.ctx)
+		if err != nil {
+			return err
+		}
+		isExist = uint64(roundId) == lastRound
+		if uint64(roundId) <= lastRound {
+			continue
+		}
+
+		err = scheduler.signConsulsResult(roundId, k)
+		if err != nil {
+			return err
+		}
+
+		nebulae, err := scheduler.client.Nebulae()
+		if err != nil {
+			return err
+		}
+
+		for k, v := range nebulae {
+			nebulaId, err := account.StringToNebulaId(k, v.ChainType)
+			if err != nil {
+				fmt.Printf("Error:%s\n", err.Error())
+				continue
+			}
+			err = scheduler.signOraclesByNebula(roundId, nebulaId, v.ChainType)
+			if err != nil {
+				continue
+			}
+
+		}
+	}
+
 	lastRound, err := scheduler.client.LastRoundApproved()
 	if err != nil && err != gravity.ErrValueNotFound {
 		return err
 	}
+	senderIndex := height % int64(consulInfo.TotalCount)
 	if isExist && uint64(roundId) > lastRound && senderIndex == int64(consulInfo.ConsulIndex) {
 		tx, err := transactions.New(scheduler.Ledger.PubKey, transactions.ApproveLastRound, scheduler.Ledger.PrivKey)
 		if err != nil {
