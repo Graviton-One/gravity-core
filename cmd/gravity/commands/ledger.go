@@ -59,10 +59,10 @@ const (
 	DevNetId ChainId = "gravity-devnet"
 	CustomId ChainId = "gravity-custom"
 
-	DefaultBootstrapUrl   = "http://127.0.0.1:5001"
+	DefaultBootstrapUrl   = "http://104.248.255.124:26657"
 	DefaultPrivateRpcHost = "127.0.0.1:2500"
 
-	DefaultPersistentPeers = "2a0d75cc7833ad4780a1035b633c5bf4ef94ea4c@104.248.255.124:26656,32a091dfea2b4191d710d2609ca21a8abfe585ac@164.90.184.213:26656,34f38d98e78ed7965a56399998d9c1dccba24fe1@164.90.185.82:26656,c22e04514ce4ae0feb3480d03593d34e4713c86d@161.35.207.224:26656\n\n\n\n\n\n\n"
+	DefaultPersistentPeers = "2a0d75cc7833ad4780a1035b633c5bf4ef94ea4c@104.248.255.124:26656,32a091dfea2b4191d710d2609ca21a8abfe585ac@164.90.184.213:26656,34f38d98e78ed7965a56399998d9c1dccba24fe1@164.90.185.82:26656,c22e04514ce4ae0feb3480d03593d34e4713c86d@161.35.207.224:26656"
 )
 
 var (
@@ -73,13 +73,13 @@ var (
 		Mempool:    cfg.DefaultMempoolConfig(),
 		Adapters: map[string]config.AdaptorsConfig{
 			account.Ethereum.String(): {
-				NodeUrl:                "http://127.0.0.1:8545",
-				GravityContractAddress: "0x0000000000000",
+				NodeUrl:                "https://ropsten.infura.io/v3/598efca7168947c6a186e2f85b600be1",
+				GravityContractAddress: "0x605f2226b0451492Cdd72D776EF311926ceE0B92",
 			},
 			account.Waves.String(): {
-				NodeUrl:                "http://127.0.0.1:6869",
-				GravityContractAddress: "0x0000000000000",
-				ChainId:                "R",
+				NodeUrl:                "https://nodes-stagenet.wavesnodes.com",
+				GravityContractAddress: "3MgDyZyRfnNBEkAYzvt8ynFLnzoqeVyQv6w",
+				ChainId:                "S",
 			},
 		},
 	}
@@ -97,12 +97,27 @@ var (
 			MaxAgeDuration:  1728 * time.Second,
 		},
 		InitScore: map[string]uint64{
-			"0x0000": 100,
+			"0xd7f746727e21ecf461bb8e8926a6aeb0931eb09311ed13d25a182d4f17339d1d": 100,
+			"0x0e7f182e6d2a11bd5d8a34531243435e2aeaa0eed7cad3c5361a81328051fa02": 100,
+			"0xe09b444f5c5f2fbdca58bdb37a2dcc90d370ff72f28a6d4b6a6ef732c44afa24": 100,
+			"0xd70f6fcdac1a6f2292a330cc830db5e9041939ff79a87ff8536040b07378ca02": 100,
 		},
 		OraclesAddressByValidator: map[string]map[string]string{
-			"0x0000": {
-				"waves":    "",
-				"ethereum": "",
+			"0xd7f746727e21ecf461bb8e8926a6aeb0931eb09311ed13d25a182d4f17339d1d": {
+				"ethereum": "0x038bf7253f2b3b78c7f8fbe856252373b0867098c6b3f7a6cabc6e73552be75697",
+				"waves":    "CNVJbuJubqLyTZ99Y8wwuFgiKqoCUvpYCnHQsezE3Qgk",
+			},
+			"0x0e7f182e6d2a11bd5d8a34531243435e2aeaa0eed7cad3c5361a81328051fa02": {
+				"ethereum": "0x03808de8b08ec39c720c04e7699783f1abefff809afc2a8f7e60e9dd59f039ffa8",
+				"waves":    "4QWcFszF3shvhReiU26Sj8Te2QqgsfsreEgiTQNeTgB5",
+			},
+			"0xe09b444f5c5f2fbdca58bdb37a2dcc90d370ff72f28a6d4b6a6ef732c44afa24": {
+				"ethereum": "0x0298644b29e125b1293446b3d5f5b6feb12eaf2e3245df08fe74682fe0ddce5c60",
+				"waves":    "CcdpQmNU9qc1uKyr2mmkYNiyadvQ3VHrcYCtLqDfrR9a",
+			},
+			"0xd70f6fcdac1a6f2292a330cc830db5e9041939ff79a87ff8536040b07378ca02": {
+				"ethereum": "0x026a6444ca6ad63e3fda46481d125f8fee07b9a5b5131a12393a654800956856b8",
+				"waves":    "E5gz7aTwjjbCbFMYmstvcvb6NvoZyZcQSt1wp68qMpBg",
 			},
 		},
 	}
@@ -227,7 +242,7 @@ func initLedgerConfig(ctx *cli.Context) error {
 		ledgerConf = DevNetConfig
 		ledgerConf.P2P = cfg.DefaultP2PConfig()
 		ledgerConf.P2P.PersistentPeers = DefaultPersistentPeers
-		ledgerConf.P2P.ListenAddress = "0.0.0.0:26657"
+		ledgerConf.P2P.ListenAddress = "tcp://0.0.0.0:26656"
 	} else {
 		ledgerConf = config.DefaultLedgerConfig()
 	}
