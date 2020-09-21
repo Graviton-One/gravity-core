@@ -4,16 +4,30 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 )
 
 const (
-	GetExtractedData = "extracted"
-	GetExtractorInfo = "info"
-	GetAggregated    = "aggregate"
+	ExtractPath   = "extract"
+	InfoPath      = "info"
+	AggregatePath = "aggregate"
+
+	String DataType = "string"
+	Int64  DataType = "int64"
+	Base64 DataType = "base64"
 )
+
+var (
+	NotFoundErr = errors.New("data not found")
+)
+type DataType string
+type Data struct {
+	Type  DataType
+	Value string
+}
 
 type Client struct {
 	hostUrl string
@@ -25,13 +39,13 @@ func New(hostUrl string) *Client {
 	}
 }
 
-func (client *Client) ExtractorInfo(ctx context.Context) (*Info, error) {
-	rs, err := client.do(GetExtractorInfo, http.MethodGet, nil, ctx)
+func (client *Client) Extract(ctx context.Context) (*Data, error) {
+	rs, err := client.do(ExtractPath, http.MethodGet, nil, ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var result Info
+	var result Data
 	err = json.Unmarshal(rs, &result)
 	if err != nil {
 		return nil, err
@@ -40,34 +54,19 @@ func (client *Client) ExtractorInfo(ctx context.Context) (*Info, error) {
 	return &result, nil
 }
 
-func (client *Client) Aggregate(values []interface{}, ctx context.Context) (interface{}, error) {
-	rs, err := client.do(GetAggregated, http.MethodPost, values, ctx)
+func (client *Client) Aggregate(values []Data, ctx context.Context) (*Data, error) {
+	rs, err := client.do(AggregatePath, http.MethodPost, values, ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var result DataRs
+	var result Data
 	err = json.Unmarshal(rs, &result)
 	if err != nil {
 		return nil, err
 	}
 
-	return result.Value, nil
-}
-
-func (client *Client) Extract(ctx context.Context) (interface{}, error) {
-	rs, err := client.do(GetExtractedData, http.MethodGet, nil, ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	var result DataRs
-	err = json.Unmarshal(rs, &result)
-	if err != nil {
-		return nil, err
-	}
-
-	return result.Value, nil
+	return &result, nil
 }
 
 func (client *Client) do(route string, method string, rqBody interface{}, ctx context.Context) ([]byte, error) {

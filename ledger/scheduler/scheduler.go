@@ -193,16 +193,19 @@ func (scheduler *Scheduler) updateOracles(roundId int64, nebulaId account.Nebula
 		oracles = append(oracles, oracleAddress)
 	}
 
-	newIndex := int(roundId) % (len(oracles) - 1)
+
 
 	if len(oracles) <= OracleCount {
 		newOracles = append(newOracles, oracles...)
-	} else if newIndex+OracleCount > len(oracles) {
-		newOracles = oracles[newIndex:]
-		count := OracleCount - len(newOracles)
-		newOracles = append(newOracles, oracles[:count]...)
-	} else {
-		newOracles = oracles[newIndex : newIndex+OracleCount]
+	}else {
+		newIndex := int(roundId) % (len(oracles) - 1)
+		if newIndex+OracleCount > len(oracles) {
+			newOracles = oracles[newIndex:]
+			count := OracleCount - len(newOracles)
+			newOracles = append(newOracles, oracles[:count]...)
+		} else {
+			newOracles = oracles[newIndex : newIndex+OracleCount]
+		}
 	}
 
 	for _, v := range newOracles {

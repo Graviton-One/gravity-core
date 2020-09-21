@@ -117,7 +117,7 @@ func (node *Node) Init() error {
 	}
 
 	oracle, ok := oraclesByValidator[node.chainType]
-	if !ok || oracle == node.oraclePubKey {
+	if !ok || oracle != node.oraclePubKey {
 		tx, err := transactions.New(node.validator.pubKey, transactions.AddOracle, node.validator.privKey)
 		if err != nil {
 			return err

@@ -1,9 +1,11 @@
 package node
 
+import "github.com/Gravity-Tech/gravity-core/oracle/extractor"
+
 type RoundState struct {
-	data        interface{}
+	data        *extractor.Data
 	commitHash  []byte
-	resultValue interface{}
+	resultValue  *extractor.Data
 	resultHash  []byte
 	isSent      bool
 	RevealExist bool

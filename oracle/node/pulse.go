@@ -3,13 +3,14 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-func (node *Node) commit(data interface{}, tcHeight uint64, pulseId uint64) ([]byte, error) {
+func (node *Node) commit(data *extractor.Data, tcHeight uint64, pulseId uint64) ([]byte, error) {
 	dataBytes := toBytes(data, node.extractor.ExtractorType)
 	commit := crypto.Keccak256(dataBytes)
 	fmt.Printf("Commit: %s - %s \n", hexutil.Encode(dataBytes), hexutil.Encode(commit[:]))
@@ -46,7 +47,7 @@ func (node *Node) commit(data interface{}, tcHeight uint64, pulseId uint64) ([]b
 
 	return commit, nil
 }
-func (node *Node) reveal(tcHeight uint64, pulseId uint64, reveal interface{}, commit []byte) error {
+func (node *Node) reveal(tcHeight uint64, pulseId uint64, reveal *extractor.Data, commit []byte) error {
 	dataBytes := toBytes(reveal, node.extractor.ExtractorType)
 	fmt.Printf("Reveal: %s  - %s \n", hexutil.Encode(dataBytes), hexutil.Encode(commit))
 
@@ -83,15 +84,15 @@ func (node *Node) reveal(tcHeight uint64, pulseId uint64, reveal interface{}, co
 
 	return nil
 }
-func (node *Node) signResult(tcHeight uint64, pulseId uint64, ctx context.Context) (interface{}, []byte, error) {
-	var values []interface{}
+func (node *Node) signResult(tcHeight uint64, pulseId uint64, ctx context.Context) (*extractor.Data, []byte, error) {
+	var values []extractor.Data
 	bytesValues, err := node.gravityClient.Reveals(node.chainType, node.nebulaId, int64(tcHeight), int64(pulseId))
 	if err != nil {
 		return nil, nil, err
 	}
 
 	for _, v := range bytesValues {
-		values = append(values, fromBytes(v, node.extractor.ExtractorType))
+		values = append(values, *fromBytes(v, node.extractor.ExtractorType))
 	}
 
 	result, err := node.extractor.Aggregate(values, ctx)
