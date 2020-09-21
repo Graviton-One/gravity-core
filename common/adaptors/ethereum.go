@@ -275,6 +275,7 @@ func (adaptor *EthereumAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulse
 				return err
 			}
 		case Bytes:
+			println(value.Value)
 			v, err := base64.StdEncoding.DecodeString(value.Value)
 			if err != nil {
 				return err
@@ -282,8 +283,8 @@ func (adaptor *EthereumAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulse
 
 			_, err = nebula.SendValueToSubByte(transactOpt, v, big.NewInt(int64(pulseId)), id)
 			if err != nil {
-				continue
 				println(err)
+				continue
 			}
 		}
 	}
