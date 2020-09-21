@@ -129,11 +129,15 @@ func startOracle(ctx *cli.Context) error {
 		return err
 	}
 
+	var chainId byte
+	if len(cfg.ChainId) > 0 {
+		chainId = cfg.ChainId[0]
+	}
 	sysCtx := context.Background()
 	oracleNode, err := node.New(
 		nebulaId,
 		chainType,
-		cfg.ChainId[0],
+		chainId,
 		oracleSecretKey,
 		node.NewValidator(validatorPrivKey),
 		cfg.ExtractorUrl,
