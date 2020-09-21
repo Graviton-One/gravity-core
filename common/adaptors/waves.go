@@ -2,7 +2,10 @@ package adaptors
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
+	"strconv"
 	"strings"
 	"time"
 
@@ -194,7 +197,7 @@ func (adaptor *WavesAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64,
 
 	return tx.ID.String(), nil
 }
-func (adaptor *WavesAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId uint64, value interface{}, ctx context.Context) error {
+func (adaptor *WavesAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId uint64, value *extractor.Data, ctx context.Context) error {
 	nebulaAddress := base58.Encode(nebulaId.ToBytes(account.Waves))
 	state, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, fmt.Sprintf("data_hash_%d", pulseId), ctx)
 	if err != nil {
@@ -236,19 +239,27 @@ func (adaptor *WavesAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId 
 	args := proto.Arguments{}
 	switch SubType(int8(nebulaType.Value.(float64))) {
 	case Int64:
+		v, err := strconv.ParseInt(value.Value, 10, 64)
+		if err != nil {
+			return err
+		}
 		args.Append(
 			proto.IntegerArgument{
-				Value: value.(int64),
+				Value: v,
 			})
 	case String:
 		args.Append(
 			proto.StringArgument{
-				Value: value.(string),
+				Value: value.Value,
 			})
 	case Bytes:
+		v, err := base64.StdEncoding.DecodeString(value.Value)
+		if err != nil {
+			return err
+		}
 		args.Append(
 			proto.BinaryArgument{
-				Value: value.([]byte),
+				Value: v,
 			})
 	}
 	args.Append(

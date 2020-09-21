@@ -2,6 +2,7 @@ package adaptors
 
 import (
 	"context"
+	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 
 	"github.com/Gravity-Tech/gravity-core/common/contracts"
 
@@ -16,7 +17,7 @@ type IBlockchainAdaptor interface {
 	ValueType(nebulaId account.NebulaId, ctx context.Context) (contracts.ExtractorType, error)
 
 	AddPulse(nebulaId account.NebulaId, pulseId uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error)
-	SendValueToSubs(nebulaId account.NebulaId, pulseId uint64, value interface{}, ctx context.Context) error
+	SendValueToSubs(nebulaId account.NebulaId, pulseId uint64, value *extractor.Data, ctx context.Context) error
 
 	SetOraclesToNebula(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error)
 	SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error)

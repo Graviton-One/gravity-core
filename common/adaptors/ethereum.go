@@ -4,7 +4,11 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"encoding/base64"
+	"errors"
+	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 	"math/big"
+	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -25,7 +29,7 @@ const (
 	String SubType = 1
 	Bytes  SubType = 2
 
-	waitTimeout = 30
+	waitTimeout = 240
 )
 
 type SubType uint8
@@ -123,17 +127,15 @@ func (adaptor *EthereumAdaptor) WaitTx(id string, ctx context.Context) error {
 	for {
 		select {
 		case <-nCtx.Done():
-			return nCtx.Err()
+			return errors.New("tx not found")
 		case <-queryTicker.C:
 		}
-		receipt, err := adaptor.ethClient.TransactionReceipt(nCtx, txHash)
+		receipt, _ := adaptor.ethClient.TransactionReceipt(nCtx, txHash)
 		if receipt != nil {
 			return nil
 		}
-		if err != nil {
-			return err
-		}
 	}
+
 }
 func (adaptor *EthereumAdaptor) PubKey() account.OraclesPubKey {
 	pubKey := crypto.CompressPubkey(&adaptor.privKey.PublicKey)
@@ -222,13 +224,22 @@ func (adaptor *EthereumAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint
 
 	var resultBytes32 [32]byte
 	copy(resultBytes32[:], hash)
-	tx, err := nebula.SendHashValue(bind.NewKeyedTransactor(adaptor.privKey), resultBytes32, v[:], r[:], s[:])
+
+	opt := bind.NewKeyedTransactor(adaptor.privKey)
+
+	opt.GasPrice, err = adaptor.ethClient.SuggestGasPrice(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	opt.GasPrice.Mul(opt.GasPrice, big.NewInt(2))
+	tx, err := nebula.SendHashValue(opt, resultBytes32, v[:], r[:], s[:])
 	if err != nil {
 		return "", err
 	}
 	return tx.Hash().String(), nil
 }
-func (adaptor *EthereumAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId uint64, value interface{}, ctx context.Context) error {
+func (adaptor *EthereumAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId uint64, value *extractor.Data, ctx context.Context) error {
 	var err error
 
 	nebula, err := contracts.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
@@ -248,20 +259,27 @@ func (adaptor *EthereumAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulse
 		}
 
 		transactOpt := bind.NewKeyedTransactor(adaptor.privKey)
-
 		switch SubType(t) {
 		case Int64:
-			_, err = nebula.SendValueToSubInt(transactOpt, value.(int64), big.NewInt(int64(pulseId)), id)
+			v, err := strconv.ParseInt(value.Value, 10, 64)
+			if err != nil {
+				return err
+			}
+			_, err = nebula.SendValueToSubInt(transactOpt, v, big.NewInt(int64(pulseId)), id)
 			if err != nil {
 				return err
 			}
 		case String:
-			_, err = nebula.SendValueToSubString(transactOpt, value.(string), big.NewInt(int64(pulseId)), id)
+			_, err = nebula.SendValueToSubString(transactOpt, value.Value, big.NewInt(int64(pulseId)), id)
 			if err != nil {
 				return err
 			}
 		case Bytes:
-			_, err = nebula.SendValueToSubByte(transactOpt, value.([]byte), big.NewInt(int64(pulseId)), id)
+			v, err := base64.StdEncoding.DecodeString(value.Value)
+			if err != nil {
+				return err
+			}
+			_, err = nebula.SendValueToSubByte(transactOpt, v, big.NewInt(int64(pulseId)), id)
 			if err != nil {
 				return err
 			}

@@ -193,8 +193,6 @@ func (scheduler *Scheduler) updateOracles(roundId int64, nebulaId account.Nebula
 		oracles = append(oracles, oracleAddress)
 	}
 
-
-
 	if len(oracles) <= OracleCount {
 		newOracles = append(newOracles, oracles...)
 	}else {

@@ -98,6 +98,10 @@ func (client *Client) do(route string, method string, rqBody interface{}, ctx co
 
 	defer response.Body.Close()
 
+	if response.StatusCode == 404 {
+		return nil, NotFoundErr
+	}
+
 	rsBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
