@@ -40,7 +40,7 @@ func fromBytes(value []byte, extractorType contracts.ExtractorType) *extractor.D
 		}
 	case contracts.BytesType:
 		return &extractor.Data{
-			Type:  extractor.Int64,
+			Type:  extractor.Base64,
 			Value: base64.StdEncoding.EncodeToString(value),
 		}
 	}

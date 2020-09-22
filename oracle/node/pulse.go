@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 
@@ -50,7 +51,7 @@ func (node *Node) commit(data *extractor.Data, tcHeight uint64, pulseId uint64) 
 func (node *Node) reveal(tcHeight uint64, pulseId uint64, reveal *extractor.Data, commit []byte) error {
 	dataBytes := toBytes(reveal, node.extractor.ExtractorType)
 	fmt.Printf("Reveal: %s  - %s \n", hexutil.Encode(dataBytes), hexutil.Encode(commit))
-
+	println(base64.StdEncoding.EncodeToString(dataBytes))
 	tx, err := transactions.New(node.validator.pubKey, transactions.Reveal, node.validator.privKey)
 	if err != nil {
 		return err
@@ -92,7 +93,11 @@ func (node *Node) signResult(tcHeight uint64, pulseId uint64, ctx context.Contex
 	}
 
 	for _, v := range bytesValues {
-		values = append(values, *fromBytes(v, node.extractor.ExtractorType))
+		b, err := base64.StdEncoding.DecodeString(v)
+		if err != nil {
+			continue
+		}
+		values = append(values, *fromBytes(b, node.extractor.ExtractorType))
 	}
 
 	result, err := node.extractor.Aggregate(values, ctx)

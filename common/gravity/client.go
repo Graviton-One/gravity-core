@@ -124,7 +124,7 @@ func (client *Client) BftOraclesByNebula(chainType account.ChainType, nebulaId a
 
 	return oracles, nil
 }
-func (client *Client) Results(height uint64, chainType account.ChainType, nebulaId account.NebulaId) ([][]byte, error) {
+func (client *Client) Results(height uint64, chainType account.ChainType, nebulaId account.NebulaId) ([]string, error) {
 	rq := query.ResultsRq{
 		Height:        height,
 		ChainType:     chainType,
@@ -136,7 +136,7 @@ func (client *Client) Results(height uint64, chainType account.ChainType, nebula
 		return nil, err
 	}
 
-	var oracles [][]byte
+	var oracles []string
 	if err == ErrValueNotFound {
 		return oracles, nil
 	}
@@ -204,7 +204,7 @@ func (client *Client) Reveal(chainType account.ChainType, oraclePubKey account.O
 
 	return rs, nil
 }
-func (client *Client) Reveals(chainType account.ChainType, nebulaId account.NebulaId, height int64, pulseId int64) ([][]byte, error) {
+func (client *Client) Reveals(chainType account.ChainType, nebulaId account.NebulaId, height int64, pulseId int64) ([]string, error) {
 	rq := query.RevealRq{
 		ChainType:     chainType,
 		NebulaAddress: nebulaId.ToString(chainType),
@@ -217,7 +217,7 @@ func (client *Client) Reveals(chainType account.ChainType, nebulaId account.Nebu
 		return nil, err
 	}
 
-	var reveals [][]byte
+	var reveals []string
 	if err == ErrValueNotFound {
 		return reveals, nil
 	}

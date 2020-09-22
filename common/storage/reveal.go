@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/base64"
 	"fmt"
 
 	"github.com/dgraph-io/badger"
@@ -23,16 +24,16 @@ func (storage *Storage) Reveal(nebulaId account.NebulaId, height int64, pulseId 
 	return b, err
 }
 
-func (storage *Storage) Reveals(nebulaId account.NebulaId, height int64, pulseId int64) ([][]byte, error) {
+func (storage *Storage) Reveals(nebulaId account.NebulaId, height int64, pulseId int64) ([]string, error) {
 	it := storage.txn.NewIterator(badger.DefaultIteratorOptions)
 	defer it.Close()
 
 	prefix := formKey(string(RevealKey), hexutil.Encode(nebulaId[:]), fmt.Sprintf("%d", height), fmt.Sprintf("%d", pulseId))
-	var values [][]byte
+	var values []string
 	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 		item := it.Item()
 		item.Value(func(v []byte) error {
-			values = append(values, v)
+			values = append(values, base64.StdEncoding.EncodeToString(v))
 			return nil
 		})
 	}

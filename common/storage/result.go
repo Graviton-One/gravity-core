@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/base64"
 	"fmt"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
@@ -21,16 +22,16 @@ func (storage *Storage) Result(nebulaId account.NebulaId, pulseId int64, oracleP
 
 	return b, err
 }
-func (storage *Storage) Results(nebulaId account.NebulaId, pulseId uint64) ([][]byte, error) {
+func (storage *Storage) Results(nebulaId account.NebulaId, pulseId uint64) ([]string, error) {
 	it := storage.txn.NewIterator(badger.DefaultIteratorOptions)
 	defer it.Close()
 
 	prefix := formKey(string(SignResultKey), hexutil.Encode(nebulaId[:]), fmt.Sprintf("%d", pulseId))
-	var values [][]byte
+	var values []string
 	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 		item := it.Item()
 		item.Value(func(v []byte) error {
-			values = append(values, v)
+			values = append(values, base64.StdEncoding.EncodeToString(v))
 			return nil
 		})
 	}

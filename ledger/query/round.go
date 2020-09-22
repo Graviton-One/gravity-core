@@ -98,7 +98,7 @@ func reveal(store *storage.Storage, value []byte) ([]byte, error) {
 
 	return v, nil
 }
-func reveals(store *storage.Storage, value []byte) ([][]byte, error) {
+func reveals(store *storage.Storage, value []byte) ([]string, error) {
 	var rq RevealRq
 	err := json.Unmarshal(value, &rq)
 	if err != nil {

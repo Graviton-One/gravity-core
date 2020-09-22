@@ -82,7 +82,7 @@ func bftOraclesByNebula(store *storage.Storage, value []byte) (storage.OraclesMa
 	return v, nil
 }
 
-func results(store *storage.Storage, value []byte) ([][]byte, error) {
+func results(store *storage.Storage, value []byte) ([]string, error) {
 	var rq ResultsRq
 	err := json.Unmarshal(value, &rq)
 	if err != nil {

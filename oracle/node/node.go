@@ -256,6 +256,7 @@ func (node *Node) execute(ledgerHeight uint64, tcHeight uint64, roundState *Roun
 		}
 
 		data, err := node.extractor.Extract(ctx)
+		println(data.Value)
 		if err != nil && err != extractor.NotFoundErr {
 			return err
 		} else if err == extractor.NotFoundErr {

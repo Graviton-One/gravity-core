@@ -107,7 +107,6 @@ contract Nebula {
     //----------------------------------internals---------------------------------------------------------------------
 
     function sendValueToSub(uint256 pulseId, bytes32 subId) internal {
-        require(pulseId <= block.number + 1, "invalid block number");
         require(isPublseSubSent[pulseId][subId] == false, "sub sent");
         
         isPublseSubSent[pulseId][subId] = true;
