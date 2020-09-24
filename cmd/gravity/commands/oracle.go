@@ -75,7 +75,7 @@ func initOracleConfig(ctx *cli.Context) error {
 	cfg := config.OracleConfig{
 		TargetChainNodeUrl: targetChainUrl,
 		GravityNodeUrl:     gravityUrl,
-		ChainId:            "R",
+		ChainId:            "S",
 		ChainType:          chainTypeStr,
 		ExtractorUrl:       extractorUrl,
 	}
