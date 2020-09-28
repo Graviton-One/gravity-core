@@ -1,5 +1,8 @@
 # Gravity Core
 
+## Additional versions:
+[RU version](docs/README-ru.md) 
+
 ## Init ledger
 
     gravity ledger --home={home} init --network=devnet
