@@ -19,6 +19,12 @@ ENV GRAVITY_NETWORK=$GRAVITY_NETWORK
 ENV INIT_CONFIG=$INIT_CONFIG
 ENV ETH_NODE_URL=$ETH_NODE_URL
 
+
+ENV GRAVITY_ETH_ADDRESS=''
+ENV GRAVITY_WAVES_ADDRESS=''
+ENV GRAVITY_WAVES_CHAINID=''
+
+
 RUN cd cmd/gravity/ && \
     go build -o gravity && \
     cp gravity /bin/
@@ -26,4 +32,3 @@ RUN cd cmd/gravity/ && \
 VOLUME /etc/gravity/
 
 ENTRYPOINT ./docker/entrypoint.sh
-# ENTRYPOINT export INIT_CONFIG && export ETH_NODE_URL ./docker/entrypoint.sh
