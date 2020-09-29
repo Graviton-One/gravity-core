@@ -12,15 +12,19 @@ update_config_field() {
 
 }
 
+
 if [ $INIT_CONFIG -eq 1 ]
 then
   gravity ledger --home=/etc/gravity/ init --network="$GRAVITY_NETWORK"
 fi
 
-env_keys=('.Adapters.ethereum.NodeUrl' '.Adapters.ethereum.GravityContractAddress' '.Adapters.waves.GravityContractAddress' '.Adapters.waves.ChainId')
-env_values=("$ETH_NODE_URL" "$GRAVITY_ETH_ADDRESS" "$GRAVITY_WAVES_ADDRESS" "$GRAVITY_WAVES_CHAINID")
 
-for (( i=0; i < 4; i++ ))
+env_keys=('.Adapters.ethereum.NodeUrl' '.Adapters.ethereum.GravityContractAddress' '.Adapters.waves.GravityContractAddress' '.Adapters.waves.ChainId' '.Adapters.waves.NodeUrl')
+env_values=("$ETH_NODE_URL" "$GRAVITY_ETH_ADDRESS" "$GRAVITY_WAVES_ADDRESS" "$GRAVITY_WAVES_CHAINID" "$WAVES_NODE_URL")
+list_len=${#env_keys[@]}
+
+
+for (( i=0; i < list_len; i++ ))
 do
   env_key="${env_keys[i]}"
   value="${env_values[i]}"
