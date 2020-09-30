@@ -16,33 +16,37 @@ start_oracle() {
         $GRAVITY_NEBULA_ADDRESS
 }
 
-
-if [ ! -d $GRAVITY_HOME ]
-then
-  echo "GRAVITY_HOME is not set"
-  exit 1
-fi
+validate_args() {
+  required_arg_keys=('Gravity Home' 'Nebula address' 'Chain type' 'Gravity Public Ledger RPC' 'Gravity target chain node url' 'Gravity extractor endpoint')
+  required_args=($GRAVITY_HOME $NEBULA_ADDRESS $CHAIN_TYPE $GRAVITY_HOME $GRAVITY_PUBLIC_LEDGER_RPC $GRAVITY_TARGET_CHAIN_NODE_URL $GRAVITY_EXTRACTOR_ENDPOINT)
+  args_len="${#required_args[@]}"
 
 
-required_arg_keys=('Nebula address' 'Chain type' 'Gravity Public Ledger RPC' 'Gravity target chain node url' 'Gravity extractor endpoint')
-required_args=($NEBULA_ADDRESS $CHAIN_TYPE $GRAVITY_HOME $GRAVITY_PUBLIC_LEDGER_RPC $GRAVITY_TARGET_CHAIN_NODE_URL $GRAVITY_EXTRACTOR_ENDPOINT)
-args_len="${#required_args[@]}"
+	for ((i = 0; i < args_len; i++))
+	do
+	  arg_key="${required_arg_keys[i]}"
+	  arg_value="${required_args[i]}"
+
+	  if [ -z $arg_value ]
+	  then
+	    echo "$arg_key is not set. Quitting..."
+	    exit 1
+	  fi
+	done
+}
 
 
-for ((i = 0; i < args_len; i++))
+run() {
+  init_oracle
+
+  start_oracle
+}
+
+while [ -n "$1" ]
 do
-  arg_key="${required_arg_keys[i]}"
-  arg_value="${required_args[i]}"
-
-  if [ -z $arg_value ]
-  then
-    echo "$arg_key is not set. Quitting..."
-    exit 1
-  fi
+  case "$1" in
+    --validate) validate_args ;;
+    --run) run ;;
+  esac
+  shift
 done
-
-
-init_oracle
-
-start_oracle
-
