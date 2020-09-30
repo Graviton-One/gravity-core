@@ -31,4 +31,4 @@ RUN cd cmd/gravity/ && \
 
 VOLUME /etc/gravity/
 
-ENTRYPOINT ./docker/entrypoint.sh
+ENTRYPOINT ./docker/entrypoint-ledger.sh
