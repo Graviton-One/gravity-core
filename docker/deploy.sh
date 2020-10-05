@@ -1,6 +1,6 @@
 #!/bin/bash
 
-start_devnet() {
+start_customnet() {
 	GRAVITY_WAVES_CHAINID='S'
 	GRAVITY_ETH_ADDRESS='0x605f2226b0451492Cdd72D776EF311926ceE0B92'
 	GRAVITY_WAVES_ADDRESS='3MiFxwmcrkujBRsM9FzCxGAL6i1acYah1pJ'
@@ -20,7 +20,7 @@ start_devnet() {
 	       -p 26657:26657 -p 2500:2500 -v $GRAVITY_HOME:/etc/gravity gravity-ledger:latest
 }
 
-start_customnet() {
+start_devnet() {
 	docker run -itd -p 26657:26657 -p 2500:2500 -v $GRAVITY_HOME:/etc/gravity gravity-ledger:latest
 }
 
