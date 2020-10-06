@@ -195,8 +195,18 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 
 func (app *GHApplication) BeginBlock(req abcitypes.RequestBeginBlock) abcitypes.ResponseBeginBlock {
 	app.storage.NewTransaction(app.db)
+	isConsul := false
+	consuls, err := app.storage.Consuls()
+	if err == nil {
+		for _, v := range consuls {
+			isConsul = v.PubKey == app.scheduler.Ledger.PubKey
+			if isConsul {
+				break
+			}
+		}
+	}
 
-	err := app.scheduler.HandleBlock(req.Header.Height, app.storage, app.IsSync)
+	err = app.scheduler.HandleBlock(req.Header.Height, app.storage, app.IsSync, isConsul)
 	if err != nil {
 		fmt.Printf("Error: %s \n", err.Error())
 	}

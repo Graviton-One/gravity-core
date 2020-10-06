@@ -46,8 +46,8 @@ func New(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, ledger *acc
 	}, nil
 }
 
-func (scheduler *Scheduler) HandleBlock(height int64, store *storage.Storage, isSync bool) error {
-	if !isSync {
+func (scheduler *Scheduler) HandleBlock(height int64, store *storage.Storage, isSync bool, isConsul bool) error {
+	if !isSync && isConsul {
 		go scheduler.process(height)
 	}
 
