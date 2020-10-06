@@ -1,0 +1,8 @@
+version: '1.0'
+
+
+services:
+	ledger:
+		build: gravityhuborg/gravity-ledger
+        volumes: 
+            - .$GRAVITY_HOME:/etc/gravity
