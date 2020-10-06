@@ -56,7 +56,7 @@ const (
 	Custom Network = "custom"
 	DevNet Network = "devnet"
 
-	DevNetId ChainId = "gravity-devnet-v0.1"
+	DevNetId ChainId = "gravity-devnet"
 	CustomId ChainId = "gravity-custom"
 
 	DefaultBootstrapUrl   = "http://104.248.255.124:26657"
