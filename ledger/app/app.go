@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/tendermint/tendermint/version"
 	"sort"
 
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
@@ -26,6 +27,8 @@ const (
 	Success      uint32 = 0
 	Error        uint32 = 500
 	NotFoundCode uint32 = 404
+
+	AppVersion uint64 = 1
 )
 
 type OraclesAddresses struct {
@@ -61,7 +64,14 @@ func NewGHApplication(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor
 }
 
 func (app *GHApplication) Info(req abcitypes.RequestInfo) abcitypes.ResponseInfo {
-	return abcitypes.ResponseInfo{}
+	store := storage.New()
+	store.NewTransaction(app.db)
+	height, _ := store.LastHeight()
+	return abcitypes.ResponseInfo{
+		Version:         version.ABCIVersion,
+		AppVersion:      AppVersion,
+		LastBlockHeight: int64(height),
+	}
 }
 
 func (app *GHApplication) SetOption(req abcitypes.RequestSetOption) abcitypes.ResponseSetOption {
@@ -204,7 +214,6 @@ func (app *GHApplication) EndBlock(req abcitypes.RequestEndBlock) abcitypes.Resp
 	if err != nil {
 		panic(err)
 	}
-
 	var newValidators []abcitypes.ValidatorUpdate
 	for i := 0; i < app.genesis.ConsulsCount && i < len(consuls); i++ {
 		if consuls[i].Value == 0 {

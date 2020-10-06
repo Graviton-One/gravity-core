@@ -283,7 +283,6 @@ func (adaptor *EthereumAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulse
 
 			_, err = nebula.SendValueToSubByte(transactOpt, v, big.NewInt(int64(pulseId)), id)
 			if err != nil {
-				println(err.Error())
 				continue
 			}
 		}

@@ -273,6 +273,26 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 		return err
 	}
 
+	newConsuls, err := scheduler.client.ConsulsCandidate()
+	if err != nil {
+		return err
+	}
+
+	isEquals := true
+	if len(consuls) != len(newConsuls) {
+		isEquals = false
+	} else {
+		for i,_ := range newConsuls {
+			if consuls[i].PubKey != newConsuls[i].PubKey ||
+				consuls[i].Value != newConsuls[i].Value {
+				isEquals = false
+			}
+		}
+	}
+	if isEquals {
+		return nil
+	}
+
 	realSignCount := 0
 
 	signs := make(map[account.OraclesPubKey][]byte)
@@ -308,10 +328,6 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 		return nil
 	}
 
-	newConsuls, err := scheduler.client.ConsulsCandidate()
-	if err != nil {
-		return err
-	}
 
 	var newConsulsAddresses []*account.OraclesPubKey
 	for i := 0; i < OracleCount; i++ {
