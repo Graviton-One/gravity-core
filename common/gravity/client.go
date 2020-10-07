@@ -359,6 +359,26 @@ func (client *Client) NebulaOraclesIndex(chainId account.ChainType, nebulaId acc
 	return binary.BigEndian.Uint64(rs), nil
 }
 
+func (client *Client) Validators() ([]account.ConsulPubKey, error) {
+	rs, err := client.do(query.AvailableValidatorsPath, nil)
+
+	if err != nil && err != ErrValueNotFound {
+		return nil, err
+	}
+
+	var publicKeys []account.ConsulPubKey
+	if err == ErrValueNotFound {
+		return publicKeys, nil
+	}
+
+	err = json.Unmarshal(rs, &publicKeys)
+	if err != nil {
+		return nil, err
+	}
+
+	return publicKeys, nil
+}
+
 func (client *Client) do(path query.Path, rq interface{}) ([]byte, error) {
 	var err error
 	b, ok := rq.([]byte)

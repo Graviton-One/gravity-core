@@ -2,6 +2,7 @@ package storage
 
 import (
 	"encoding/json"
+	"github.com/Gravity-Tech/gravity-core/config"
 	"strings"
 
 	"github.com/dgraph-io/badger"
@@ -39,6 +40,7 @@ var (
 type Key string
 type Storage struct {
 	txn *badger.Txn
+	AppDetailsDelegate *config.ValidatorDetails
 }
 
 func formKey(args ...string) []byte {

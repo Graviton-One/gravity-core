@@ -345,11 +345,12 @@ func startLedger(ctx *cli.Context) error {
 		PubKey:  ledgerPubKey,
 	}
 
-	gravityApp, err := crateApp(db, ledgerValidator, privKeysCfg.TargetChains, ledgerConf, genesis, bootstrap, tConfig.RPC.ListenAddress, sysCtx)
+	gravityApp, err := createApp(db, ledgerValidator, privKeysCfg.TargetChains, ledgerConf, genesis, bootstrap, tConfig.RPC.ListenAddress, sysCtx)
 	if err != nil {
 		return fmt.Errorf("failed to parse gravity config: %w", err)
 	}
 
+	gravityApp.UpdateDetails(privKeysCfg.Details)
 	gravityApp.IsSync = true
 	var validators []types.GenesisValidator
 	for k, v := range genesis.InitScore {
@@ -424,7 +425,7 @@ func startLedger(ctx *cli.Context) error {
 	return nil
 }
 
-func crateApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys map[string]config.Key, cfg config.LedgerConfig, genesisCfg config.Genesis, bootstrap string, localHost string, ctx context.Context) (*app.GHApplication, error) {
+func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys map[string]config.Key, cfg config.LedgerConfig, genesisCfg config.Genesis, bootstrap string, localHost string, ctx context.Context) (*app.GHApplication, error) {
 	bAdaptors := make(map[account.ChainType]adaptors.IBlockchainAdaptor)
 	for k, v := range cfg.Adapters {
 		chainType, err := account.ParseChainType(k)

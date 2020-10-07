@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/Gravity-Tech/gravity-core/config"
 	"sort"
 
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
@@ -227,4 +228,8 @@ func (app *GHApplication) EndBlock(req abcitypes.RequestEndBlock) abcitypes.Resp
 	} else {
 		return abcitypes.ResponseEndBlock{}
 	}
+}
+
+func (app *GHApplication) UpdateDetails(details *config.ValidatorDetails) {
+	app.storage.AppDetailsDelegate = details
 }

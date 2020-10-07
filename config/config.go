@@ -16,7 +16,6 @@ import (
 
 type ValidatorDetails struct {
 	Name, Description, JoinedAt string
-
 	// Misc
 	AvatarURL, Website string
 }

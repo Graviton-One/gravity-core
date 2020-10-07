@@ -1,6 +1,11 @@
 package storage
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"fmt"
+	"github.com/Gravity-Tech/gravity-core/common/account"
+	"github.com/Gravity-Tech/gravity-core/config"
+)
 
 func (storage *Storage) LastHeight() (uint64, error) {
 	b, err := storage.getValue([]byte(LastHeightKey))
@@ -59,4 +64,30 @@ func (storage *Storage) LastRoundApproved() (uint64, error) {
 	}
 
 	return binary.BigEndian.Uint64(b), nil
+}
+
+
+func (storage *Storage) Validators() (*[]account.ConsulPubKey, error) {
+	consulScores, err := storage.Scores()
+
+	if err != nil {
+		return nil, err
+	}
+
+	keys := make([]account.ConsulPubKey, len(consulScores))
+
+	for consulPubKey, _ := range consulScores {
+		keys = append(keys, consulPubKey)
+	}
+
+	return &keys, nil
+}
+
+func (storage *Storage) ValidatorDetails() (*config.ValidatorDetails, error) {
+	// Read current config (on every call)
+	if storage.AppDetailsDelegate == nil {
+		return nil, fmt.Errorf("no details provided")
+	}
+
+	return storage.AppDetailsDelegate, nil
 }
