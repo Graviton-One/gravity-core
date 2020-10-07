@@ -74,11 +74,11 @@ var (
 		Adapters: map[string]config.AdaptorsConfig{
 			account.Ethereum.String(): {
 				NodeUrl:                "https://ropsten.infura.io/v3/598efca7168947c6a186e2f85b600be1",
-				GravityContractAddress: "0xb517D14A6F75DCc2328BC2CcBcb12BFEe3d4D7f1",
+				GravityContractAddress: "0x80C52beF8622cDF368Bf8AaD5ee4A78cB68E2a79",
 			},
 			account.Waves.String(): {
 				NodeUrl:                "https://nodes-stagenet.wavesnodes.com",
-				GravityContractAddress: "3MZarQZupM1byrFn5unXjyY5urLs5Zw3R1X",
+				GravityContractAddress: "3MfrQBknYJSnifUxD86yMPTSHEhgcPe3NBq",
 				ChainId:                "S",
 			},
 		},
