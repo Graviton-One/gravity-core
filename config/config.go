@@ -14,8 +14,16 @@ import (
 	wavesplatform "github.com/wavesplatform/go-lib-crypto"
 )
 
+type ValidatorDetails struct {
+	Name, Description, JoinedAt string
+
+	// Misc
+	AvatarURL, Website string
+}
+
 type Keys struct {
 	Validator    Key
+	Details ValidatorDetails
 	TargetChains map[string]Key
 }
 
@@ -41,6 +49,10 @@ func GeneratePrivKeys() (*Keys, error) {
 			Address: hexutil.Encode(validatorPrivKey.PubKey().Bytes()[5:]),
 			PubKey:  hexutil.Encode(validatorPrivKey.PubKey().Bytes()[5:]),
 			PrivKey: hexutil.Encode(validatorPrivKey[:]),
+		},
+		Details: ValidatorDetails{
+			Name: "", Description: "", JoinedAt: "",
+			AvatarURL: "", Website: "",
 		},
 		TargetChains: map[string]Key{
 			account.Ethereum.String(): Key{
