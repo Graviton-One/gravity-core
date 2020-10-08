@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"github.com/Gravity-Tech/gravity-core/ledger/app"
 
 	"github.com/Gravity-Tech/gravity-core/common/storage"
 )
@@ -28,7 +29,8 @@ const (
 	SignNewConsulsByConsulPath Path = "signNewConsulsByConsul"
 	SignNewOraclesByConsulPath Path = "signNewOraclesByConsul"
 	NebulaOraclesIndexPath     Path = "nebulaOraclesIndex"
-	AllValidators              Path = "allValidators"
+	AllValidatorsPath          Path = "allValidators"
+	ValidatorDetailsPath       Path = "validatorDetails"
 )
 
 var (
@@ -36,7 +38,7 @@ var (
 	ErrValueNotFound = errors.New("value not found")
 )
 
-func Query(store *storage.Storage, path string, rq []byte) ([]byte, error) {
+func Query(app *app.GHApplication, store *storage.Storage, path string, rq []byte) ([]byte, error) {
 	var value interface{}
 	var err error
 	switch Path(path) {
@@ -74,8 +76,10 @@ func Query(store *storage.Storage, path string, rq []byte) ([]byte, error) {
 		value, err = nebulaOraclesIndex(store, rq)
 	case LastRoundApprovedPath:
 		value, err = store.LastRoundApproved()
-	case AllValidators:
+	case AllValidatorsPath:
 		value, err = allValidators(store, rq)
+	case ValidatorDetailsPath:
+		value, err = app.ValidatorDetails()
 	default:
 		return nil, ErrInvalidPath
 	}

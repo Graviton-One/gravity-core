@@ -15,12 +15,27 @@ type AdaptorsConfig struct {
 	GravityContractAddress string
 }
 
+type ValidatorDetails struct {
+	Name, Description, JoinedAt string
+	// Misc
+	AvatarURL, Website string
+}
+
+func (validatorDetails *ValidatorDetails) DefaultNew() *ValidatorDetails {
+	return &ValidatorDetails{
+		Name: "Gravity Node", Description: "", JoinedAt: "",
+		AvatarURL: "", Website: "",
+	}
+}
+
 type LedgerConfig struct {
 	Moniker    string
 	IsFastSync bool
 	Mempool    *cfg.MempoolConfig
 	RPC        *cfg.RPCConfig
 	P2P        *cfg.P2PConfig
+
+	Details    *ValidatorDetails
 
 	Adapters map[string]AdaptorsConfig
 }
@@ -32,6 +47,7 @@ func DefaultLedgerConfig() LedgerConfig {
 		Mempool:    cfg.DefaultMempoolConfig(),
 		RPC:        cfg.DefaultRPCConfig(),
 		P2P:        cfg.DefaultP2PConfig(),
+		Details:    ValidatorDetails{}.DefaultNew(),
 		Adapters: map[string]AdaptorsConfig{
 			account.Ethereum.String(): {
 				NodeUrl:                "",
