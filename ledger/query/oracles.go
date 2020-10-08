@@ -2,6 +2,7 @@ package query
 
 import (
 	"encoding/json"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/storage"
@@ -20,6 +21,21 @@ type ResultsRq struct {
 	ChainType     account.ChainType
 	Height        uint64
 	NebulaAddress string
+}
+
+func allValidators(store *storage.Storage, _ []byte) ([]string, error) {
+	scores, err := store.Scores()
+	result := make([]string, len(scores))
+
+	if err != nil {
+		return result, err
+	}
+
+	for consulPubKey, _ := range scores {
+		result = append(result, ed25519.PubKeyEd25519(consulPubKey).String())
+	}
+
+	return result, nil
 }
 
 func oraclesByValidator(store *storage.Storage, value []byte) (storage.OraclesByTypeMap, error) {

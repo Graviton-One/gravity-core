@@ -28,6 +28,7 @@ const (
 	SignNewConsulsByConsulPath Path = "signNewConsulsByConsul"
 	SignNewOraclesByConsulPath Path = "signNewOraclesByConsul"
 	NebulaOraclesIndexPath     Path = "nebulaOraclesIndex"
+	AllValidators              Path = "allValidators"
 )
 
 var (
@@ -73,6 +74,8 @@ func Query(store *storage.Storage, path string, rq []byte) ([]byte, error) {
 		value, err = nebulaOraclesIndex(store, rq)
 	case LastRoundApprovedPath:
 		value, err = store.LastRoundApproved()
+	case AllValidators:
+		value, err = allValidators(store, rq)
 	default:
 		return nil, ErrInvalidPath
 	}
