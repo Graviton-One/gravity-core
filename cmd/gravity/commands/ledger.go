@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/signal"
 	"path"
+	"strings"
 	"syscall"
 	"time"
 
@@ -184,6 +186,25 @@ var (
 	}
 )
 
+func getPublicIP() (string, error) {
+	ifaces, _ := net.Interfaces()
+
+	for _, i := range ifaces {
+		addrs, _ := i.Addrs()
+		for _, addr := range addrs {
+
+			switch v := addr.(type) {
+			case *net.IPAddr:
+				if strings.Contains(fmt.Sprintf("%v", v), "/24") {
+					return fmt.Sprintf("%v", v), nil
+				}
+			}
+		}
+	}
+
+	return "", fmt.Errorf("not found valid ip")
+}
+
 func initLedgerConfig(ctx *cli.Context) error {
 	var err error
 
@@ -247,6 +268,9 @@ func initLedgerConfig(ctx *cli.Context) error {
 	} else {
 		ledgerConf = config.DefaultLedgerConfig()
 	}
+
+	ledgerConf.PublicIP, _ = getPublicIP()
+
 	b, err = json.MarshalIndent(&ledgerConf, "", " ")
 	err = ioutil.WriteFile(path.Join(home, LedgerConfigFileName), b, 0644)
 	if err != nil {

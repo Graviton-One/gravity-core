@@ -47,6 +47,7 @@ type LedgerConfig struct {
 	P2P        *cfg.P2PConfig
 
 	Details    *ValidatorDetails
+	PublicIP   string
 
 	Adapters map[string]AdaptorsConfig
 }
