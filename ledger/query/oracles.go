@@ -2,10 +2,9 @@ package query
 
 import (
 	"encoding/json"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/storage"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 type ByValidatorRq struct {
@@ -23,19 +22,25 @@ type ResultsRq struct {
 	NebulaAddress string
 }
 
-func allValidators(store *storage.Storage, _ []byte) ([]string, error) {
+func allValidators(store *storage.Storage, _ []byte) ([]byte, error) {
 	scores, err := store.Scores()
 	result := make([]string, len(scores))
 
 	if err != nil {
-		return result, err
+		return make([]byte, 0), err
 	}
 
 	for consulPubKey, _ := range scores {
-		result = append(result, ed25519.PubKeyEd25519(consulPubKey).String())
+		result = append(result, hexutil.Encode(consulPubKey[:]))
 	}
 
-	return result, nil
+	encoded, err := json.Marshal(result)
+
+	if err != nil {
+		return make([]byte, 0), err
+	}
+
+	return encoded, nil
 }
 
 func oraclesByValidator(store *storage.Storage, value []byte) (storage.OraclesByTypeMap, error) {
