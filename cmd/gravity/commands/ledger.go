@@ -185,7 +185,6 @@ var (
 		},
 	}
 )
-
 func getPublicIP() (string, error) {
 	ifaces, _ := net.Interfaces()
 
@@ -193,17 +192,24 @@ func getPublicIP() (string, error) {
 		addrs, _ := i.Addrs()
 		for _, addr := range addrs {
 
+			var ip net.IP
 			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
 			case *net.IPAddr:
-				if strings.Contains(fmt.Sprintf("%v", v), "/24") {
-					return fmt.Sprintf("%v", v), nil
-				}
+				ip = v.IP
 			}
+
+			if strings.Contains(fmt.Sprintf("%v", addr), "/24") {
+				return fmt.Sprintf("%v", ip), nil
+			}
+
 		}
 	}
 
 	return "", fmt.Errorf("not found valid ip")
 }
+
 
 func initLedgerConfig(ctx *cli.Context) error {
 	var err error
