@@ -123,7 +123,18 @@ func (app *GHApplication) Query(reqQuery abcitypes.RequestQuery) (resQuery abcit
 
 	store := storage.New()
 	store.NewTransaction(app.db)
-	b, err := query.Query(app, store, reqQuery.Path, reqQuery.Data)
+
+	var b []byte
+	if query.Path(reqQuery.Path) == query.ValidatorDetailsPath {
+		details, err := app.ValidatorDetails()
+
+		if details != nil && err != nil {
+			b, _ = details.Bytes()
+		}
+	} else {
+		b, err = query.Query(store, reqQuery.Path, reqQuery.Data)
+	}
+
 	if err == query.ErrValueNotFound {
 		resQuery.Code = NotFoundCode
 	} else if err != nil {

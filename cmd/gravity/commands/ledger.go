@@ -71,7 +71,7 @@ var (
 		RPC:        cfg.DefaultRPCConfig(),
 		IsFastSync: true,
 		Mempool:    cfg.DefaultMempoolConfig(),
-		Details:    config.ValidatorDetails{}.DefaultNew(),
+		Details:    (&config.ValidatorDetails{}).DefaultNew(),
 		Adapters: map[string]config.AdaptorsConfig{
 			account.Ethereum.String(): {
 				NodeUrl:                "https://ropsten.infura.io/v3/598efca7168947c6a186e2f85b600be1",
@@ -494,7 +494,7 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 		}
 	}
 
-	application, err := app.NewGHApplication(bAdaptors, blockScheduler, db, &genesis, ctx, cfg)
+	application, err := app.NewGHApplication(bAdaptors, blockScheduler, db, &genesis, ctx, &cfg)
 	if err != nil {
 		return nil, err
 	}

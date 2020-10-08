@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"github.com/Gravity-Tech/gravity-core/ledger/app"
+	//"github.com/Gravity-Tech/gravity-core/ledger/app"
 
 	"github.com/Gravity-Tech/gravity-core/common/storage"
 )
@@ -38,7 +38,7 @@ var (
 	ErrValueNotFound = errors.New("value not found")
 )
 
-func Query(app *app.GHApplication, store *storage.Storage, path string, rq []byte) ([]byte, error) {
+func Query(store *storage.Storage, path string, rq []byte) ([]byte, error) {
 	var value interface{}
 	var err error
 	switch Path(path) {
@@ -78,8 +78,6 @@ func Query(app *app.GHApplication, store *storage.Storage, path string, rq []byt
 		value, err = store.LastRoundApproved()
 	case AllValidatorsPath:
 		value, err = allValidators(store, rq)
-	case ValidatorDetailsPath:
-		value, err = app.ValidatorDetails()
 	default:
 		return nil, ErrInvalidPath
 	}

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	cfg "github.com/tendermint/tendermint/config"
 )
@@ -19,6 +20,16 @@ type ValidatorDetails struct {
 	Name, Description, JoinedAt string
 	// Misc
 	AvatarURL, Website string
+}
+
+func (validatorDetails *ValidatorDetails) Bytes() ([]byte, error) {
+	res, err := json.Marshal(validatorDetails)
+
+	if err != nil {
+		return make([]byte, 0), err
+	}
+
+	return res, nil
 }
 
 func (validatorDetails *ValidatorDetails) DefaultNew() *ValidatorDetails {
@@ -47,7 +58,7 @@ func DefaultLedgerConfig() LedgerConfig {
 		Mempool:    cfg.DefaultMempoolConfig(),
 		RPC:        cfg.DefaultRPCConfig(),
 		P2P:        cfg.DefaultP2PConfig(),
-		Details:    ValidatorDetails{}.DefaultNew(),
+		Details:    (&ValidatorDetails{}).DefaultNew(),
 		Adapters: map[string]AdaptorsConfig{
 			account.Ethereum.String(): {
 				NodeUrl:                "",
