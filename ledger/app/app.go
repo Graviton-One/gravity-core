@@ -252,13 +252,3 @@ func (app *GHApplication) EndBlock(req abcitypes.RequestEndBlock) abcitypes.Resp
 		return abcitypes.ResponseEndBlock{}
 	}
 }
-
-func (app *GHApplication) ValidatorDetails() (*config.ValidatorDetails, error) {
-	err := fmt.Errorf("no validator details provided")
-
-	if app.ledgerConfig == nil || app.ledgerConfig.Details == nil {
-		return nil, err
-	}
-
-	return app.ledgerConfig.Details, nil
-}
