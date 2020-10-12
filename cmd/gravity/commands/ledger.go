@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/signal"
 	"path"
+	"strings"
 	"syscall"
 	"time"
 
@@ -71,6 +73,7 @@ var (
 		RPC:        cfg.DefaultRPCConfig(),
 		IsFastSync: true,
 		Mempool:    cfg.DefaultMempoolConfig(),
+		Details:    (&config.ValidatorDetails{}).DefaultNew(),
 		Adapters: map[string]config.AdaptorsConfig{
 			account.Ethereum.String(): {
 				NodeUrl:                "https://ropsten.infura.io/v3/598efca7168947c6a186e2f85b600be1",
@@ -182,6 +185,31 @@ var (
 		},
 	}
 )
+func getPublicIP() (string, error) {
+	ifaces, _ := net.Interfaces()
+
+	for _, i := range ifaces {
+		addrs, _ := i.Addrs()
+		for _, addr := range addrs {
+
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+
+			if strings.Contains(fmt.Sprintf("%v", addr), "/24") {
+				return fmt.Sprintf("%v", ip), nil
+			}
+
+		}
+	}
+
+	return "", fmt.Errorf("not found valid ip")
+}
+
 
 func initLedgerConfig(ctx *cli.Context) error {
 	var err error
@@ -246,6 +274,9 @@ func initLedgerConfig(ctx *cli.Context) error {
 	} else {
 		ledgerConf = config.DefaultLedgerConfig()
 	}
+
+	ledgerConf.PublicIP, _ = getPublicIP()
+
 	b, err = json.MarshalIndent(&ledgerConf, "", " ")
 	err = ioutil.WriteFile(path.Join(home, LedgerConfigFileName), b, 0644)
 	if err != nil {
@@ -345,7 +376,7 @@ func startLedger(ctx *cli.Context) error {
 		PubKey:  ledgerPubKey,
 	}
 
-	gravityApp, err := crateApp(db, ledgerValidator, privKeysCfg.TargetChains, ledgerConf, genesis, bootstrap, tConfig.RPC.ListenAddress, sysCtx)
+	gravityApp, err := createApp(db, ledgerValidator, privKeysCfg.TargetChains, ledgerConf, genesis, bootstrap, tConfig.RPC.ListenAddress, sysCtx)
 	if err != nil {
 		return fmt.Errorf("failed to parse gravity config: %w", err)
 	}
@@ -424,7 +455,7 @@ func startLedger(ctx *cli.Context) error {
 	return nil
 }
 
-func crateApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys map[string]config.Key, cfg config.LedgerConfig, genesisCfg config.Genesis, bootstrap string, localHost string, ctx context.Context) (*app.GHApplication, error) {
+func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys map[string]config.Key, cfg config.LedgerConfig, genesisCfg config.Genesis, bootstrap string, localHost string, ctx context.Context) (*app.GHApplication, error) {
 	bAdaptors := make(map[account.ChainType]adaptors.IBlockchainAdaptor)
 	for k, v := range cfg.Adapters {
 		chainType, err := account.ParseChainType(k)
@@ -493,7 +524,7 @@ func crateApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys 
 		}
 	}
 
-	application, err := app.NewGHApplication(bAdaptors, blockScheduler, db, &genesis, ctx)
+	application, err := app.NewGHApplication(bAdaptors, blockScheduler, db, &genesis, ctx, &cfg)
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/Gravity-Tech/gravity-core/config"
 	"github.com/tendermint/tendermint/version"
 	"sort"
 
@@ -48,11 +49,12 @@ type GHApplication struct {
 	scheduler *scheduler.Scheduler
 	ctx       context.Context
 	genesis   *Genesis
+	ledgerConfig *config.LedgerConfig
 }
 
 var _ abcitypes.Application = (*GHApplication)(nil)
 
-func NewGHApplication(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, scheduler *scheduler.Scheduler, db *badger.DB, genesis *Genesis, ctx context.Context) (*GHApplication, error) {
+func NewGHApplication(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, scheduler *scheduler.Scheduler, db *badger.DB, genesis *Genesis, ctx context.Context, config *config.LedgerConfig) (*GHApplication, error) {
 	return &GHApplication{
 		db:        db,
 		adaptors:  adaptors,
@@ -60,6 +62,7 @@ func NewGHApplication(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor
 		ctx:       ctx,
 		genesis:   genesis,
 		storage:   storage.New(),
+		ledgerConfig: config,
 	}, nil
 }
 
@@ -120,7 +123,9 @@ func (app *GHApplication) Query(reqQuery abcitypes.RequestQuery) (resQuery abcit
 
 	store := storage.New()
 	store.NewTransaction(app.db)
-	b, err := query.Query(store, reqQuery.Path, reqQuery.Data)
+
+	b, err := query.Query(store, reqQuery.Path, reqQuery.Data, app.ledgerConfig.Details)
+
 	if err == query.ErrValueNotFound {
 		resQuery.Code = NotFoundCode
 	} else if err != nil {
