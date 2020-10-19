@@ -11,7 +11,7 @@ pipeline:
   publish-ledger:
     image: plugins/docker
     dockerfile: docker/ledger.dockerfile
-    context: docker/
+    context: .
     repo: gravityhuborg/gravity-ledger
     tags: [latest, master]
     secrets: [docker_username,docker_password]
