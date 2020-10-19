@@ -5,17 +5,19 @@ update_config_field() {
   local value=$2 
 
   temp_config=/etc/gravity/config_tmp.json
+  # shellcheck disable=SC2002
   cat /etc/gravity/config.json | jq "$key = \"$value\"" > "$temp_config"
   # cat /etc/gravity/config.json | jq ".Adapters.ethereum.NodeUrl = \"$ETH_NODE_URL\"" > "$temp_config"
   cat $temp_config > /etc/gravity/config.json 
   rm $temp_config
-
 }
 
-
-if [ $INIT_CONFIG -eq 1 ]
+if [ "$INIT_CONFIG" -eq 1 ]
 then
-  gravity ledger --home=/etc/gravity/ init --network="$GRAVITY_NETWORK"
+  # Config folder is empty, generating keys
+  if [ -z "$(ls -A /etc/gravity/)" ]; then
+    gravity ledger --home=/etc/gravity/ init --network="$GRAVITY_NETWORK"
+  fi
 fi
 
 
@@ -31,11 +33,16 @@ do
 
   echo "KEY: $env_key; VALUE: $value"
 
-  if [ ! -z $value ]
+  if [ -n "$value" ]
   then
     update_config_field "$env_key" "$value"
   fi
 
 done
 
-gravity ledger --home=/etc/gravity start --rpc="$GRAVITY_RPC" --bootstrap="$GRAVITY_BOOTSTRAP"
+if [ -n "$GRAVITY_BOOTSTRAP" ]
+then
+  gravity ledger --home=/etc/gravity start --rpc="$GRAVITY_RPC" --bootstrap="$GRAVITY_BOOTSTRAP"
+else
+  gravity ledger --home=/etc/gravity start --rpc="$GRAVITY_RPC"
+fi

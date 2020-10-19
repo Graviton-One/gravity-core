@@ -1,0 +1,21 @@
+kind: pipeline
+type: docker
+name: gravity-core
+
+trigger:
+  branch:
+    - master
+    - add-drone
+
+pipeline:
+  publish-ledger:
+    image: plugins/docker
+    dockerfile: docker/ledger.dockerfile
+    context: .
+    repo: gravityhuborg/gravity-ledger
+    tags: [latest, master]
+    secrets: [docker_username,docker_password]
+    when:
+      branch:
+        - master
+        - add-drone

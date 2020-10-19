@@ -17,17 +17,17 @@ start_customnet() {
 	       -e GRAVITY_WAVES_ADDRESS=$GRAVITY_WAVES_ADDRESS \
 	       -e GRAVITY_WAVES_CHAINID=$GRAVITY_WAVES_CHAINID \
 	       -e WAVES_NODE_URL=$WAVES_NODE_URL \
-	       -p 26657:26657 -p 2500:2500 -v $GRAVITY_HOME:/etc/gravity gravity-ledger:latest
+	       -p 26657:26657 -p 2500:2500 -v "$GRAVITY_HOME":/etc/gravity gravity-ledger:latest
 }
 
 start_devnet() {
-	docker run -itd -p 26657:26657 -p 2500:2500 -v $GRAVITY_HOME:/etc/gravity gravity-ledger:latest
+	docker run -itd -p 26657:26657 -p 2500:2500 -v "$GRAVITY_HOME":/etc/gravity gravity-ledger:latest
 }
 
 while [ -n "$1" ]
 do
 	case "$1" in
-                --pure) rm -rf $GRAVITY_HOME ;;
+    --pure) rm -rf "$GRAVITY_HOME" ;;
 		--custom) start_customnet ;;
 		--dev) start_devnet ;;
 	esac
