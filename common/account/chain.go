@@ -20,6 +20,8 @@ var (
 
 func ParseChainType(chainType string) (ChainType, error) {
 	switch strings.ToLower(chainType) {
+	case "bsc":
+		return Binance, nil
 	case "ethereum":
 		return Ethereum, nil
 	case "waves":
@@ -34,6 +36,8 @@ func (ch ChainType) String() string {
 		return "ethereum"
 	case Waves:
 		return "waves"
+	case Binance:
+		return "bsc"
 	default:
 		return "ethereum"
 	}
