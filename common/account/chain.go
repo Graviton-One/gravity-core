@@ -10,6 +10,7 @@ type ChainType byte
 const (
 	Ethereum ChainType = iota
 	Waves
+	Binance
 )
 
 var (

@@ -79,6 +79,11 @@ func New(nebulaId account.NebulaId, chainType account.ChainType, chainId byte, o
 
 	var adaptor adaptors.IBlockchainAdaptor
 	switch chainType {
+	case account.Binance:
+		adaptor, err = adaptors.NewBinanceAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.BinanceAdapterWithGhClient(ghClient))
+		if err != nil {
+			return nil, err
+		}
 	case account.Ethereum:
 		adaptor, err = adaptors.NewEthereumAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.EthAdapterWithGhClient(ghClient))
 		if err != nil {
