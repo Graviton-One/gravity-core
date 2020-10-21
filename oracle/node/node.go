@@ -199,16 +199,14 @@ func (node *Node) Start(ctx context.Context) {
 			continue
 		}
 
-		pulseId, err := node.adaptor.LastPulseId(node.nebulaId, ctx)
+		newLastPulseId, err := node.adaptor.LastPulseId(node.nebulaId, ctx)
 		if err != nil {
 			errorLogger.Print(err)
 			continue
 		}
 
-		pulseId++
-
-		if lastPulseId != pulseId {
-			lastPulseId = pulseId
+		if lastPulseId != newLastPulseId {
+			lastPulseId = newLastPulseId
 			roundState = new(RoundState)
 		}
 
@@ -248,7 +246,7 @@ func (node *Node) Start(ctx context.Context) {
 			lastLedgerHeight = ledgerHeight
 		}
 
-		err = node.execute(pulseId, ledgerHeight, tcHeight, roundState, ctx)
+		err = node.execute(lastPulseId + 1, ledgerHeight, tcHeight, roundState, ctx)
 		if err != nil {
 			errorLogger.Print(err)
 		}

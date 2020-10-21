@@ -91,12 +91,12 @@ func sendHashValue(hash: ByteVector, signs: String) = {
     else if(getBytesByKey(toString(height)) != base64'0') 
         then throw("data is exist")
     else {
-        let pulseId = lastPulseId + 1
+        let currentPulseId = lastPulseId + 1
         WriteSet([
-            DataEntry(getHashDataKey(lastPulseId), hash),
-            DataEntry(getHeightByPulseKey(lastPulseId), height),
+            DataEntry(getHashDataKey(currentPulseId), hash),
+            DataEntry(getHeightByPulseKey(currentPulseId), height),
             DataEntry(LastHeightKey, height),
-            DataEntry(LastPulseIdKey, pulseId)
+            DataEntry(LastPulseIdKey, currentPulseId)
         ])
     }
 }
