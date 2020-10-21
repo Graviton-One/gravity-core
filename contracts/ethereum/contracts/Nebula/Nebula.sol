@@ -68,10 +68,11 @@ contract Nebula {
 
         require(count >= bftValue, "invalid bft count");
         
-        pulses[lastPulseId] = NModels.Pulse(dataHash, block.number);
+        uint256 newPulseId = lastPulseId + 1;
+        pulses[newPulseId] = NModels.Pulse(dataHash, block.number);
 
-        emit NewPulse(lastPulseId, block.number, dataHash);
-        lastPulseId = lastPulseId + 1;
+        emit NewPulse(newPulseId, block.number, dataHash);
+        lastPulseId = newPulseId;
     }
 
     function updateOracles(address[] memory newOracles, uint8[] memory v, bytes32[] memory r, bytes32[] memory s, uint256 newRound) public {
@@ -107,6 +108,7 @@ contract Nebula {
     //----------------------------------internals---------------------------------------------------------------------
 
     function sendValueToSub(uint256 pulseId, bytes32 subId) internal {
+        require(pulseId <= block.number + 1, "invalid block number");
         require(isPublseSubSent[pulseId][subId] == false, "sub sent");
         
         isPublseSubSent[pulseId][subId] = true;
