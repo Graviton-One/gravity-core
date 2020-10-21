@@ -215,8 +215,6 @@ func (node *Node) Start(ctx context.Context) {
 			errorLogger.Print(err)
 		}
 
-		tcHeight = tcHeight / 8 * 8
-
 		if tcHeight != lastTcHeight {
 			fmt.Printf("Tc Height: %d\n", tcHeight)
 			pulseCountInBlock = 0
