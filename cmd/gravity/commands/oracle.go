@@ -78,6 +78,7 @@ func initOracleConfig(ctx *cli.Context) error {
 		ChainId:            "S",
 		ChainType:          chainTypeStr,
 		ExtractorUrl:       extractorUrl,
+		BlocksInterval:     10,
 	}
 	b, err := json.MarshalIndent(&cfg, "", " ")
 	if err != nil {
