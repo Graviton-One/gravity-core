@@ -243,7 +243,8 @@ func (node *Node) Start(ctx context.Context) {
 }
 
 func (node *Node) execute(ledgerHeight uint64, tcHeight uint64, roundState *RoundState, ctx context.Context) error {
-	pulseId, err := node.adaptor.LastPulseId(node.nebulaId, ctx)
+	lastPulseId, err := node.adaptor.LastPulseId(node.nebulaId, ctx)
+	pulseId := lastPulseId + 1
 	if err != nil {
 		return err
 	}
