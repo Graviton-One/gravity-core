@@ -78,6 +78,7 @@ func initOracleConfig(ctx *cli.Context) error {
 		ChainId:            "S",
 		ChainType:          chainTypeStr,
 		ExtractorUrl:       extractorUrl,
+		BlocksInterval:     10,
 	}
 	b, err := json.MarshalIndent(&cfg, "", " ")
 	if err != nil {
@@ -96,7 +97,6 @@ func initOracleConfig(ctx *cli.Context) error {
 func startOracle(ctx *cli.Context) error {
 	home := ctx.String(HomeFlag)
 	nebulaIdStr := ctx.Args().First()
-
 	var cfg config.OracleConfig
 	err := config.ParseConfig(path.Join(home, DefaultNebulaeDir, fmt.Sprintf("%s.json", nebulaIdStr)), &cfg)
 	if err != nil {
@@ -142,6 +142,7 @@ func startOracle(ctx *cli.Context) error {
 		node.NewValidator(validatorPrivKey),
 		cfg.ExtractorUrl,
 		cfg.GravityNodeUrl,
+		cfg.BlocksInterval,
 		cfg.TargetChainNodeUrl,
 		sysCtx)
 

@@ -1,4 +1,4 @@
-pragma solidity ^0.7.0;
+pragma solidity <=0.7.0;
 
 contract Gravity {
     mapping(uint256=>address[]) public rounds;

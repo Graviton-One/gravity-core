@@ -471,6 +471,11 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 		var adaptor adaptors.IBlockchainAdaptor
 
 		switch chainType {
+		case account.Binance:
+			adaptor, err = adaptors.NewBinanceAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithBinanceGravityContract(v.GravityContractAddress))
+			if err != nil {
+				return nil, err
+			}
 		case account.Ethereum:
 			adaptor, err = adaptors.NewEthereumAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithEthereumGravityContract(v.GravityContractAddress))
 			if err != nil {

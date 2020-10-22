@@ -21,6 +21,8 @@ func formSignConsulsByConsulKey(pubKey account.ConsulPubKey, chainType account.C
 		prefix = "waves"
 	case account.Ethereum:
 		prefix = "ethereum"
+	case account.Binance:
+		prefix = "bsc"
 	}
 	return formKey(string(SignConsulsResultByConsulKey), hexutil.Encode(pubKey[:]), prefix, fmt.Sprintf("%d", roundId))
 }
