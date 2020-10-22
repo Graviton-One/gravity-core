@@ -68,10 +68,11 @@ contract Nebula {
 
         require(count >= bftValue, "invalid bft count");
         
-        pulses[lastPulseId] = NModels.Pulse(dataHash, block.number);
+        uint256 newPulseId = lastPulseId + 1;
+        pulses[newPulseId] = NModels.Pulse(dataHash, block.number);
 
-        emit NewPulse(lastPulseId, block.number, dataHash);
-        lastPulseId = lastPulseId + 1;
+        emit NewPulse(newPulseId, block.number, dataHash);
+        lastPulseId = newPulseId;
     }
 
     function updateOracles(address[] memory newOracles, uint8[] memory v, bytes32[] memory r, bytes32[] memory s, uint256 newRound) public {
