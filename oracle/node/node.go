@@ -251,20 +251,20 @@ func (node *Node) Start(ctx context.Context) {
 			lastLedgerHeight = ledgerHeight
 		}
 
-		err = node.execute(lastPulseId + 1, ledgerHeight, tcHeight, roundState, ctx)
+		err = node.execute(lastPulseId + 1, ledgerHeight, tcHeight, tcHeight/node.blocksInterval, roundState, ctx)
 		if err != nil {
 			errorLogger.Print(err)
 		}
 	}
 }
 
-func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, roundState *RoundState, ctx context.Context) error {
+func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, intervalId uint64, roundState *RoundState, ctx context.Context) error {
 	switch state.CalculateSubRound(ledgerHeight) {
 	case state.CommitSubRound:
 		if roundState.commitHash != nil {
 			return nil
 		}
-		_, err := node.gravityClient.CommitHash(node.chainType, node.nebulaId, int64(tcHeight), int64(pulseId), node.oraclePubKey)
+		_, err := node.gravityClient.CommitHash(node.chainType, node.nebulaId, int64(intervalId), int64(pulseId), node.oraclePubKey)
 		if err != nil && err != gravity.ErrValueNotFound {
 			return err
 		} else if err == nil {
@@ -282,7 +282,7 @@ func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, 
 			return nil
 		}
 
-		commit, err := node.commit(data, tcHeight, pulseId)
+		commit, err := node.commit(data, intervalId, pulseId)
 		if err != nil {
 			return err
 		}
@@ -293,14 +293,14 @@ func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, 
 		if roundState.commitHash == nil || roundState.RevealExist {
 			return nil
 		}
-		_, err := node.gravityClient.Reveal(node.chainType, node.oraclePubKey, node.nebulaId, int64(tcHeight), int64(pulseId), roundState.commitHash)
+		_, err := node.gravityClient.Reveal(node.chainType, node.oraclePubKey, node.nebulaId, int64(intervalId), int64(pulseId), roundState.commitHash)
 		if err != nil && err != gravity.ErrValueNotFound {
 			return err
 		} else if err == nil {
 			return nil
 		}
 
-		err = node.reveal(tcHeight, pulseId, roundState.data, roundState.commitHash)
+		err = node.reveal(intervalId, pulseId, roundState.data, roundState.commitHash)
 		if err != nil {
 			return err
 		}
@@ -310,7 +310,7 @@ func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, 
 			return nil
 		}
 
-		value, hash, err := node.signResult(tcHeight, pulseId, ctx)
+		value, hash, err := node.signResult(intervalId, pulseId, ctx)
 		if err != nil {
 			return err
 		}
