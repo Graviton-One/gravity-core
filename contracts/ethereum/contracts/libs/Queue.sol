@@ -1,11 +1,11 @@
-pragma solidity ^0.7;
+pragma solidity <=0.7;
 
 library QueueLib {
     struct Queue {
         bytes32 first;
         bytes32 last;
-        mapping(bytes32=>bytes32) nextElement;
-        mapping(bytes32=>bytes32) prevElement;
+        mapping(bytes32 => bytes32) nextElement;
+        mapping(bytes32 => bytes32) prevElement;
     }
 
     function drop(Queue storage queue, bytes32 rqHash) public {
@@ -33,7 +33,6 @@ library QueueLib {
     //     }
     // }
 
-
     function push(Queue storage queue, bytes32 elementHash) public {
         if (queue.first == 0x000) {
             queue.first = elementHash;
@@ -45,5 +44,4 @@ library QueueLib {
             queue.last = elementHash;
         }
     }
-
 }
