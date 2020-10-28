@@ -1,4 +1,4 @@
-pragma solidity <=0.7.0;
+pragma solidity ^0.7;
 
 library QueueLib {
     struct Queue {
@@ -9,23 +9,29 @@ library QueueLib {
     }
 
     function drop(Queue storage queue, bytes32 rqHash) public {
-        if (queue.first == rqHash && queue.last == rqHash) {
-            queue.first = 0x000;
-            queue.last = 0x000;
-        } else if (queue.first == rqHash) {
-            queue.first = queue.nextElement[rqHash];
-        } else if (queue.last == rqHash) {
-            queue.last = queue.prevElement[rqHash];
+        bytes32 prevElement = queue.prevElement[rqHash];
+        bytes32 nextElement = queue.nextElement[rqHash];
+
+        if (prevElement != bytes32(0)) {
+            queue.nextElement[prevElement] = nextElement;
+        } else {
+            queue.first = nextElement;
+        }
+
+        if (nextElement != bytes32(0)) {
+            queue.prevElement[nextElement] = prevElement;
+        } else {
+            queue.last = prevElement;
         }
     }
 
-    function next(Queue storage queue, bytes32 startRqHash) public view returns(bytes32) {
-        if (startRqHash == 0x000)
-            return queue.first;
-        else {
-            return queue.nextElement[startRqHash];
-        }
-    }
+    // function next(Queue storage queue, bytes32 startRqHash) public view returns(bytes32) {
+    //     if (startRqHash == 0x000)
+    //         return queue.first;
+    //     else {
+    //         return queue.nextElement[startRqHash];
+    //     }
+    // }
 
 
     function push(Queue storage queue, bytes32 elementHash) public {
@@ -35,6 +41,7 @@ library QueueLib {
         } else {
             queue.nextElement[queue.last] = elementHash;
             queue.prevElement[elementHash] = queue.last;
+            queue.nextElement[elementHash] = bytes32(0);
             queue.last = elementHash;
         }
     }
