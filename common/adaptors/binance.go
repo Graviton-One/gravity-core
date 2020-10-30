@@ -6,6 +6,8 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"errors"
+	"github.com/Gravity-Tech/gravity-core/abi"
+	"github.com/Gravity-Tech/gravity-core/abi/ethereum"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 	"math/big"
 	"strconv"
@@ -16,7 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
-	"github.com/Gravity-Tech/gravity-core/common/contracts"
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -39,7 +40,7 @@ type BinanceAdaptor struct {
 	ghClient  *gravity.Client
 	ethClient *ethclient.Client
 
-	gravityContract *contracts.Gravity
+	gravityContract *ethereum.Gravity
 }
 type BinanceAdapterOption func(*BinanceAdaptor) error
 
@@ -51,7 +52,7 @@ func WithBinanceGravityContract(address string) BinanceAdapterOption {
 		}
 		ethContractAddress := common.Address{}
 		ethContractAddress.SetBytes(hexAddress)
-		h.gravityContract, err = contracts.NewGravity(ethContractAddress, h.ethClient)
+		h.gravityContract, err = ethereum.NewGravity(ethContractAddress, h.ethClient)
 		if err != nil {
 			return err
 		}
@@ -142,8 +143,8 @@ func (adaptor *BinanceAdaptor) PubKey() account.OraclesPubKey {
 	oraclePubKey := account.BytesToOraclePubKey(pubKey[:], account.Ethereum)
 	return oraclePubKey
 }
-func (adaptor *BinanceAdaptor) ValueType(nebulaId account.NebulaId, ctx context.Context) (contracts.ExtractorType, error) {
-	nebula, err := contracts.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
+func (adaptor *BinanceAdaptor) ValueType(nebulaId account.NebulaId, ctx context.Context) (abi.ExtractorType, error) {
+	nebula, err := ethereum.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return 0, err
 	}
@@ -153,11 +154,11 @@ func (adaptor *BinanceAdaptor) ValueType(nebulaId account.NebulaId, ctx context.
 		return 0, err
 	}
 
-	return contracts.ExtractorType(exType), nil
+	return abi.ExtractorType(exType), nil
 }
 
 func (adaptor *BinanceAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
-	nebula, err := contracts.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
+	nebula, err := ethereum.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return "", err
 	}
@@ -242,7 +243,7 @@ func (adaptor *BinanceAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint6
 func (adaptor *BinanceAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId uint64, value *extractor.Data, ctx context.Context) error {
 	var err error
 
-	nebula, err := contracts.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
+	nebula, err := ethereum.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return err
 	}
@@ -291,7 +292,7 @@ func (adaptor *BinanceAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseI
 }
 
 func (adaptor *BinanceAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
-	nebula, err := contracts.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
+	nebula, err := ethereum.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return "", err
 	}
@@ -445,7 +446,7 @@ func (adaptor *BinanceAdaptor) SignConsuls(consulsAddresses []*account.OraclesPu
 	return sign, nil
 }
 func (adaptor *BinanceAdaptor) SignOracles(nebulaId account.NebulaId, oracles []*account.OraclesPubKey) ([]byte, error) {
-	nebula, err := contracts.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
+	nebula, err := ethereum.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return nil, err
 	}
@@ -477,7 +478,7 @@ func (adaptor *BinanceAdaptor) SignOracles(nebulaId account.NebulaId, oracles []
 }
 
 func (adaptor *BinanceAdaptor) LastPulseId(nebulaId account.NebulaId, ctx context.Context) (uint64, error) {
-	nebula, err := contracts.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
+	nebula, err := ethereum.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return 0, err
 	}

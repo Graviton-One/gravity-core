@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/Gravity-Tech/gravity-core/abi"
 	"os"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 
 	"log"
 
-	"github.com/Gravity-Tech/gravity-core/common/contracts"
 	"github.com/Gravity-Tech/gravity-core/common/state"
 
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
@@ -54,7 +54,7 @@ func NewValidator(privKey []byte) *Validator {
 
 type Extractor struct {
 	*extractor.Client
-	ExtractorType contracts.ExtractorType
+	ExtractorType abi.ExtractorType
 }
 
 type Node struct {

@@ -4,12 +4,11 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/Gravity-Tech/gravity-core/abi"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/Gravity-Tech/gravity-core/common/contracts"
 
 	"github.com/Gravity-Tech/gravity-core/common/storage"
 
@@ -98,14 +97,14 @@ func (adaptor *WavesAdaptor) PubKey() account.OraclesPubKey {
 	oraclePubKey := account.BytesToOraclePubKey(pubKey[:], account.Waves)
 	return oraclePubKey
 }
-func (adaptor *WavesAdaptor) ValueType(nebulaId account.NebulaId, ctx context.Context) (contracts.ExtractorType, error) {
+func (adaptor *WavesAdaptor) ValueType(nebulaId account.NebulaId, ctx context.Context) (abi.ExtractorType, error) {
 	nebulaAddress := base58.Encode(nebulaId.ToBytes(account.Waves))
 	state, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, "type", ctx)
 	if err != nil {
 		return 0, err
 	}
 
-	return contracts.ExtractorType(state.Value.(float64)), nil
+	return abi.ExtractorType(state.Value.(float64)), nil
 }
 
 func (adaptor *WavesAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
