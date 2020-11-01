@@ -309,8 +309,7 @@ func (adaptor *WavesAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracl
 	var newOracles []string
 	var stringSigns [5]string
 
-	lastRound := uint64(lastRoundState.Value.(float64))
-	consulsState, _, err := adaptor.helper.GetStateByAddressAndKey(adaptor.gravityContract, fmt.Sprintf("consuls_%d", lastRound), ctx)
+	consulsState, _, err := adaptor.helper.GetStateByAddressAndKey(adaptor.gravityContract, fmt.Sprintf("consuls_%d", round), ctx)
 	if err != nil {
 		return "", err
 	}
