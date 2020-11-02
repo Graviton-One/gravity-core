@@ -151,7 +151,7 @@ func sendValueToSub() = {
                 case _ => throw("invalid height type")
             }
             
-            if (invokeTx.function != "attachValue") 
+            if (invokeTx.function != "attachData")
                 then throw("invalid function name")
             else if (invokeTx.args.size() != 2) 
                 then throw("invalid args size")

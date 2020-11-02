@@ -223,11 +223,10 @@ func (node *Node) Start(ctx context.Context) {
 		if tcHeight != lastTcHeight {
 			fmt.Printf("Tc Height: %d\n", tcHeight)
 			lastTcHeight = tcHeight
-		}
-
-		if tcHeight % node.blocksInterval == 0 {
-			pulseCountInBlock = 0
-			roundState = new(RoundState)
+			if tcHeight % node.blocksInterval == 0 {
+				pulseCountInBlock = 0
+				roundState = new(RoundState)
+			}
 		}
 
 		oraclesMap, err := node.gravityClient.BftOraclesByNebula(node.chainType, node.nebulaId)
@@ -313,6 +312,10 @@ func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, 
 		value, hash, err := node.signResult(intervalId, pulseId, ctx)
 		if err != nil {
 			return err
+		}
+		//TODO migrate to err
+		if value == nil {
+			return nil
 		}
 
 		roundState.resultValue = value

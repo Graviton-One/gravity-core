@@ -100,6 +100,9 @@ func (node *Node) signResult(tcHeight uint64, pulseId uint64, ctx context.Contex
 		values = append(values, *fromBytes(b, node.extractor.ExtractorType))
 	}
 
+	if len(values) == 0 {
+		return nil, nil, nil
+	}
 	result, err := node.extractor.Aggregate(values, ctx)
 	if err != nil {
 		return nil, nil, err

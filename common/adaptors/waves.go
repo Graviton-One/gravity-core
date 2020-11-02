@@ -273,12 +273,12 @@ func (adaptor *WavesAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId 
 		ChainID:         adaptor.chainID,
 		ScriptRecipient: contract,
 		FunctionCall: proto.FunctionCall{
-			Name:      "attachValue",
+			Name:      "attachData",
 			Arguments: args,
 		},
 		Payments:  nil,
 		FeeAsset:  *asset,
-		Fee:       500000,
+		Fee:       900000,
 		Timestamp: wclient.NewTimestampFromTime(time.Now()),
 	}
 
