@@ -44,5 +44,5 @@ if [ -n "$GRAVITY_BOOTSTRAP" ]
 then
   gravity ledger --home=/etc/gravity start --rpc="$GRAVITY_RPC" --bootstrap="$GRAVITY_BOOTSTRAP"
 else
-  gravity ledger --home=/etc/gravity start --rpc="$GRAVITY_RPC"
+  gravity ledger --home=/etc/gravity start --rpc="$GRAVITY_RPC" --bootstrap=""
 fi
