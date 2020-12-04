@@ -28,6 +28,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 		roundId := (height / CalculateScoreInterval) - 1
 
 		index := roundId % int64(consulInfo.TotalCount)
+
 		for k, v := range scheduler.Adaptors {
 			lastRound, err := v.LastRound(scheduler.ctx)
 			if err != nil {
@@ -45,26 +46,27 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 			if err != nil {
 				return err
 			}
+		}
 
-			nebulae, err := scheduler.client.Nebulae()
+		nebulae, err := scheduler.client.Nebulae()
+		if err != nil {
+			return err
+		}
+
+		for k, v := range nebulae {
+			nebulaId, err := account.StringToNebulaId(k, v.ChainType)
 			if err != nil {
-				return err
+				fmt.Printf("Error:%s\n", err.Error())
+				continue
 			}
 
-			for k, v := range nebulae {
-				nebulaId, err := account.StringToNebulaId(k, v.ChainType)
-				if err != nil {
-					fmt.Printf("Error:%s\n", err.Error())
-					continue
-				}
-
-				err = scheduler.sendOraclesToNebula(nebulaId, v.ChainType, roundId)
-				if err != nil {
-					continue
-				}
+			err = scheduler.sendOraclesToNebula(nebulaId, v.ChainType, roundId)
+			if err != nil {
+				continue
 			}
 		}
 	}
+
 
 	for k, v := range scheduler.Adaptors {
 		lastRound, err := v.LastRound(scheduler.ctx)

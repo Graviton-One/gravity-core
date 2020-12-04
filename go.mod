@@ -10,7 +10,7 @@ require (
 	github.com/tendermint/tendermint v0.33.4
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/wavesplatform/go-lib-crypto v0.0.0-20190905125804-474f21517ad5
-	github.com/wavesplatform/gowaves v0.7.0
+	github.com/wavesplatform/gowaves v0.8.4
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897 // indirect
 	golang.org/x/sys v0.0.0-20201020230747-6e5568b54d1a // indirect
 )

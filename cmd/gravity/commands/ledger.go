@@ -353,7 +353,7 @@ func startLedger(ctx *cli.Context) error {
 
 	tConfig.RootDir = home
 	tConfig.Consensus.RootDir = home
-	tConfig.Consensus.TimeoutCommit = time.Second * 3
+	tConfig.Consensus.TimeoutCommit = time.Second / 3
 
 	logger, err := tmflags.ParseLogLevel(tConfig.LogLevel, log.NewTMLogger(log.NewSyncWriter(os.Stdout)), cfg.DefaultLogLevel())
 	if err != nil {
