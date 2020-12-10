@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	CalculateScoreInterval = 200
+	CalculateScoreInterval = 4000
 	OracleCount            = 5
 )
 
