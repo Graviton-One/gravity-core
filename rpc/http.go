@@ -101,7 +101,7 @@ func nebulaHandler(w http.ResponseWriter, r *http.Request, action func(rq *http.
 }
 
 func dropNebula(r *http.Request) error {
-	var request AddNebulaRq
+	var request DropNebulaRq
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&request)
 	if err != nil {
