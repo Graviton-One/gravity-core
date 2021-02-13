@@ -79,8 +79,10 @@ func SetState(tx *transactions.Transaction, store *storage.Storage, adaptors map
 		return newRound(store, tx, height, adaptors, ctx)
 	case transactions.Vote:
 		return vote(store, tx)
-	case transactions.SetNebula:
+	case transactions.AddNebula:
 		return setNebula(store, tx)
+	case transactions.DropNebula:
+		return dropNebula(store, tx)
 	case transactions.SignNewConsuls:
 		return signNewConsuls(store, tx)
 	case transactions.SignNewOracles:
@@ -235,6 +237,11 @@ func vote(store *storage.Storage, tx *transactions.Transaction) error {
 	}
 
 	return store.SetVote(tx.SenderPubKey, votes)
+}
+
+func dropNebula(store *storage.Storage, tx *transactions.Transaction) error {
+	nebulaId := account.BytesToNebulaId(tx.Value(0).([]byte))
+	return store.DropNebula(nebulaId)
 }
 
 func setNebula(store *storage.Storage, tx *transactions.Transaction) error {

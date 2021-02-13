@@ -14,12 +14,17 @@ import (
 
 var cfg *Config
 
-type SetNebulaRq struct {
+type AddNebulaRq struct {
 	NebulaId             string
 	ChainType            string
 	MaxPulseCountInBlock uint64
 	MinScore             uint64
 }
+type DropNebulaRq struct {
+	NebulaId  string
+	ChainType string
+}
+
 type VotesRq struct {
 	Votes []VoteRq
 }
@@ -31,7 +36,12 @@ type VoteRq struct {
 func ListenRpcServer(config *Config) {
 	cfg = config
 	http.HandleFunc("/vote", vote)
-	http.HandleFunc("/setNebula", setNebulaHandler)
+	http.HandleFunc("/setNebula", func(rp http.ResponseWriter, rq *http.Request) {
+		nebulaHandler(rp, rq, addNebula)
+	})
+	http.HandleFunc("/dropNebula", func(rp http.ResponseWriter, rq *http.Request) {
+		nebulaHandler(rp, rq, dropNebula)
+	})
 	err := http.ListenAndServe(cfg.Host, nil)
 	if err != nil {
 		fmt.Printf("Error Private RPC: %s", err.Error())
@@ -81,23 +91,57 @@ func vote(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func setNebulaHandler(w http.ResponseWriter, r *http.Request) {
-	err := setNebula(r)
+func nebulaHandler(w http.ResponseWriter, r *http.Request, action func(rq *http.Request) error) {
+	err := action(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	return
 }
-func setNebula(r *http.Request) error {
-	var request SetNebulaRq
+
+func dropNebula(r *http.Request) error {
+	var request DropNebulaRq
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&request)
 	if err != nil {
 		return err
 	}
 
-	tx, err := transactions.New(cfg.pubKey, transactions.SetNebula, cfg.privKey)
+	tx, err := transactions.New(cfg.pubKey, transactions.DropNebula, cfg.privKey)
+	if err != nil {
+		return err
+	}
+
+	chainType, err := account.ParseChainType(request.ChainType)
+	if err != nil {
+		return err
+	}
+	nebulaId, err := account.StringToNebulaId(request.NebulaId, chainType)
+	if err != nil {
+		return err
+	}
+
+	tx.AddValues([]transactions.Value{
+		transactions.BytesValue{Value: nebulaId[:]},
+	})
+	err = cfg.client.SendTx(tx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func addNebula(r *http.Request) error {
+	var request AddNebulaRq
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&request)
+	if err != nil {
+		return err
+	}
+
+	tx, err := transactions.New(cfg.pubKey, transactions.AddNebula, cfg.privKey)
 	if err != nil {
 		return err
 	}

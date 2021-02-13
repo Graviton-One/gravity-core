@@ -79,6 +79,10 @@ func (storage *Storage) setValue(key []byte, jsonOrBytes interface{}) error {
 	return storage.txn.Set(key, b)
 }
 
+func (storage *Storage) dropValue(key []byte) error {
+	return storage.txn.Delete(key)
+}
+
 func (storage *Storage) NewTransaction(db *badger.DB) {
 	storage.txn = db.NewTransaction(true)
 }

@@ -76,6 +76,11 @@ func (storage *Storage) NebulaInfo(nebulaId account.NebulaId) (*NebulaInfo, erro
 
 	return &nebulae, err
 }
+
+func (storage *Storage) DropNebula(nebulaId account.NebulaId) error {
+	return storage.dropValue(formNebulaInfoKey(nebulaId))
+}
+
 func (storage *Storage) SetNebula(nebulaId account.NebulaId, info NebulaInfo) error {
 	return storage.setValue(formNebulaInfoKey(nebulaId), &info)
 }
