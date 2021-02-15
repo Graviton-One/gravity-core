@@ -93,6 +93,11 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 		if err != nil {
 			return nil, err
 		}
+	case account.Huobi:
+		adaptor, err = adaptors.NewHuobiAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.HuobiAdapterWithGhClient(ghClient))
+		if err != nil {
+			return nil, err
+		}
 	case account.Waves:
 		adaptor, err = adaptors.NewWavesAdapter(oracleSecretKey, targetChainNodeUrl, chainId, adaptors.WavesAdapterWithGhClient(ghClient))
 		if err != nil {

@@ -481,6 +481,11 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 			if err != nil {
 				return nil, err
 			}
+		case account.Huobi:
+			adaptor, err = adaptors.NewHuobiAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithHuobiGravityContract(v.GravityContractAddress))
+			if err != nil {
+				return nil, err
+			}
 		case account.Waves:
 			adaptor, err = adaptors.NewWavesAdapter(privKey, v.NodeUrl, v.ChainId[0], adaptors.WithWavesGravityContract(v.GravityContractAddress))
 			if err != nil {
