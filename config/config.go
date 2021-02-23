@@ -25,16 +25,47 @@ type Key struct {
 	PrivKey string
 }
 
-func GeneratePrivKeys() (*Keys, error) {
-	validatorPrivKey := ed25519.GenPrivKey()
-
+func generateEthereumBasedPrivKeys() (*Key, error) {
 	ethPrivKey, err := ethCrypto.GenerateKey()
 	if err != nil {
 		return nil, err
 	}
 
+	return &Key{
+		Address: ethCrypto.PubkeyToAddress(ethPrivKey.PublicKey).String(),
+		PubKey:  hexutil.Encode(ethCrypto.CompressPubkey(&ethPrivKey.PublicKey)),
+		PrivKey: hexutil.Encode(ethCrypto.FromECDSA(ethPrivKey)),
+	}, nil
+}
+
+func generateWavesPrivKeys(chain byte) (*Key, error) {
 	wCrypto := wavesplatform.NewWavesCrypto()
 	wSeed := wCrypto.RandomSeed()
+
+	return &Key{
+		Address: string(wCrypto.AddressFromSeed(wSeed, wavesplatform.WavesChainID(chain))),
+		PubKey:  string(wCrypto.PublicKey(wSeed)),
+		PrivKey: string(wSeed),
+	}, nil
+}
+
+func GeneratePrivKeys(wavesChainID byte) (*Keys, error) {
+	validatorPrivKey := ed25519.GenPrivKey()
+
+
+	ethPrivKeys, err := generateEthereumBasedPrivKeys()
+	if err != nil {
+		return nil, err
+	}
+
+	bscPrivKeys, err := generateEthereumBasedPrivKeys()
+	if err != nil {
+		return nil, err
+	}
+	wavesPrivKeys, err := generateWavesPrivKeys(wavesChainID)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Keys{
 		Validator: Key{
@@ -43,16 +74,9 @@ func GeneratePrivKeys() (*Keys, error) {
 			PrivKey: hexutil.Encode(validatorPrivKey[:]),
 		},
 		TargetChains: map[string]Key{
-			account.Ethereum.String(): Key{
-				Address: ethCrypto.PubkeyToAddress(ethPrivKey.PublicKey).String(),
-				PubKey:  hexutil.Encode(ethCrypto.CompressPubkey(&ethPrivKey.PublicKey)),
-				PrivKey: hexutil.Encode(ethCrypto.FromECDSA(ethPrivKey)),
-			},
-			account.Waves.String(): Key{
-				Address: string(wCrypto.AddressFromSeed(wSeed, 'S')),
-				PubKey:  string(wCrypto.PublicKey(wSeed)),
-				PrivKey: string(wSeed),
-			},
+			account.Ethereum.String(): *ethPrivKeys,
+			account.Binance.String(): *bscPrivKeys,
+			account.Waves.String(): *wavesPrivKeys,
 		},
 	}, nil
 }

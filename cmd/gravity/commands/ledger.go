@@ -57,6 +57,7 @@ const (
 
 	Custom Network = "custom"
 	DevNet Network = "devnet"
+	Mainnet Network = "mainnet"
 
 	DevNetId ChainId = "gravity-devnet"
 	CustomId ChainId = "gravity-custom"
@@ -232,19 +233,27 @@ func initLedgerConfig(ctx *cli.Context) error {
 			return err
 		}
 	} else {
-		keysKfg, err := config.GeneratePrivKeys()
+		var keysCfg *config.Keys
+		var err error
+
+		if network == DevNet {
+			keysCfg, err = config.GeneratePrivKeys('S')
+		} else if network == Mainnet {
+			keysCfg, err = config.GeneratePrivKeys('W')
+		}
+
 		if err != nil {
 			return err
 		}
 
-		b, err := json.MarshalIndent(&keysKfg, "", " ")
+		b, err := json.MarshalIndent(&keysCfg, "", " ")
 		err = ioutil.WriteFile(path.Join(home, PrivKeysConfigFileName), b, 0644)
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("Validator PubKey: %s\n", keysKfg.Validator.PubKey)
-		for k, v := range keysKfg.TargetChains {
+		fmt.Printf("Validator PubKey: %s\n", keysCfg.Validator.PubKey)
+		for k, v := range keysCfg.TargetChains {
 			fmt.Printf("%s PubKey: %s\n", k, v.PubKey)
 		}
 	}
@@ -252,7 +261,6 @@ func initLedgerConfig(ctx *cli.Context) error {
 	var genesis config.Genesis
 	if network == DevNet {
 		genesis = DevNetGenesis
-
 	} else {
 		genesis = CustomNetGenesis
 	}
