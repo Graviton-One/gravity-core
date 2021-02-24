@@ -6,12 +6,15 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"errors"
+	"math/big"
+	"reflect"
+	"strconv"
+	"time"
+
 	"github.com/Gravity-Tech/gravity-core/abi"
 	"github.com/Gravity-Tech/gravity-core/abi/ethereum"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
-	"math/big"
-	"strconv"
-	"time"
+	"github.com/gookit/validate"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -35,14 +38,81 @@ const (
 
 type SubType uint8
 type EthereumAdaptor struct {
-	privKey *ecdsa.PrivateKey
+	privKey *ecdsa.PrivateKey `option:"-"`
 
-	ghClient  *gravity.Client
-	ethClient *ethclient.Client
+	ghClient  *gravity.Client   `option:"ghClient"`
+	ethClient *ethclient.Client `option:"ethClient"`
 
-	gravityContract *ethereum.Gravity
+	gravityContract *ethereum.Gravity `option:"gravityContract"`
 }
 type EthereumAdapterOption func(*EthereumAdaptor) error
+
+func (ea *EthereumAdaptor) applyOpts(opts AdapterOptions) error {
+	err := validateEthereumAdapterOptions(opts)
+	if err != nil {
+		return err
+	}
+	v := reflect.TypeOf(*ea)
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		tag := field.Tag.Get("option")
+		val, ok := opts[tag]
+		if ok {
+			switch tag {
+			case "ghClient":
+				ea.ghClient = val.(*gravity.Client)
+			case "wvClient":
+				ea.ethClient = val.(*ethclient.Client)
+			case "gravityContract":
+				err := WithEthereumGravityContract(val.(string))(ea)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func validateEthereumAdapterOptions(opts AdapterOptions) error {
+	v := validate.Map(opts)
+	v.AddRule("ghClient", "isGhClient")
+	v.AddRule("ethClient", "isEthClient")
+	v.AddRule("gravityContract", "string")
+
+	if !v.Validate() { // validate ok
+		return v.Errors
+	}
+	return nil
+}
+
+func NewEthereumsAdapterByOpts(seed []byte, nodeUrl string, ctx context.Context, opts AdapterOptions) (*EthereumAdaptor, error) {
+	ethClient, err := ethclient.DialContext(ctx, nodeUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	ethPrivKey := &ecdsa.PrivateKey{
+		PublicKey: ecdsa.PublicKey{
+			Curve: secp256k1.S256(),
+		},
+		D: new(big.Int),
+	}
+	ethPrivKey.D.SetBytes(seed)
+	ethPrivKey.PublicKey.X, ethPrivKey.PublicKey.Y = ethPrivKey.PublicKey.Curve.ScalarBaseMult(seed)
+
+	adapter := &EthereumAdaptor{
+		privKey:   ethPrivKey,
+		ethClient: ethClient,
+	}
+
+	err = adapter.applyOpts(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return adapter, nil
+}
 
 func WithEthereumGravityContract(address string) EthereumAdapterOption {
 	return func(h *EthereumAdaptor) error {

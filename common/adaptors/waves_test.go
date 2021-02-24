@@ -1,25 +1,11 @@
 package adaptors
 
 import (
-	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
 	wclient "github.com/wavesplatform/gowaves/pkg/client"
 )
-
-func TestOne(t *testing.T) {
-	type S struct {
-		F string `species:"gopher" color:"blue"`
-	}
-
-	s := S{}
-	st := reflect.TypeOf(s)
-	field := st.Field(0)
-	fmt.Println(field.Tag.Get("color"), field.Tag.Get("species"))
-	t.FailNow()
-}
 
 func TestWavesAdaptor_applyOpts(t *testing.T) {
 	f := NewFactory()

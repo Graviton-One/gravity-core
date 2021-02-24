@@ -71,13 +71,9 @@ func validateWavesAdapterOptions(opts AdapterOptions) error {
 	v := validate.Map(opts)
 
 	v.AddRule("chainID", "isByte")
-	//v.AddRule("chainID", "required")
 	v.AddRule("ghClient", "isGhClient")
-	//v.AddRule("ghClient", "required")
 	v.AddRule("wvClient", "isWvClient")
-	//v.AddRule("wvClient", "required")
 	v.AddRule("gravityContract", "string")
-	//v.AddRule("gravityContract", "required")
 
 	if !v.Validate() { // validate ok
 		return v.Errors

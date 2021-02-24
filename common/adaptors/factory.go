@@ -1,16 +1,20 @@
 package adaptors
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/Gravity-Tech/gravity-core/abi/ethereum"
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gookit/validate"
 	wclient "github.com/wavesplatform/gowaves/pkg/client"
 )
 
-//Options - map of custom adaptor creating options
+//AdapterOptions - map of custom adaptor creating options
 type AdapterOptions map[string]interface{}
 
+//Factory - abstract factory struct
 type Factory struct {
 }
 
@@ -38,19 +42,41 @@ func isWvClientValidator(val interface{}) bool {
 		return false
 	}
 }
+func isEthClientValidator(val interface{}) bool {
+	switch val.(type) {
+	case *ethclient.Client:
+		return true
+	default:
+		return false
+	}
+}
+
+func isEthGravityContractValidator(val interface{}) bool {
+	switch val.(type) {
+	case *ethereum.Gravity:
+		return true
+	default:
+		return false
+	}
+}
 
 func NewFactory() *Factory {
 	validate.AddValidator("isGhClient", isGhClientValidator)
 	validate.AddValidator("isByte", isByteValidator)
 	validate.AddValidator("isWvClient", isWvClientValidator)
+	validate.AddValidator("isEthClient", isEthClientValidator)
+	validate.AddValidator("isEthGravityContract", isEthGravityContractValidator)
+
 	return &Factory{}
 }
 
-//NewAdaptor - factory function
-func (f *Factory) CreateAdaptor(name string, oracleSecretKey []byte, targetChainNodeUrl string, opts AdapterOptions) (IBlockchainAdaptor, error) {
+//CreateAdaptor - factory function
+func (f *Factory) CreateAdaptor(name string, oracleSecretKey []byte, targetChainNodeUrl string, ctx context.Context, opts AdapterOptions) (IBlockchainAdaptor, error) {
 	switch name {
 	case "waves":
 		return NewWavesAdapterByOpts(oracleSecretKey, targetChainNodeUrl, opts)
+	case "ethereum":
+		return NewEthereumsAdapterByOpts(oracleSecretKey, targetChainNodeUrl, ctx, opts)
 	}
 	return nil, fmt.Errorf("Unknown adaptor name %s", name)
 }
