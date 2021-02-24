@@ -61,11 +61,13 @@ const (
 
 	DevNetId ChainId = "gravity-devnet"
 	CustomId ChainId = "gravity-custom"
+	MainnetId ChainId = "gravity-mainnet"
 
 	DefaultBootstrapUrl   = "http://104.248.255.124:26657"
 	DefaultPrivateRpcHost = "127.0.0.1:2500"
 
 	DefaultPersistentPeers = "2a0d75cc7833ad4780a1035b633c5bf4ef94ea4c@104.248.255.124:26656,32a091dfea2b4191d710d2609ca21a8abfe585ac@164.90.184.213:26656,34f38d98e78ed7965a56399998d9c1dccba24fe1@164.90.185.82:26656,c22e04514ce4ae0feb3480d03593d34e4713c86d@161.35.207.224:26656"
+	DefaultMainnetPersistenPeers = "b1f75f16f909b2cfc5dc108279b8c024a55a8754@134.122.37.128:26656"
 )
 
 var (
@@ -116,12 +118,54 @@ var (
 				"waves":    "4QWcFszF3shvhReiU26Sj8Te2QqgsfsreEgiTQNeTgB5",
 			},
 			"0xe09b444f5c5f2fbdca58bdb37a2dcc90d370ff72f28a6d4b6a6ef732c44afa24": {
-				"ethereum": "0x0298644b29e125b1293446b3d5f5b6feb12eaf2e3245df08fe74682fe0ddce5c60",
+				"ethereum": "0x0298644b29e125b1293446b3d5f5b6feb12eaf2e3245dfe08fe74682fe0ddce5c60",
 				"waves":    "CcdpQmNU9qc1uKyr2mmkYNiyadvQ3VHrcYCtLqDfrR9a",
 			},
 			"0xd70f6fcdac1a6f2292a330cc830db5e9041939ff79a87ff8536040b07378ca02": {
 				"ethereum": "0x026a6444ca6ad63e3fda46481d125f8fee07b9a5b5131a12393a654800956856b8",
 				"waves":    "E5gz7aTwjjbCbFMYmstvcvb6NvoZyZcQSt1wp68qMpBg",
+			},
+		},
+	}
+
+	MainNetConfig = config.LedgerConfig{
+		Moniker:    config.DefaultMoniker,
+		RPC:        cfg.DefaultRPCConfig(),
+		IsFastSync: true,
+		Mempool:    cfg.DefaultMempoolConfig(),
+		Details:    (&config.ValidatorDetails{}).DefaultNew(),
+		Adapters: map[string]config.AdaptorsConfig{
+			account.Binance.String(): {
+				NodeUrl:                "https://bsc-dataseed1.ninicoin.io",
+				GravityContractAddress: "0x6D639CDe23b94b243981E73b40c51FBdD2619538",
+			},
+			account.Waves.String(): {
+				NodeUrl:                "https://nodes.wavesexplorer.com",
+				GravityContractAddress: "3PGBa1Gjq6X3nNRs31T5AFTXb6C5fQF2pCP",
+				ChainId:                "W",
+			},
+		},
+	}
+	MainNetGenesis = config.Genesis{
+		ConsulsCount: 5,
+		GenesisTime:  time.Unix(1604404717580, 0),
+		ChainID:      string(MainnetId),
+		Block: types.BlockParams{
+			MaxBytes:   1048576,
+			MaxGas:     -1,
+			TimeIotaMs: 1000,
+		},
+		Evidence: types.EvidenceParams{
+			MaxAgeNumBlocks: 100000,
+			MaxAgeDuration:  1728 * time.Second,
+		},
+		InitScore: map[string]uint64{
+			"0x44b65703ea4c29031a802cfd19cf5afc5fcaeda30510116edfdfc409b3c92640": 100,
+		},
+		OraclesAddressByValidator: map[string]map[string]string{
+			"0x44b65703ea4c29031a802cfd19cf5afc5fcaeda30510116edfdfc409b3c92640": {
+				"bsc": "0x03da0ea869e39f90608b28488cd3af93c0e3910b4e91a076cbb4aa034a91bdb0a4",
+				"waves": "J4ihucd6trFFxdvGfA2iKqSDerGi3wokhezAtw4sEHNF",
 			},
 		},
 	}
@@ -261,6 +305,8 @@ func initLedgerConfig(ctx *cli.Context) error {
 	var genesis config.Genesis
 	if network == DevNet {
 		genesis = DevNetGenesis
+	} else if network == Mainnet {
+		genesis = MainNetGenesis
 	} else {
 		genesis = CustomNetGenesis
 	}
@@ -278,6 +324,11 @@ func initLedgerConfig(ctx *cli.Context) error {
 		ledgerConf = DevNetConfig
 		ledgerConf.P2P = cfg.DefaultP2PConfig()
 		ledgerConf.P2P.PersistentPeers = DefaultPersistentPeers
+		ledgerConf.P2P.ListenAddress = "tcp://0.0.0.0:26656"
+	} else if network == Mainnet {
+		ledgerConf = MainNetConfig
+		ledgerConf.P2P = cfg.DefaultP2PConfig()
+		ledgerConf.P2P.PersistentPeers = DefaultMainnetPersistenPeers
 		ledgerConf.P2P.ListenAddress = "tcp://0.0.0.0:26656"
 	} else {
 		ledgerConf = config.DefaultLedgerConfig()
