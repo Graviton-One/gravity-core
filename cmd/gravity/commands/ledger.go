@@ -118,7 +118,7 @@ var (
 				"waves":    "4QWcFszF3shvhReiU26Sj8Te2QqgsfsreEgiTQNeTgB5",
 			},
 			"0xe09b444f5c5f2fbdca58bdb37a2dcc90d370ff72f28a6d4b6a6ef732c44afa24": {
-				"ethereum": "0x0298644b29e125b1293446b3d5f5b6feb12eaf2e3245dfe08fe74682fe0ddce5c60",
+				"ethereum": "0x0298644b29e125b1293446b3d5f5b6feb12eaf2e3245df08fe74682fe0ddce5c60",
 				"waves":    "CcdpQmNU9qc1uKyr2mmkYNiyadvQ3VHrcYCtLqDfrR9a",
 			},
 			"0xd70f6fcdac1a6f2292a330cc830db5e9041939ff79a87ff8536040b07378ca02": {
