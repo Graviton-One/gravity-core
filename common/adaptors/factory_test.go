@@ -112,7 +112,7 @@ func TestFactory_CreateAdaptor(t *testing.T) {
 	}{
 
 		{name: "Test valid options", f: f, args: args{name: "waves", oracleSecretKey: []byte("key"), targetChainNodeUrl: "ws:url", opts: validOpts}, wantErr: false, want: &wanted},
-		{name: "Test incorrect adoptor name", f: f, args: args{name: "wavesddd", oracleSecretKey: []byte("key"), targetChainNodeUrl: "ws:url", opts: validOpts}, wantErr: true},
+		{name: "Test incorrect adaptor name", f: f, args: args{name: "wavesddd", oracleSecretKey: []byte("key"), targetChainNodeUrl: "ws:url", opts: validOpts}, wantErr: true},
 		{name: "Test invalid options", f: f, args: args{name: "waves", oracleSecretKey: []byte("key"), targetChainNodeUrl: "ws:url", opts: AdapterOptions{
 			"ghClient":        &ghClient,
 			"wvClient":        5,

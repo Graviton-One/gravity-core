@@ -36,7 +36,7 @@ func TestWavesAdaptor_applyOpts(t *testing.T) {
 		want    WavesAdaptor
 	}{
 		{name: "Test valid options", args: args{opts: validOpts}, wantErr: false, want: wanted},
-		{name: "Test invaid ghClient", args: args{opts: AdapterOptions{
+		{name: "Test invalid ghClient", args: args{opts: AdapterOptions{
 			"ghClient":        6,
 			"wvClient":        &wvClient,
 			"gravityContract": "contract",
