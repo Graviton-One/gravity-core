@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/Gravity-Tech/gravity-core/abi"
-	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Gravity-Tech/gravity-core/abi"
+	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
+	"github.com/gookit/validate"
 
 	"github.com/Gravity-Tech/gravity-core/common/storage"
 
@@ -30,14 +33,53 @@ const (
 type WavesAdaptor struct {
 	secret crypto.SecretKey
 
-	ghClient    *gravity.Client
-	wavesClient *wclient.Client
-	helper      helpers.ClientHelper
-
-	gravityContract string
-	chainID         byte
+	ghClient        *gravity.Client      `option:"ghClient"`
+	wavesClient     *wclient.Client      `option:"wvClient"`
+	helper          helpers.ClientHelper `option:"-"`
+	gravityContract string               `option:"gravityContract"`
+	chainID         byte                 `option:"chainID"`
 }
 type WavesAdapterOption func(*WavesAdaptor) error
+
+func (wa *WavesAdaptor) applyOpts(opts AdapterOptions) error {
+	err := validateWavesAdapterOptions(opts)
+	if err != nil {
+		return err
+	}
+	v := reflect.TypeOf(*wa)
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		tag := field.Tag.Get("option")
+		val, ok := opts[tag]
+		if ok {
+			switch tag {
+			case "ghClient":
+				wa.ghClient = val.(*gravity.Client)
+			case "wvClient":
+				wa.wavesClient = val.(*wclient.Client)
+			case "gravityContract":
+				wa.gravityContract = val.(string)
+			case "chainID":
+				wa.chainID = val.(byte)
+			}
+		}
+	}
+	return nil
+}
+
+func validateWavesAdapterOptions(opts AdapterOptions) error {
+	v := validate.Map(opts)
+
+	v.AddRule("chainID", "isByte")
+	v.AddRule("ghClient", "isGhClient")
+	v.AddRule("wvClient", "isWvClient")
+	v.AddRule("gravityContract", "string")
+
+	if !v.Validate() { // validate ok
+		return v.Errors
+	}
+	return nil
+}
 
 func WithWavesGravityContract(address string) WavesAdapterOption {
 	return func(h *WavesAdaptor) error {
@@ -50,6 +92,25 @@ func WavesAdapterWithGhClient(ghClient *gravity.Client) WavesAdapterOption {
 		h.ghClient = ghClient
 		return nil
 	}
+}
+func NewWavesAdapterByOpts(seed []byte, nodeUrl string, opts AdapterOptions) (*WavesAdaptor, error) {
+	wClient, err := wclient.NewClient(wclient.Options{ApiKey: "", BaseUrl: nodeUrl})
+	if err != nil {
+		return nil, err
+	}
+
+	secret, err := crypto.NewSecretKeyFromBytes(seed)
+	adapter := &WavesAdaptor{
+		secret:      secret,
+		wavesClient: wClient,
+		helper:      helpers.NewClientHelper(wClient),
+	}
+	err = adapter.applyOpts(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return adapter, nil
 }
 
 func NewWavesAdapter(seed []byte, nodeUrl string, chainId byte, opts ...WavesAdapterOption) (*WavesAdaptor, error) {
