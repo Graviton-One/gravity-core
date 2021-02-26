@@ -6,12 +6,14 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"errors"
-	"github.com/Gravity-Tech/gravity-core/abi"
-	"github.com/Gravity-Tech/gravity-core/abi/ethereum"
-	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
+	"fmt"
 	"math/big"
 	"strconv"
 	"time"
+
+	"github.com/Gravity-Tech/gravity-core/abi"
+	"github.com/Gravity-Tech/gravity-core/abi/ethereum"
+	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -220,6 +222,7 @@ func (adaptor *BinanceAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint6
 	}
 
 	if realSignCount < int(bft.Uint64()) {
+		fmt.Printf("Exist bft count %d < min bft count (%d)", realSignCount, bft.Uint64())
 		return "", nil
 	}
 

@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Gravity-Tech/gravity-core/abi"
 	"os"
 	"time"
+
+	"github.com/Gravity-Tech/gravity-core/abi"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -65,9 +66,9 @@ type Node struct {
 	oraclePubKey  account.OraclesPubKey
 	gravityClient *gravity.Client
 
-	adaptor   adaptors.IBlockchainAdaptor
-	extractor *Extractor
-	blocksInterval uint64
+	adaptor              adaptors.IBlockchainAdaptor
+	extractor            *Extractor
+	blocksInterval       uint64
 	MaxPulseCountInBlock uint64
 }
 
@@ -112,10 +113,10 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 			ExtractorType: exType,
 			Client:        extractor.New(extractorUrl),
 		},
-		chainType:     chainType,
-		adaptor:       adaptor,
-		gravityClient: ghClient,
-		oraclePubKey:  adaptor.PubKey(),
+		chainType:      chainType,
+		adaptor:        adaptor,
+		gravityClient:  ghClient,
+		oraclePubKey:   adaptor.PubKey(),
 		blocksInterval: blocksInterval,
 	}, nil
 }
@@ -223,7 +224,7 @@ func (node *Node) Start(ctx context.Context) {
 		if tcHeight != lastTcHeight {
 			fmt.Printf("Tc Height: %d\n", tcHeight)
 			lastTcHeight = tcHeight
-			if tcHeight % node.blocksInterval == 0 {
+			if tcHeight%node.blocksInterval == 0 {
 				pulseCountInBlock = 0
 				roundState = new(RoundState)
 			}
@@ -250,7 +251,7 @@ func (node *Node) Start(ctx context.Context) {
 			lastLedgerHeight = ledgerHeight
 		}
 
-		err = node.execute(lastPulseId + 1, ledgerHeight, tcHeight, tcHeight/node.blocksInterval, roundState, ctx)
+		err = node.execute(lastPulseId+1, ledgerHeight, tcHeight, tcHeight/node.blocksInterval, roundState, ctx)
 		if err != nil {
 			errorLogger.Print(err)
 		}
@@ -375,6 +376,8 @@ func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, 
 			if err != nil {
 				return err
 			}
+		} else {
+			fmt.Printf("Info: Tx result not sent")
 		}
 	}
 	return nil
