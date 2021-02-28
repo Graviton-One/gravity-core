@@ -26,7 +26,7 @@ contract Nebula {
     uint256 public lastPulseId;
     mapping(bytes32 => NModels.Subscription) public subscriptions;
     mapping(uint256 => NModels.Pulse) public pulses;
-    mapping(uint256 => mapping(bytes32 => bool)) public isPublseSubSent;
+    mapping(uint256 => mapping(bytes32 => bool)) public isPulseSubSent;
 
     constructor(NModels.DataType newDataType, address newGravityContract, address[] memory newOracle, uint256 newBftValue) public {
         dataType = newDataType;
@@ -108,9 +108,9 @@ contract Nebula {
     //----------------------------------internals---------------------------------------------------------------------
 
     function sendValueToSub(uint256 pulseId, bytes32 subId) internal {
-        require(isPublseSubSent[pulseId][subId] == false, "sub sent");
+        require(isPulseSubSent[pulseId][subId] == false, "sub sent");
         
-        isPublseSubSent[pulseId][subId] = true;
+        isPulseSubSent[pulseId][subId] = true;
     }
     
     function subscribe(address payable contractAddress, uint8 minConfirmations, uint256 reward) public {
