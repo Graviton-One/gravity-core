@@ -10,45 +10,6 @@ import (
 	"time"
 )
 
-
-type NetworkEnvironment int
-
-const (
-	Wavelet = 1e8
-)
-
-const (
-	WavesStagenet NetworkEnvironment = iota
-	WavesTestnet
-)
-
-func (env NetworkEnvironment) NodeURL() string {
-	switch env {
-	case WavesStagenet:
-		return "https://nodes-stagenet.wavesnodes.com"
-	}
-
-	panic("no node url")
-}
-
-func (env NetworkEnvironment) ChainID() string {
-	switch env {
-	case WavesStagenet:
-		return "S"
-	}
-
-	panic("invalid chain id")
-}
-
-type WavesTestConfig struct {
-	DistributorSeed string
-	Environment     NetworkEnvironment
-}
-
-type WavesActorSeedsMock struct {
-	Gravity, Nebula, Subscriber wavesplatform.Seed
-}
-
 var cfg WavesTestConfig
 var actorsMock WavesActorSeedsMock
 
@@ -72,37 +33,43 @@ func Init() {
 
 	cfg = WavesTestConfig{ DistributorSeed: distributor, Environment: environment }
 
-	actorsMock = WavesActorSeedsMock{
-		Gravity:    wCrypto.RandomSeed(),
-		Nebula:     wCrypto.RandomSeed(),
-		Subscriber: wCrypto.RandomSeed(),
-	}
+	actorsMock = NewWavesActorsMock()
 }
 
-func NebulaDistinctTest() error {
-
+func NebulaDeployTest(t *testing.T) error {
 	nebulaScript, err := ScriptFromFile("./contracts/waves/nebula")
 
 	distributionSeed, err := crypto.NewSecretKeyFromBase58(string(wCrypto.PrivateKey(wavesplatform.Seed(cfg.DistributorSeed))))
 	if err != nil {
 		return err
 	}
-	//
-	//transferTx := &proto.MassTransferWithProofs{
-	//	Type:      proto.MassTransferTransaction,
-	//	Version:   1,
-	//	SenderPK:  crypto.GeneratePublicKey(distributionSeed),
-	//	Fee:       5000000,
-	//	Timestamp: wavesClient.NewTimestampFromTime(time.Now()),
-	//	Transfers: []proto.MassTransferEntry{
-	//		{
-	//			Amount:    2 * Wavelet,
-	//			Recipient: actorsMock.Gravity,
-	//		},
-	//	},
-	//	Attachment: &proto.LegacyAttachment{},
-	//}
 
+	// send waves
+	// 0.1 - for script set
+	// 0.1 - for data tx set
+	transferTx := &proto.Transfer{
+		SenderPK:  crypto.GeneratePublicKey(distributionSeed),
+		Fee:       5000000,
+		Timestamp: wavesClient.NewTimestampFromTime(time.Now()),
+		Recipient: actorsMock.Nebula.Recipient(cfg.Environment.ChainIDBytes()),
+		Amount:    0.2 * Wavelet,
+		AmountAsset: nil,
+	}
+
+	//err = transferTx.Sign(cfg.Environment.ChainIDBytes(), distributionSeed)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//_, err = testConfig.Client.Transactions.Broadcast(testConfig.Ctx, massTx)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//err = <-testConfig.Helper.WaitTx(massTx.ID.String(), testConfig.Ctx)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	return nil
 }
+
+
