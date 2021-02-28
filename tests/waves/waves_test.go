@@ -25,64 +25,8 @@ var wavesHelper helpers.ClientHelper
 
 var wCrypto = wavesplatform.NewWavesCrypto()
 
-//var nebulaTestMockCfg []NebulaTestMockConfig
+//var nebulaTestMockCfg []NebulaTestMockConfig - validate different mocks in future
 var nebulaTestMockCfg NebulaTestMockConfig
-
-type NebulaTestMockConfig struct {
-	chainId           byte
-
-	BftCoefficient    int64          `dtx:"bft_coefficient"`
-	GravityAddress    string         `dtx:"gravity_contract"`
-	NebulaPubkey      string         `dtx:"contract_pubkey"`
-	SubscriberAddress string         `dtx:"subscriber_address"`
-	OraclesList       [5]WavesActor  `dtx:"oracles"`
-}
-
-func (nebulaMockCfg *NebulaTestMockConfig) OraclesPubKeysListDataEntry () string {
-	var res []string
-
-	for _, oracle := range nebulaMockCfg.OraclesList {
-		res = append(res, oracle.Account(nebulaMockCfg.chainId).PubKey.String())
-	}
-
-	return strings.Join(res, ",")
-}
-
-func (nebulaMockCfg *NebulaTestMockConfig) DataEntries () proto.DataEntries {
-	return proto.DataEntries{
-		&proto.IntegerDataEntry{
-			Key:   "bft_coefficient",
-			Value: nebulaMockCfg.BftCoefficient,
-		},
-		&proto.StringDataEntry{
-			Key:   "gravity_contract",
-			Value: nebulaMockCfg.GravityAddress,
-		},
-		&proto.StringDataEntry{
-			Key:   "contract_pubkey",
-			Value: nebulaMockCfg.NebulaPubkey,
-		},
-		&proto.StringDataEntry{
-			Key:   "subscriber_address",
-			Value: nebulaMockCfg.SubscriberAddress,
-		},
-		&proto.StringDataEntry{
-			Key:   "oracles",
-			Value: nebulaMockCfg.OraclesPubKeysListDataEntry(),
-		},
-	}
-}
-
-func (nebulaMockCfg *NebulaTestMockConfig) OraclesPubKeysList () []string {
-	var oraclesPubKeyList []string
-
-	for _, mockedConsul := range nebulaMockCfg.OraclesList {
-		pk := mockedConsul.Account(cfg.Environment.ChainIDBytes()).PubKey.String()
-		oraclesPubKeyList = append(oraclesPubKeyList, pk)
-	}
-
-	return oraclesPubKeyList
-}
 
 func TestMain(m *testing.M) {
 	Init()
@@ -150,9 +94,18 @@ func Init() {
 			NewWavesActor(),
 		},
 	}
+
+}
+
+func TestNebulaMockConfig(t *testing.T) {
+	err := nebulaTestMockCfg.Validate()
+
+	handleError(t, err, "nebula mock is valid")
 }
 
 func TestNebulaDeploy(t *testing.T) {
+
+
 	nebulaScript, err := ScriptFromFile("../../abi/waves/nebula.abi")
 
 	//distributionSeed, err := crypto.NewSecretKeyFromBase58(string(wCrypto.PrivateKey(wavesplatform.Seed(cfg.DistributorSeed))))
@@ -220,6 +173,10 @@ func TestNebulaDeploy(t *testing.T) {
 	handleError(t, err, "deployed nebula")
 }
 
+
+// TestNebulaSendHashValueSucceeding
+// TestNebulaSendHashValueFailing_InvalidHash
+// TestNebulaSendHashValueFailing_NotEnoughSignatures
 
 func TestNebulaSendHashValueSucceeding(t *testing.T) {
 	var err error
@@ -378,3 +335,17 @@ func TestNebulaSendHashValueFailing_NotEnoughSignatures(t *testing.T) {
 		t.Log(fmt.Sprintf("success: signatures count < bft_coefficient. hash was rejected by nebula. response: \n %v \n", err.Error()))
 	}
 }
+
+/*
+ * TODO: TestUpdateOraclesSucceeding -
+ *   signatures count >= bft_coefficient & rest input params are valid
+ */
+/*
+ * TODO: TestUpdateOraclesFailing_SignaturesListLengthIsLessThanFive -
+ *   RIDE source code is bounded for signsList to have len() == 5, so '1,1,1,1,1' is valid.
+ *   That is why '1,1,1' is succeeding case for this test
+ */
+/*
+ * TODO: TestUpdateOraclesFailing_NotEnoughSignatures -
+ *   actual signatures count is less than bft
+ */
