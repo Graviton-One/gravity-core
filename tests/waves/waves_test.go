@@ -2,7 +2,6 @@ package tests
 
 import (
 	"context"
-	"time"
 	"flag"
 	"github.com/Gravity-Tech/gateway-deployer/waves/contracts"
 	wavesDeployer "github.com/Gravity-Tech/gateway-deployer/waves/deployer"
@@ -13,6 +12,7 @@ import (
 	"github.com/wavesplatform/gowaves/pkg/proto"
 	"strings"
 	"testing"
+	"time"
 )
 
 var cfg WavesTestConfig
@@ -185,21 +185,19 @@ func NebulaDeployTest(t *testing.T) {
 		clientWaves,
 		wavesHelper,
 		nebulaScript,
-		mockGravityAddress,
-		mockSubscriberAddress,
-		oraclesPubKeyList,
-		bftCoeff,
+		nebulaTestMockCfg.GravityAddress,
+		nebulaTestMockCfg.SubscriberAddress,
+		nebulaTestMockCfg.OraclesPubKeysList(),
+		nebulaTestMockCfg.BftCoefficient,
 		contracts.BytesType,
 		cfg.Environment.ChainIDBytes(),
-		actorsMock.Nebula,
+		actorsMock.Nebula.SecretKey(),
 		cfg.ctx,
 	)
 
 	if err != nil {
 		t.Fail()
 	}
-
-	return nil
 }
 
 func NebulaDataTransactionPersistTest(t *testing.T) error {
@@ -325,4 +323,8 @@ func NebulaSendHashValueFailingTest(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
+}
+
+func NebulaUpdateOraclesTest(t *testing.T) {
+
 }
