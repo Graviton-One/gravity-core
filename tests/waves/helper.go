@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"github.com/Gravity-Tech/gravity-core/common/helpers"
+	"github.com/mr-tron/base58"
 	wavesplatform "github.com/wavesplatform/go-lib-crypto"
 	"github.com/wavesplatform/gowaves/pkg/client"
 	"time"
@@ -132,27 +133,49 @@ func NewWavesActorsMock() WavesActorSeedsMock {
 	}
 }
 
-func SignAndBroadcast(tx proto.Transaction, txID string, cfg WavesTestConfig, clientWaves *client.Client, wavesHelper helpers.ClientHelper, senderSeed crypto.SecretKey) error {
+func SignAndBroadcast(tx proto.Transaction, cfg WavesTestConfig, clientWaves *client.Client, wavesHelper helpers.ClientHelper, senderSeed crypto.SecretKey) (
+	*struct {
+		Response *client.Response
+		TxID      string
+	}, error) {
 	var err error
+
+	result := &struct {
+		Response *client.Response
+		TxID     string
+	}{ Response: nil, TxID: "" }
+
 	err = tx.Sign(cfg.Environment.ChainIDBytes(), senderSeed)
 	if err != nil {
-		return err
-	}
-	_, err = clientWaves.Transactions.Broadcast(cfg.ctx, tx)
-	if err != nil {
-		return err
+		return result, err
 	}
 
-	err = <-wavesHelper.WaitTx(txID, cfg.ctx)
+	var response *client.Response
+	response, err = clientWaves.Transactions.Broadcast(cfg.ctx, tx)
 	if err != nil {
-		return err
+		return result, err
 	}
 
-	return nil
+	result.Response = response
+
+	txID, err := tx.GetID(cfg.Environment.ChainIDBytes())
+	result.TxID = base58.Encode(txID)
+
+	if err != nil {
+		return result, err
+	}
+
+	// just for compile avoidance
+	err = <-wavesHelper.WaitTx(base58.Encode(txID), cfg.ctx)
+	if err != nil {
+		return result, err
+	}
+
+	return result, nil
 }
 
-func TransferWavesTransaction(senderPubKey crypto.PublicKey, amount uint64, recipient proto.Recipient) *proto.TransferWithProofs {
-	tx := &proto.TransferWithProofs{
+func TransferWavesTransaction(senderPubKey crypto.PublicKey, amount uint64, recipient proto.Recipient) *proto.TransferWithSig {
+	tx := &proto.TransferWithSig{
 		Type:    proto.TransferTransaction,
 		Version: 1,
 		Transfer: proto.Transfer{
@@ -161,7 +184,6 @@ func TransferWavesTransaction(senderPubKey crypto.PublicKey, amount uint64, reci
 			Timestamp:   client.NewTimestampFromTime(time.Now()),
 			Recipient:   recipient,
 			Amount:      amount,
-			AmountAsset: nil,
 		},
 	}
 

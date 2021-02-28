@@ -3,6 +3,7 @@ package tests
 import (
 	"context"
 	"flag"
+	"fmt"
 	"github.com/Gravity-Tech/gateway-deployer/waves/contracts"
 	wavesDeployer "github.com/Gravity-Tech/gateway-deployer/waves/deployer"
 	"github.com/Gravity-Tech/gravity-core/common/helpers"
@@ -10,6 +11,8 @@ import (
 	client "github.com/wavesplatform/gowaves/pkg/client"
 	"github.com/wavesplatform/gowaves/pkg/crypto"
 	"github.com/wavesplatform/gowaves/pkg/proto"
+	"os"
+	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -84,30 +87,53 @@ func (nebulaMockCfg *NebulaTestMockConfig) OraclesPubKeysList () []string {
 func TestMain(m *testing.M) {
 	Init()
 
-	m.Run()
+	os.Exit(m.Run())
+}
+
+func handleError(t *testing.T, err error, successMessage string) {
+	if err != nil {
+		t.Error(err.Error())
+		debug.PrintStack()
+		panic(1)
+	} else {
+		t.Log(successMessage)
+	}
+}
+
+var testInputOption *testsInputCommand
+
+type testsInputCommand struct {
+	distributor, chainID string
 }
 
 func Init() {
-	var distributor, chainID string
-	flag.StringVar(&chainID, "chain", "S", "network env")
-	flag.StringVar(&distributor, "distributor", "", "waves token distributor")
+	testInputOption = &testsInputCommand{}
+
+	flag.StringVar(&testInputOption.chainID, "chain", "S", "network env")
+	flag.StringVar(&testInputOption.distributor, "distributor", "", "waves token distributor")
 	flag.Parse()
 
-	if distributor == ""  {
+	if testInputOption.distributor == ""  {
 		panic("distributor is invalid")
 	}
 
+	// TODO: from chain id fn should be here
 	environment := WavesStagenet
 
-	cfg = WavesTestConfig{ ctx: context.Background(), DistributorSeed: distributor, Environment: environment }
+	cfg = WavesTestConfig{ ctx: context.Background(), DistributorSeed: testInputOption.distributor, Environment: environment }
 
 	actorsMock = NewWavesActorsMock()
 
-	clientWaves, _ = client.NewClient(client.Options{
+	var err error
+	clientWaves, err = client.NewClient(client.Options{
 		BaseUrl: cfg.Environment.NodeURL(),
 		Client:  nil,
 		ApiKey:  "",
 	})
+
+	if err != nil {
+		fmt.Printf("err: %v \n", err)
+	}
 
 	wavesHelper = helpers.NewClientHelper(clientWaves)
 
@@ -126,15 +152,13 @@ func Init() {
 	}
 }
 
-func NebulaDeployTest(t *testing.T) {
-	nebulaScript, err := ScriptFromFile("./contracts/waves/nebula")
+func TestNebulaDeploy(t *testing.T) {
+	nebulaScript, err := ScriptFromFile("../../abi/waves/nebula.abi")
 
 	//distributionSeed, err := crypto.NewSecretKeyFromBase58(string(wCrypto.PrivateKey(wavesplatform.Seed(cfg.DistributorSeed))))
 	distributionSeed := WavesActor(cfg.DistributorSeed).SecretKey()
 
-	if err != nil {
-		t.Fail()
-	}
+	handleError(t, err, "nebula waves script found successfully")
 
 	// send waves
 	// 0.1 - for script set
@@ -145,41 +169,39 @@ func NebulaDeployTest(t *testing.T) {
 		actorsMock.Nebula.Recipient(cfg.Environment.ChainIDBytes()),
 	)
 
-	err = SignAndBroadcast(
+	_, err = SignAndBroadcast(
 		transferTx,
-		transferTx.ID.String(),
 		cfg,
 		clientWaves,
 		wavesHelper,
 		distributionSeed,
 	)
 
+	handleError(t, err, "successfully sent 0.2 waves to nebula")
+
+	amountPerOracle, oracleCount := 0.1, float64(len(nebulaTestMockCfg.OraclesList))
+	var oraclesMassTransferList []proto.MassTransferEntry
 	for _, oracle := range nebulaTestMockCfg.OraclesList {
 		// 0.2 for each oracle
-		transferTx := TransferWavesTransaction(
-			crypto.GeneratePublicKey(distributionSeed),
-			0.2 * Wavelet,
-			oracle.Recipient(cfg.Environment.ChainIDBytes()),
-		)
-
-		err = SignAndBroadcast(
-			transferTx,
-			transferTx.ID.String(),
-			cfg,
-			clientWaves,
-			wavesHelper,
-			distributionSeed,
-		)
-
-		if err != nil {
-			t.Fail()
-		}
-
+		oraclesMassTransferList = append(oraclesMassTransferList, proto.MassTransferEntry{
+			Recipient: oracle.Recipient(cfg.Environment.ChainIDBytes()),
+			Amount:    0.1 * Wavelet,
+		})
 	}
 
-	if err != nil {
-		t.Fail()
+	massTransferTx := &proto.MassTransferWithProofs{
+		Type:       proto.MassTransferTransaction,
+		Version:    1,
+		SenderPK:   crypto.GeneratePublicKey(distributionSeed),
+		Asset:      proto.OptionalAsset{},
+		Transfers:  oraclesMassTransferList,
+		Timestamp:  client.NewTimestampFromTime(time.Now()),
+		Fee:        0.004 * Wavelet,
 	}
+
+	_, err = SignAndBroadcast(massTransferTx, cfg, clientWaves, wavesHelper, distributionSeed)
+
+	handleError(t, err, fmt.Sprintf("mass transferred waves (%v * %v = %v) to oracles", amountPerOracle, oracleCount, amountPerOracle * oracleCount))
 
 	err = wavesDeployer.DeployNebulaWaves(
 		clientWaves,
@@ -195,46 +217,17 @@ func NebulaDeployTest(t *testing.T) {
 		cfg.ctx,
 	)
 
-	if err != nil {
-		t.Fail()
-	}
+	handleError(t, err, "deployed nebula")
 }
 
-func NebulaDataTransactionPersistTest(t *testing.T) error {
+
+func TestNebulaSendHashValueSucceeding(t *testing.T) {
 	var err error
-	// for mock option in nebula mock options
-	tx := &proto.DataWithProofs{
-		Type:      proto.DataTransaction,
-		Version:   1,
-		Proofs:    nil,
-		SenderPK:  crypto.PublicKey{},
-		Entries:   nebulaTestMockCfg.DataEntries(),
-		Fee:       0.1 * Wavelet,
-		Timestamp: 0,
-	}
 
-	err = SignAndBroadcast(
-		tx,
-		tx.ID.String(),
-		cfg,
-		clientWaves,
-		wavesHelper,
-		actorsMock.Nebula.SecretKey(),
-	)
+	t.Log("check the only succeeding behaviour of \"sendHashValue\" function")
 
-	if err != nil {
-		t.Fail()
-	}
-
-	return nil
-}
-
-func NebulaSendHashValueSucceedingTest(t *testing.T) {
-	var err error
-	var exampleHashBytes []byte
 	exampleHash := "this is example data"
-
-	copy(exampleHashBytes, exampleHash)
+	exampleHashBytes := []byte(exampleHash)
 
 	chainID := cfg.Environment.ChainIDBytes()
 
@@ -242,9 +235,7 @@ func NebulaSendHashValueSucceedingTest(t *testing.T) {
 	for i, oracle := range nebulaTestMockCfg.OraclesList {
 		signature, err := crypto.Sign(oracle.SecretKey(), exampleHashBytes)
 
-		if err != nil {
-			t.Fail()
-		}
+		handleError(t, err, fmt.Sprintf("message signed by oracle #%v successfully \n", i + 1))
 
 		signaturesList[i] = signature.String()
 	}
@@ -270,17 +261,20 @@ func NebulaSendHashValueSucceedingTest(t *testing.T) {
 		Timestamp:       client.NewTimestampFromTime(time.Now()),
 	}
 
-	err = SignAndBroadcast(invokeTx, invokeTx.ID.String(), cfg, clientWaves, wavesHelper, sender.SecretKey())
+	result, err := SignAndBroadcast(invokeTx, cfg, clientWaves, wavesHelper, sender.SecretKey())
 
-	if err != nil {
-		t.Fail()
-	}
+	handleError(t, err, fmt.Sprintf("success: invoked sendHashValue. tx id: %v", result.TxID))
 }
 
-func NebulaSendHashValueFailingTest(t *testing.T) {
+func TestNebulaSendHashValueFailing_InvalidHash(t *testing.T) {
 	var err error
-	var exampleHashBytes []byte
+
+	t.Log("ensure \"sendHashValue\" fails if signed hash differs for input hash")
+
+	targetHash := []byte("sdgfjnsdfgjsdnfg")
+
 	exampleHash := "this is example data"
+	exampleHashBytes := []byte(exampleHash)
 
 	copy(exampleHashBytes, exampleHash)
 
@@ -290,9 +284,7 @@ func NebulaSendHashValueFailingTest(t *testing.T) {
 	for i, oracle := range nebulaTestMockCfg.OraclesList {
 		signature, err := crypto.Sign(oracle.SecretKey(), exampleHashBytes)
 
-		if err != nil {
-			t.Fail()
-		}
+		handleError(t, err, fmt.Sprintf("message signed by oracle #%v: %v \n", i + 1, signature.String()))
 
 		signaturesList[i] = signature.String()
 	}
@@ -309,7 +301,7 @@ func NebulaSendHashValueFailingTest(t *testing.T) {
 		FunctionCall:    proto.FunctionCall{
 			Name: "sendHashValue",
 			Arguments: proto.Arguments{
-				proto.BinaryArgument{ Value: []byte{'a'} },
+				proto.BinaryArgument{ Value: targetHash },
 				proto.StringArgument{ Value: concatedSignatures },
 			},
 		},
@@ -318,13 +310,71 @@ func NebulaSendHashValueFailingTest(t *testing.T) {
 		Timestamp:       client.NewTimestampFromTime(time.Now()),
 	}
 
-	err = SignAndBroadcast(invokeTx, invokeTx.ID.String(), cfg, clientWaves, wavesHelper, sender.SecretKey())
+	response, err := SignAndBroadcast(invokeTx, cfg, clientWaves, wavesHelper, sender.SecretKey())
 
 	if err == nil {
-		t.Fail()
+		t.Error(fmt.Sprintf("error: invalid hash was accepted by nebula. tx: %v \n", response.TxID))
+	} else {
+		t.Log(fmt.Sprintf("success: invalid hash was rejected by nebula. response: \n %v \n", err.Error()))
 	}
 }
 
-func NebulaUpdateOraclesTest(t *testing.T) {
+/**
+ * The goal is to check that "sendHashValue" fails if total signatures count < bftCoefficient
+ */
+func TestNebulaSendHashValueFailing_NotEnoughSignatures(t *testing.T) {
+	var err error
 
+	t.Log("ensure \"sendHashValue\" fails if not enough oracle signatures provided")
+
+	exampleHash := "this is example data"
+	exampleHashBytes := []byte(exampleHash)
+
+	chainID := cfg.Environment.ChainIDBytes()
+
+	bftCoefficient := nebulaTestMockCfg.BftCoefficient
+
+	if bftCoefficient < 1 {
+		t.Error(fmt.Sprintf("error: bft_coefficient provided is less than 1. actual value: %v", bftCoefficient))
+		panic(1)
+	}
+
+	signaturesList := make([]string, 5, 5)
+	for i := int64(0); i < bftCoefficient - 1; i++ {
+		oracle := nebulaTestMockCfg.OraclesList[i]
+		signature, err := crypto.Sign(oracle.SecretKey(), exampleHashBytes)
+
+		handleError(t, err, fmt.Sprintf("message signed by oracle #%v: %v \n", i + 1, signature.String()))
+
+		signaturesList[i] = signature.String()
+	}
+
+	concatedSignatures := strings.Join(signaturesList, ",")
+
+	sender := nebulaTestMockCfg.OraclesList[0]
+	invokeTx := &proto.InvokeScriptWithProofs{
+		Type:            proto.InvokeScriptTransaction,
+		Version:         1,
+		ChainID:         cfg.Environment.ChainIDBytes(),
+		SenderPK:        sender.Account(chainID).PubKey,
+		ScriptRecipient: actorsMock.Nebula.Recipient(chainID),
+		FunctionCall:    proto.FunctionCall{
+			Name: "sendHashValue",
+			Arguments: proto.Arguments{
+				proto.BinaryArgument{ Value: exampleHashBytes },
+				proto.StringArgument{ Value: concatedSignatures },
+			},
+		},
+		Payments:        nil,
+		Fee:             0.005 * Wavelet,
+		Timestamp:       client.NewTimestampFromTime(time.Now()),
+	}
+
+	response, err := SignAndBroadcast(invokeTx, cfg, clientWaves, wavesHelper, sender.SecretKey())
+
+	if err == nil {
+		t.Error(fmt.Sprintf("error: signatures count < bft_coefficient. hash was accepted by nebula. tx: %v \n", response.TxID))
+	} else {
+		t.Log(fmt.Sprintf("success: signatures count < bft_coefficient. hash was rejected by nebula. response: \n %v \n", err.Error()))
+	}
 }
