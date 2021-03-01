@@ -88,8 +88,6 @@ func sendHashValue(hash: ByteVector, signs: String) = {
 
     if (count < bftCoefficient)
        then throw("invalid bft count")
-    else if(getBytesByKey(toString(height)) != base64'0') 
-        then throw("data exists")
     else {
         let currentPulseId = lastPulseId + 1
         WriteSet([
