@@ -14,6 +14,7 @@ import (
 	"os"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -86,6 +87,7 @@ func Init() {
 		BftCoefficient: 5,
 		GravityAddress: NewWavesActor().Account(cfg.Environment.ChainIDBytes()).Address,
 		SubscriberAddress: NewWavesActor().Account(cfg.Environment.ChainIDBytes()).Address,
+		NebulaPubkey: actorsMock.Nebula.Account(cfg.Environment.ChainIDBytes()).PubKey.String(),
 		OraclesList: [5]WavesActor{
 			NewWavesActor(),
 			NewWavesActor(),
@@ -94,7 +96,6 @@ func Init() {
 			NewWavesActor(),
 		},
 	}
-
 }
 
 func TestNebulaMockConfig(t *testing.T) {
@@ -178,10 +179,8 @@ func TestNebulaDeploy(t *testing.T) {
 // TestNebulaSendHashValueFailing_InvalidHash
 // TestNebulaSendHashValueFailing_NotEnoughSignatures
 
-func TestNebulaSendHashValueSucceeding(t *testing.T) {
+func testSuccessfulNebulaSendHashValue(t *testing.T) (error, string) {
 	var err error
-
-	t.Log("check the only succeeding behaviour of \"sendHashValue\" function")
 
 	exampleHash := "this is example data"
 	exampleHashBytes := []byte(exampleHash)
@@ -218,9 +217,16 @@ func TestNebulaSendHashValueSucceeding(t *testing.T) {
 		Timestamp:       client.NewTimestampFromTime(time.Now()),
 	}
 
-	result, err := SignAndBroadcast(invokeTx, cfg, clientWaves, wavesHelper, sender.SecretKey())
+	res, err := SignAndBroadcast(invokeTx, cfg, clientWaves, wavesHelper, sender.SecretKey())
+	return err, res.TxID
+}
 
-	handleError(t, err, fmt.Sprintf("success: invoked sendHashValue. tx id: %v", result.TxID))
+func TestNebulaSendHashValueSucceeding(t *testing.T) {
+	t.Log("check the only succeeding behaviour of \"sendHashValue\" function")
+
+	err, txID := testSuccessfulNebulaSendHashValue(t)
+
+	handleError(t, err, fmt.Sprintf("success: invoked sendHashValue. tx id: %v", txID))
 }
 
 func TestNebulaSendHashValueFailing_InvalidHash(t *testing.T) {
@@ -333,6 +339,36 @@ func TestNebulaSendHashValueFailing_NotEnoughSignatures(t *testing.T) {
 		t.Error(fmt.Sprintf("error: signatures count < bft_coefficient. hash was accepted by nebula. tx: %v \n", response.TxID))
 	} else {
 		t.Log(fmt.Sprintf("success: signatures count < bft_coefficient. hash was rejected by nebula. response: \n %v \n", err.Error()))
+	}
+}
+
+func TestNebulaSendHashValueFailing_HashPerBlockExceeded(t *testing.T) {
+	var wg sync.WaitGroup
+	resultCounter := make(chan string)
+
+	t.Log("check that concurrent valid hash approval is failing")
+
+	worker := func(wg *sync.WaitGroup) {
+		err, txID := testSuccessfulNebulaSendHashValue(t)
+		defer wg.Done()
+
+		if err == nil {
+			go func() {
+				resultCounter <- txID
+			}()
+		}
+	}
+
+	wg.Add(2)
+	go worker(&wg)
+	go worker(&wg)
+	wg.Wait()
+
+	if cap(resultCounter) != 1 {
+		t.Error("error: either both or none of \"sendHashValue\" invocations took place")
+	} else {
+		resultTx := <- resultCounter
+		t.Logf("success: only one  \"sendHashValue\" invoke occured. tx id: %v \n", resultTx)
 	}
 }
 
