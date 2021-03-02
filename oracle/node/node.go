@@ -251,15 +251,22 @@ func (node *Node) Start(ctx context.Context) {
 			lastLedgerHeight = ledgerHeight
 		}
 
-		err = node.execute(lastPulseId+1, ledgerHeight, tcHeight, tcHeight/node.blocksInterval, roundState, ctx)
+		interval := (tcHeight - 2*node.blocksInterval/state.SubRoundCount) / node.blocksInterval
+
+		fmt.Printf("Interval: %d\n", interval)
+		round := state.CalculateSubRound(tcHeight, node.blocksInterval)
+
+		fmt.Printf("Round: %d\n", round)
+
+		err = node.execute(lastPulseId+1, round, tcHeight, interval, roundState, ctx)
 		if err != nil {
 			errorLogger.Print(err)
 		}
 	}
 }
 
-func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, intervalId uint64, roundState *RoundState, ctx context.Context) error {
-	switch state.CalculateSubRound(ledgerHeight) {
+func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64, intervalId uint64, roundState *RoundState, ctx context.Context) error {
+	switch {
 	case state.CommitSubRound:
 		if roundState.commitHash != nil {
 			return nil

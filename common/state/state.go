@@ -27,8 +27,6 @@ const (
 	SendToTargetChain
 
 	SubRoundCount = 4
-
-	RoundInterval = 2
 )
 
 var (
@@ -50,8 +48,8 @@ var (
 	ErrRoundIsExist       = errors.New("round is exist")
 )
 
-func CalculateSubRound(id uint64) SubRound {
-	return SubRound(id % SubRoundCount)
+func CalculateSubRound(tcHeight uint64, blocksInterval uint64) SubRound {
+	return SubRound((tcHeight / (blocksInterval / SubRoundCount)) % SubRoundCount)
 }
 
 func SetState(tx *transactions.Transaction, store *storage.Storage, adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, ctx context.Context) error {
