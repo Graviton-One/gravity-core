@@ -266,7 +266,7 @@ func (node *Node) Start(ctx context.Context) {
 }
 
 func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64, intervalId uint64, roundState *RoundState, ctx context.Context) error {
-	switch {
+	switch round {
 	case state.CommitSubRound:
 		if roundState.commitHash != nil {
 			return nil
