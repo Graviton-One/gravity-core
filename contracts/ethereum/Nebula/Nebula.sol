@@ -7,6 +7,7 @@ import "../interfaces/ISubscriberBytes.sol";
 import "../interfaces/ISubscriberInt.sol";
 import "../interfaces/ISubscriberString.sol";
 
+
 contract Nebula {
     event NewPulse(uint256 pulseId, uint256 height, bytes32 dataHash);
     event NewSubscriber(bytes32 id);
@@ -88,34 +89,45 @@ contract Nebula {
        oracles = newOracles;
        rounds[newRound] = true;
     }
+    
+    function validateDataProvider() internal view returns(bool) {
+        for(uint i = 0; i < oracles.length; i++) {
+            if (oracles[i] == msg.sender) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     function sendValueToSubByte(bytes memory value, uint256 pulseId, bytes32 subId) public {
+        require(validateDataProvider(), "caller is not one of the oracles");
         sendValueToSub(pulseId, subId);
         ISubscriberBytes(subscriptions[subId].contractAddress).attachValue(value);
     }
 
     function sendValueToSubInt(int64 value, uint256 pulseId, bytes32 subId) public {
+        require(validateDataProvider(), "caller is not one of the oracles");
         sendValueToSub(pulseId, subId);
         ISubscriberInt(subscriptions[subId].contractAddress).attachValue(value);
     }
 
     function sendValueToSubString(string memory value, uint256 pulseId, bytes32 subId) public {
+        require(validateDataProvider(), "caller is not one of the oracles");
         sendValueToSub(pulseId, subId);
         ISubscriberString(subscriptions[subId].contractAddress).attachValue(value);
     }
-
 
     //----------------------------------internals---------------------------------------------------------------------
 
     function sendValueToSub(uint256 pulseId, bytes32 subId) internal {
         require(isPulseSubSent[pulseId][subId] == false, "sub sent");
-        
+
         isPulseSubSent[pulseId][subId] = true;
     }
     
     function subscribe(address payable contractAddress, uint8 minConfirmations, uint256 reward) public {
         bytes32 id = keccak256(abi.encodePacked(abi.encodePacked(msg.sig, msg.sender, contractAddress, minConfirmations)));
-        require(subscriptions[id].owner == address(0x00), "rq is exist");
+        require(subscriptions[id].owner == address(0x00), "rq exists");
         subscriptions[id] = NModels.Subscription(msg.sender, contractAddress, minConfirmations, reward);
         QueueLib.push(subscriptionsQueue, id);
         subscriptionIds.push(id);
