@@ -17,7 +17,7 @@ const (
 	AddOracle         TxFunc = "addOracle"
 	AddOracleInNebula TxFunc = "addOracleInNebula"
 	Result            TxFunc = "result"
-	NewRound          TxFunc = "newRound"
+	NewRound          TxFunc = "newRound" //TODO: Legacy / not used
 	Vote              TxFunc = "vote"
 	AddNebula         TxFunc = "setNebula"
 	DropNebula        TxFunc = "dropNebula"
