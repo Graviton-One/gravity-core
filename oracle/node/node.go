@@ -3,7 +3,6 @@ package node
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/Gravity-Tech/gravity-core/abi"
@@ -144,8 +143,7 @@ func (node *Node) Init() error {
 		if err != nil {
 			return err
 		}
-
-		fmt.Printf("Add oracle (TXID): %s\n", hexutil.Encode(tx.Id[:]))
+		zap.L().Sugar().Infof("Add oracle (TXID): %s\n", hexutil.Encode(tx.Id[:]))
 		time.Sleep(time.Duration(5) * time.Second)
 	}
 
@@ -174,8 +172,7 @@ func (node *Node) Init() error {
 		if err != nil {
 			return err
 		}
-
-		fmt.Printf("Add oracle in nebula (TXID): %s\n", hexutil.Encode(tx.Id[:]))
+		zap.L().Sugar().Infof("Add oracle in nebula (TXID): %s\n", hexutil.Encode(tx.Id[:]))
 		time.Sleep(time.Duration(5) * time.Second)
 	}
 
@@ -220,7 +217,7 @@ func (node *Node) Start(ctx context.Context) {
 		}
 
 		if tcHeight != lastTcHeight {
-			fmt.Printf("Tc Height: %d\n", tcHeight)
+			zap.L().Sugar().Infof("Tc Height: %d\n", tcHeight)
 			lastTcHeight = tcHeight
 			if tcHeight%node.blocksInterval == 0 {
 				pulseCountInBlock = 0
@@ -245,7 +242,7 @@ func (node *Node) Start(ctx context.Context) {
 
 		ledgerHeight := uint64(info.SyncInfo.LatestBlockHeight)
 		if lastLedgerHeight != ledgerHeight {
-			fmt.Printf("Ledger Height: %d\n", ledgerHeight)
+			zap.L().Sugar().Infof("Ledger Height: %d\n", ledgerHeight)
 			lastLedgerHeight = ledgerHeight
 		}
 
@@ -333,10 +330,11 @@ func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, 
 
 		oraclesMap, err := node.gravityClient.BftOraclesByNebula(node.chainType, node.nebulaId)
 		if err != nil {
-			zap.L().Sugar().Debugf("BFT error: %s", err)
+			zap.L().Sugar().Debugf("BFT error: %s , \n %s", err, zap.Stack("trace").String)
 			return nil
 		}
 		if _, ok := oraclesMap[node.oraclePubKey.ToString(node.chainType)]; !ok {
+			zap.L().Debug("Oracle not found")
 			return nil
 		}
 
