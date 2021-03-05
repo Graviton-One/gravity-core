@@ -6,12 +6,14 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"errors"
-	"github.com/Gravity-Tech/gravity-core/abi"
-	"github.com/Gravity-Tech/gravity-core/abi/ethereum"
-	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 	"math/big"
 	"strconv"
 	"time"
+
+	"github.com/Gravity-Tech/gravity-core/abi"
+	"github.com/Gravity-Tech/gravity-core/abi/ethereum"
+	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
+	"go.uber.org/zap"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -283,6 +285,7 @@ func (adaptor *BinanceAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseI
 			}
 
 			_, err = nebula.SendValueToSubByte(transactOpt, v, big.NewInt(int64(pulseId)), id)
+			zap.L().Error(err.Error())
 			if err != nil {
 				continue
 			}
