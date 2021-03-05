@@ -12,6 +12,8 @@ require (
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/wavesplatform/go-lib-crypto v0.0.0-20190905125804-474f21517ad5
 	github.com/wavesplatform/gowaves v0.8.4
+	go.uber.org/multierr v1.6.0 // indirect
+	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897 // indirect
 	golang.org/x/sys v0.0.0-20201020230747-6e5568b54d1a // indirect
 )

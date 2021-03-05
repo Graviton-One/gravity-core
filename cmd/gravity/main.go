@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Gravity-Tech/gravity-core/cmd/gravity/commands"
+	"go.uber.org/zap"
 
 	"github.com/urfave/cli/v2"
 )
@@ -18,9 +19,9 @@ func main() {
 			commands.OracleCommand,
 		},
 	}
-
 	err := app.Run(os.Args)
 	if err != nil {
+		zap.L().Fatal(err.Error())
 		log.Fatal(err)
 	}
 }

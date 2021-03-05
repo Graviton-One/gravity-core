@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"go.uber.org/zap"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/config"
@@ -50,6 +51,11 @@ var (
 				Name:  HomeFlag,
 				Value: "./",
 				Usage: "Home dir for gravity config and files",
+			},
+			&cli.StringFlag{
+				Name:  LogLevelFlag,
+				Value: "development",
+				Usage: "Level of logging, should be development or production",
 			},
 		},
 	}
@@ -95,10 +101,17 @@ func initOracleConfig(ctx *cli.Context) error {
 }
 
 func startOracle(ctx *cli.Context) error {
+	logger, err := InitLogger(ctx)
+	if err != nil {
+		return err
+	}
+	defer logger.Sync() // flushes buffer, if any
+	zap.ReplaceGlobals(logger)
+
 	home := ctx.String(HomeFlag)
 	nebulaIdStr := ctx.Args().First()
 	var cfg config.OracleConfig
-	err := config.ParseConfig(path.Join(home, DefaultNebulaeDir, fmt.Sprintf("%s.json", nebulaIdStr)), &cfg)
+	err = config.ParseConfig(path.Join(home, DefaultNebulaeDir, fmt.Sprintf("%s.json", nebulaIdStr)), &cfg)
 	if err != nil {
 		return err
 	}

@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Gravity-Tech/gravity-core/abi"
-	"os"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/Gravity-Tech/gravity-core/abi"
+	"go.uber.org/zap"
 
-	"log"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/Gravity-Tech/gravity-core/common/state"
 
@@ -28,11 +27,11 @@ const (
 	TimeoutMs = 1000
 )
 
-var (
-	errorLogger = log.New(os.Stdout,
-		"ERROR: ",
-		log.Ldate|log.Ltime|log.Lshortfile)
-)
+// var (
+// 	errorLogger = log.New(os.Stdout,
+// 		"ERROR: ",
+// 		log.Ldate|log.Ltime|log.Lshortfile)
+// )
 
 type Validator struct {
 	privKey tendermintCrypto.PrivKeyEd25519
@@ -65,9 +64,9 @@ type Node struct {
 	oraclePubKey  account.OraclesPubKey
 	gravityClient *gravity.Client
 
-	adaptor   adaptors.IBlockchainAdaptor
-	extractor *Extractor
-	blocksInterval uint64
+	adaptor              adaptors.IBlockchainAdaptor
+	extractor            *Extractor
+	blocksInterval       uint64
 	MaxPulseCountInBlock uint64
 }
 
@@ -112,10 +111,10 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 			ExtractorType: exType,
 			Client:        extractor.New(extractorUrl),
 		},
-		chainType:     chainType,
-		adaptor:       adaptor,
-		gravityClient: ghClient,
-		oraclePubKey:  adaptor.PubKey(),
+		chainType:      chainType,
+		adaptor:        adaptor,
+		gravityClient:  ghClient,
+		oraclePubKey:   adaptor.PubKey(),
 		blocksInterval: blocksInterval,
 	}, nil
 }
@@ -206,7 +205,7 @@ func (node *Node) Start(ctx context.Context) {
 
 		newLastPulseId, err := node.adaptor.LastPulseId(node.nebulaId, ctx)
 		if err != nil {
-			errorLogger.Print(err)
+			zap.L().Error(err.Error())
 			continue
 		}
 
@@ -217,13 +216,13 @@ func (node *Node) Start(ctx context.Context) {
 
 		tcHeight, err := node.adaptor.GetHeight(ctx)
 		if err != nil {
-			errorLogger.Print(err)
+			zap.L().Error(err.Error())
 		}
 
 		if tcHeight != lastTcHeight {
 			fmt.Printf("Tc Height: %d\n", tcHeight)
 			lastTcHeight = tcHeight
-			if tcHeight % node.blocksInterval == 0 {
+			if tcHeight%node.blocksInterval == 0 {
 				pulseCountInBlock = 0
 				roundState = new(RoundState)
 			}
@@ -231,7 +230,7 @@ func (node *Node) Start(ctx context.Context) {
 
 		oraclesMap, err := node.gravityClient.BftOraclesByNebula(node.chainType, node.nebulaId)
 		if err != nil {
-			errorLogger.Print(err)
+			zap.L().Error(err.Error())
 			continue
 		}
 		if _, ok := oraclesMap[node.oraclePubKey.ToString(node.chainType)]; !ok {
@@ -240,7 +239,7 @@ func (node *Node) Start(ctx context.Context) {
 
 		info, err := node.gravityClient.HttpClient.Status()
 		if err != nil {
-			errorLogger.Print(err)
+			zap.L().Error(err.Error())
 			continue
 		}
 
@@ -250,9 +249,9 @@ func (node *Node) Start(ctx context.Context) {
 			lastLedgerHeight = ledgerHeight
 		}
 
-		err = node.execute(lastPulseId + 1, ledgerHeight, tcHeight, tcHeight/node.blocksInterval, roundState, ctx)
+		err = node.execute(lastPulseId+1, ledgerHeight, tcHeight, tcHeight/node.blocksInterval, roundState, ctx)
 		if err != nil {
-			errorLogger.Print(err)
+			zap.L().Error(err.Error())
 		}
 	}
 }
@@ -260,6 +259,7 @@ func (node *Node) Start(ctx context.Context) {
 func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, intervalId uint64, roundState *RoundState, ctx context.Context) error {
 	switch state.CalculateSubRound(ledgerHeight) {
 	case state.CommitSubRound:
+		zap.L().Debug("Commit subround")
 		if roundState.commitHash != nil {
 			return nil
 		}
@@ -289,6 +289,7 @@ func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, 
 		roundState.commitHash = commit
 		roundState.data = data
 	case state.RevealSubRound:
+		zap.L().Debug("Reveal subround")
 		if roundState.commitHash == nil || roundState.RevealExist {
 			return nil
 		}
@@ -305,6 +306,7 @@ func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, 
 		}
 		roundState.RevealExist = true
 	case state.ResultSubRound:
+		zap.L().Debug("Result subround")
 		if roundState.data == nil && !roundState.RevealExist {
 			return nil
 		}
@@ -321,6 +323,7 @@ func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, 
 		roundState.resultValue = value
 		roundState.resultHash = hash
 	case state.SendToTargetChain:
+		zap.L().Debug("Send to target chain subround")
 		var oracles []account.OraclesPubKey
 		var myRound uint64
 
@@ -330,6 +333,7 @@ func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, 
 
 		oraclesMap, err := node.gravityClient.BftOraclesByNebula(node.chainType, node.nebulaId)
 		if err != nil {
+			zap.L().Sugar().Debugf("BFT error: %s", err)
 			return nil
 		}
 		if _, ok := oraclesMap[node.oraclePubKey.ToString(node.chainType)]; !ok {
@@ -355,7 +359,7 @@ func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, 
 		if tcHeight%uint64(len(oracles)) != myRound {
 			return nil
 		}
-
+		zap.L().Debug("Adding pulse")
 		txId, err := node.adaptor.AddPulse(node.nebulaId, pulseId, oracles, roundState.resultHash, ctx)
 		if err != nil {
 			return err
@@ -367,10 +371,10 @@ func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, 
 				return err
 			}
 
-			fmt.Printf("Result tx id : %s\n", txId)
+			zap.L().Sugar().Infof("Result tx id: %s", txId)
 
 			roundState.isSent = true
-
+			zap.L().Debug("Sending Value to subs")
 			err = node.adaptor.SendValueToSubs(node.nebulaId, pulseId, roundState.resultValue, ctx)
 			if err != nil {
 				return err
