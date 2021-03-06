@@ -16,7 +16,7 @@ func (scheduler *Scheduler) process(height int64) {
 	}
 }
 func (scheduler *Scheduler) processByHeight(height int64) error {
-	roundId := height / CalculateScoreInterval
+	roundId := CalculateRound(height)
 
 	consulInfo, err := scheduler.consulInfo()
 	if err != nil {
@@ -24,8 +24,8 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 	}
 
 	isExist := true
-	if height%CalculateScoreInterval == 0 {
-		roundId := (height / CalculateScoreInterval) - 1
+	if IsRoundStart(height) {
+		roundId := int64(CalculateRound(height) - 1)
 
 		index := roundId % int64(consulInfo.TotalCount)
 
