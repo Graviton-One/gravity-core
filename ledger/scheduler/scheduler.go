@@ -16,11 +16,11 @@ import (
 )
 
 const (
-	HardforkHeight = 77852
+	HardforkHeight = 95574
 
 	StarValueForNewRound      = 1000
 	CalculateScoreInterval    = 100
-	NewCalculateScoreInterval = 21600
+	NewCalculateScoreInterval = 9600
 	OracleCount               = 5
 )
 
@@ -54,12 +54,20 @@ func CalculateRound(height int64) int64 {
 	if height >= HardforkHeight {
 		return height/NewCalculateScoreInterval + StarValueForNewRound
 	}
+	// exists only for backward compatibility
+	if height >= 77852 {
+		return height/21600 + StarValueForNewRound
+	}
 
 	return height / CalculateScoreInterval
 }
 func IsRoundStart(height int64) bool {
 	if height >= HardforkHeight {
 		return height%NewCalculateScoreInterval == 0
+	}
+	// exists only for backward compatibility
+	if height >= 77852 {
+		return height%21600 == 0
 	}
 
 	return height%CalculateScoreInterval == 0
