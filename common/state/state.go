@@ -338,7 +338,7 @@ func signNewOracles(store *storage.Storage, tx *transactions.Transaction) error 
 	return nil
 }
 func approveLastRound(store *storage.Storage, adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, height uint64, isSync bool, ctx context.Context) error {
-	roundId := height / scheduler.CalculateScoreInterval
+	roundId := uint64(scheduler.CalculateRound(int64(height)))
 
 	lastRound, err := store.LastRoundApproved()
 	if err != nil && err != storage.ErrKeyNotFound {
