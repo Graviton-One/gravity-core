@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
+	"go.uber.org/zap"
 
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -113,7 +115,7 @@ func (node *Node) signResult(tcHeight uint64, pulseId uint64, ctx context.Contex
 	if err != nil {
 		return nil, nil, err
 	}
-	fmt.Printf("Result hash: %s \n", hexutil.Encode(hash))
+	zap.L().Sugar().Infof("Result hash: %s \n", hexutil.Encode(hash))
 
 	tx, err := transactions.New(node.validator.pubKey, transactions.Result, node.validator.privKey)
 	if err != nil {
@@ -142,6 +144,6 @@ func (node *Node) signResult(tcHeight uint64, pulseId uint64, ctx context.Contex
 		return nil, nil, err
 	}
 
-	fmt.Printf("Sign result txId: %s\n", hexutil.Encode(tx.Id[:]))
+	zap.L().Sugar().Infof("Sign result txId: %s\n", hexutil.Encode(tx.Id[:]))
 	return result, hash, nil
 }
