@@ -6,6 +6,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"math/big"
 	"strconv"
 	"time"
@@ -222,6 +223,7 @@ func (adaptor *BinanceAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint6
 	}
 
 	if realSignCount < int(bft.Uint64()) {
+		fmt.Printf("Exist bft count %d < min bft count (%d)", realSignCount, bft.Uint64())
 		return "", nil
 	}
 

@@ -16,8 +16,12 @@ import (
 )
 
 const (
-	CalculateScoreInterval = 100
-	OracleCount            = 5
+	HardforkHeight = 95574
+
+	StarValueForNewRound      = 1000
+	CalculateScoreInterval    = 100
+	NewCalculateScoreInterval = 9600
+	OracleCount               = 5
 )
 
 type Scheduler struct {
@@ -46,14 +50,37 @@ func New(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, ledger *acc
 	}, nil
 }
 
+func CalculateRound(height int64) int64 {
+	if height >= HardforkHeight {
+		return height/NewCalculateScoreInterval + StarValueForNewRound
+	}
+	// exists only for backward compatibility
+	if height >= 77852 {
+		return height/21600 + StarValueForNewRound
+	}
+
+	return height / CalculateScoreInterval
+}
+func IsRoundStart(height int64) bool {
+	if height >= HardforkHeight {
+		return height%NewCalculateScoreInterval == 0
+	}
+	// exists only for backward compatibility
+	if height >= 77852 {
+		return height%21600 == 0
+	}
+
+	return height%CalculateScoreInterval == 0
+}
+
 func (scheduler *Scheduler) HandleBlock(height int64, store *storage.Storage, isSync bool, isConsul bool) error {
 	if !isSync && isConsul {
 		go scheduler.process(height)
 	}
 
-	roundId := height / CalculateScoreInterval
+	roundId := CalculateRound(height)
 
-	if height%CalculateScoreInterval == 0 || height == 1 {
+	if IsRoundStart(height) || height == 1 {
 		if err := scheduler.calculateScores(store); err != nil {
 			return err
 		}
@@ -195,7 +222,7 @@ func (scheduler *Scheduler) updateOracles(roundId int64, nebulaId account.Nebula
 
 	if len(oracles) <= OracleCount {
 		newOracles = append(newOracles, oracles...)
-	}else {
+	} else {
 		newIndex := int(roundId) % (len(oracles) - 1)
 		if newIndex+OracleCount > len(oracles) {
 			newOracles = oracles[newIndex:]

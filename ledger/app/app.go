@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sort"
+
 	"github.com/Gravity-Tech/gravity-core/config"
 	"github.com/tendermint/tendermint/version"
-	"sort"
 
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
 
@@ -42,13 +43,13 @@ type Genesis struct {
 }
 
 type GHApplication struct {
-	IsSync    bool
-	db        *badger.DB
-	storage   *storage.Storage
-	adaptors  map[account.ChainType]adaptors.IBlockchainAdaptor
-	scheduler *scheduler.Scheduler
-	ctx       context.Context
-	genesis   *Genesis
+	IsSync       bool
+	db           *badger.DB
+	storage      *storage.Storage
+	adaptors     map[account.ChainType]adaptors.IBlockchainAdaptor
+	scheduler    *scheduler.Scheduler
+	ctx          context.Context
+	genesis      *Genesis
 	ledgerConfig *config.LedgerConfig
 }
 
@@ -56,12 +57,12 @@ var _ abcitypes.Application = (*GHApplication)(nil)
 
 func NewGHApplication(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, scheduler *scheduler.Scheduler, db *badger.DB, genesis *Genesis, ctx context.Context, config *config.LedgerConfig) (*GHApplication, error) {
 	return &GHApplication{
-		db:        db,
-		adaptors:  adaptors,
-		scheduler: scheduler,
-		ctx:       ctx,
-		genesis:   genesis,
-		storage:   storage.New(),
+		db:           db,
+		adaptors:     adaptors,
+		scheduler:    scheduler,
+		ctx:          ctx,
+		genesis:      genesis,
+		storage:      storage.New(),
 		ledgerConfig: config,
 	}, nil
 }
@@ -87,7 +88,7 @@ func (app *GHApplication) DeliverTx(req abcitypes.RequestDeliverTx) abcitypes.Re
 		return abcitypes.ResponseDeliverTx{Code: Error, Info: err.Error()}
 	}
 
-	err = state.SetState(tx, app.storage, app.adaptors, app.ctx)
+	err = state.SetState(tx, app.storage, app.adaptors, app.IsSync, app.ctx)
 	if err != nil {
 		return abcitypes.ResponseDeliverTx{Code: Error, Info: err.Error()}
 	}
@@ -102,7 +103,7 @@ func (app *GHApplication) CheckTx(req abcitypes.RequestCheckTx) abcitypes.Respon
 
 	store := storage.New()
 	store.NewTransaction(app.db)
-	err = state.SetState(tx, store, app.adaptors, app.ctx)
+	err = state.SetState(tx, store, app.adaptors, app.IsSync, app.ctx)
 	if err != nil {
 		return abcitypes.ResponseCheckTx{Code: Error, Info: err.Error()}
 	}

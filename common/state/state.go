@@ -27,8 +27,6 @@ const (
 	SendToTargetChain
 
 	SubRoundCount = 4
-
-	RoundInterval = 2
 )
 
 var (
@@ -50,11 +48,11 @@ var (
 	ErrRoundIsExist       = errors.New("round is exist")
 )
 
-func CalculateSubRound(id uint64) SubRound {
-	return SubRound(id % SubRoundCount)
+func CalculateSubRound(tcHeight uint64, blocksInterval uint64) SubRound {
+	return SubRound((tcHeight / (blocksInterval / SubRoundCount)) % SubRoundCount)
 }
 
-func SetState(tx *transactions.Transaction, store *storage.Storage, adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, ctx context.Context) error {
+func SetState(tx *transactions.Transaction, store *storage.Storage, adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, isSync bool, ctx context.Context) error {
 	if err := isValidSigns(store, tx); err != nil {
 		return err
 	}
@@ -88,7 +86,7 @@ func SetState(tx *transactions.Transaction, store *storage.Storage, adaptors map
 	case transactions.SignNewOracles:
 		return signNewOracles(store, tx)
 	case transactions.ApproveLastRound:
-		return approveLastRound(store, adaptors, height, ctx)
+		return approveLastRound(store, adaptors, height, isSync, ctx)
 	default:
 		return ErrFuncNotFound
 	}
@@ -339,8 +337,8 @@ func signNewOracles(store *storage.Storage, tx *transactions.Transaction) error 
 
 	return nil
 }
-func approveLastRound(store *storage.Storage, adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, height uint64, ctx context.Context) error {
-	roundId := height / scheduler.CalculateScoreInterval
+func approveLastRound(store *storage.Storage, adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, height uint64, isSync bool, ctx context.Context) error {
+	roundId := uint64(scheduler.CalculateRound(int64(height)))
 
 	lastRound, err := store.LastRoundApproved()
 	if err != nil && err != storage.ErrKeyNotFound {
@@ -350,19 +348,22 @@ func approveLastRound(store *storage.Storage, adaptors map[account.ChainType]ada
 	if lastRound >= roundId {
 		return ErrRoundIsExist
 	}
-	isExist := true
-	for _, v := range adaptors {
-		isExist, err = v.RoundExist(int64(roundId), ctx)
-		if err != nil {
-			return err
-		}
 
-		if isExist {
-			lastRoundContract, err := v.LastRound(ctx)
+	if !isSync {
+		isExist := true
+		for _, v := range adaptors {
+			isExist, err = v.RoundExist(int64(roundId), ctx)
 			if err != nil {
 				return err
 			}
-			isExist = lastRoundContract < roundId
+
+			if isExist {
+				lastRoundContract, err := v.LastRound(ctx)
+				if err != nil {
+					return err
+				}
+				isExist = lastRoundContract < roundId
+			}
 		}
 	}
 

@@ -16,7 +16,7 @@ func (scheduler *Scheduler) process(height int64) {
 	}
 }
 func (scheduler *Scheduler) processByHeight(height int64) error {
-	roundId := height / CalculateScoreInterval
+	roundId := CalculateRound(height)
 
 	consulInfo, err := scheduler.consulInfo()
 	if err != nil {
@@ -24,49 +24,47 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 	}
 
 	isExist := true
-	if height%CalculateScoreInterval == 0 {
-		roundId := (height / CalculateScoreInterval) - 1
+	if IsRoundStart(height) {
+		roundId := int64(CalculateRound(height) - 1)
 
 		index := roundId % int64(consulInfo.TotalCount)
 
-		for k, v := range scheduler.Adaptors {
-			lastRound, err := v.LastRound(scheduler.ctx)
+		if index == int64(consulInfo.ConsulIndex) {
+			for k, v := range scheduler.Adaptors {
+				lastRound, err := v.LastRound(scheduler.ctx)
+				if err != nil {
+					return err
+				}
+				if uint64(roundId) <= lastRound {
+					continue
+				}
+
+				err = scheduler.sendConsulsToGravityContract(roundId, k)
+				if err != nil {
+					return err
+				}
+			}
+
+			nebulae, err := scheduler.client.Nebulae()
 			if err != nil {
 				return err
 			}
-			if uint64(roundId) <= lastRound {
-				continue
-			}
 
-			if index != int64(consulInfo.ConsulIndex) {
-				continue
-			}
+			for k, v := range nebulae {
+				nebulaId, err := account.StringToNebulaId(k, v.ChainType)
+				if err != nil {
+					fmt.Printf("Error:%s\n", err.Error())
+					continue
+				}
 
-			err = scheduler.sendConsulsToGravityContract(roundId, k)
-			if err != nil {
-				return err
-			}
-		}
-
-		nebulae, err := scheduler.client.Nebulae()
-		if err != nil {
-			return err
-		}
-
-		for k, v := range nebulae {
-			nebulaId, err := account.StringToNebulaId(k, v.ChainType)
-			if err != nil {
-				fmt.Printf("Error:%s\n", err.Error())
-				continue
-			}
-
-			err = scheduler.sendOraclesToNebula(nebulaId, v.ChainType, roundId)
-			if err != nil {
-				continue
+				err = scheduler.sendOraclesToNebula(nebulaId, v.ChainType, roundId)
+				if err != nil {
+					fmt.Printf("SendOraclesToNebula Error: %s\n", err.Error())
+					continue
+				}
 			}
 		}
 	}
-
 
 	for k, v := range scheduler.Adaptors {
 		lastRound, err := v.LastRound(scheduler.ctx)
@@ -314,7 +312,6 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 	if realSignCount < len(consuls)*2/3 {
 		return nil
 	}
-
 
 	var newConsulsAddresses []*account.OraclesPubKey
 	for i := 0; i < OracleCount; i++ {
