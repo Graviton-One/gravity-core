@@ -357,14 +357,18 @@ func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, 
 		}
 
 		if len(oracles) == 0 {
+			zap.L().Debug("Oracles map is empty")
 			return nil
 		}
 		if tcHeight%uint64(len(oracles)) != myRound {
+			zap.L().Debug("Len oracles != myRound")
 			return nil
 		}
 		zap.L().Debug("Adding pulse")
 		txId, err := node.adaptor.AddPulse(node.nebulaId, pulseId, oracles, roundState.resultHash, ctx)
+
 		if err != nil {
+			zap.L().Sugar().Debugf("Error: %s", err)
 			return err
 		}
 
