@@ -319,6 +319,7 @@ func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, 
 		}
 		//TODO migrate to err
 		if value == nil {
+			zap.L().Sugar().Debugf("Value is nil: %t", value == nil)
 			return nil
 		}
 
@@ -330,6 +331,7 @@ func (node *Node) execute(pulseId uint64, ledgerHeight uint64, tcHeight uint64, 
 		var myRound uint64
 
 		if roundState.isSent || roundState.resultValue == nil {
+			zap.L().Sugar().Debugf("roundState.isSent: %t, resultValue is nil: %t", roundState.isSent, roundState.resultValue == nil)
 			return nil
 		}
 
