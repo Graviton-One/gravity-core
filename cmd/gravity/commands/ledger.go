@@ -508,11 +508,12 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 			return nil, err
 		}
 		for chainNameString, oracle := range v {
-			chainTypeString := cfg.Adapters[chainNameString].ChainType
-			chainType, err := account.ParseChainType(chainTypeString)
-			if err != nil {
-				return nil, err
-			}
+			chainType := privKeys.ChainIds[chainNameString]
+			//chainTypeString := cfg.Adapters[chainNameString].ChainType
+			// chainType, err := account.ParseChainType(chainTypeString)
+			// if err != nil {
+			// 	return nil, err
+			// }
 
 			oraclePubKey, err := account.StringToOraclePubKey(oracle, chainType)
 			if err != nil {
