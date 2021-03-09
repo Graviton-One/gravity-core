@@ -42,6 +42,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 
 				err = scheduler.sendConsulsToGravityContract(roundId, k)
 				if err != nil {
+					fmt.Printf("sendConsulsToGravityContract:%d -> %d\n", roundId, k)
 					return err
 				}
 			}
