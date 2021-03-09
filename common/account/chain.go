@@ -2,6 +2,7 @@ package account
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -39,6 +40,6 @@ func (ch ChainType) String() string {
 	case Binance:
 		return "bsc"
 	default:
-		return "ethereum"
+		return fmt.Sprintf("%d", ch)
 	}
 }
