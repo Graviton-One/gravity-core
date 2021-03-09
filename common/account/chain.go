@@ -29,7 +29,7 @@ func ParseChainType(chainType string) (ChainType, error) {
 	case "waves":
 		return Waves, nil
 	default:
-		i, err := strconv.ParseInt(s, 10, 8) //Is third parameter not honored??
+		i, err := strconv.ParseInt(chainType, 10, 8) //Is third parameter not honored??
 		if err == nil {
 			return ChainType(i), nil
 		}
