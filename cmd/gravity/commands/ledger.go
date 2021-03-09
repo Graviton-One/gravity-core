@@ -55,8 +55,8 @@ const (
 	NetworkFlag                   = "network"
 	BootstrapUrlFlag              = "bootstrap"
 
-	Custom Network = "custom"
-	DevNet Network = "devnet"
+	Custom  Network = "custom"
+	DevNet  Network = "devnet"
 	Mainnet Network = "mainnet"
 
 	DevNetId ChainId = "gravity-devnet"
@@ -186,6 +186,7 @@ var (
 		},
 	}
 )
+
 func getPublicIP() (string, error) {
 	ifaces, _ := net.Interfaces()
 
@@ -210,7 +211,6 @@ func getPublicIP() (string, error) {
 
 	return "", fmt.Errorf("not found valid ip")
 }
-
 
 func initLedgerConfig(ctx *cli.Context) error {
 	var err error
@@ -384,7 +384,7 @@ func startLedger(ctx *cli.Context) error {
 		PubKey:  ledgerPubKey,
 	}
 
-	gravityApp, err := createApp(db, ledgerValidator, privKeysCfg.TargetChains, ledgerConf, genesis, bootstrap, tConfig.RPC.ListenAddress, sysCtx)
+	gravityApp, err := createApp(db, ledgerValidator, privKeysCfg, ledgerConf, genesis, bootstrap, tConfig.RPC.ListenAddress, sysCtx)
 	if err != nil {
 		return fmt.Errorf("failed to parse gravity config: %w", err)
 	}
@@ -463,7 +463,7 @@ func startLedger(ctx *cli.Context) error {
 	return nil
 }
 
-func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys map[string]config.Key, cfg config.LedgerConfig, genesisCfg config.Genesis, bootstrap string, localHost string, ctx context.Context) (*app.GHApplication, error) {
+func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys config.Keys, cfg config.LedgerConfig, genesisCfg config.Genesis, bootstrap string, localHost string, ctx context.Context) (*app.GHApplication, error) {
 	bAdaptors := make(map[account.ChainType]adaptors.IBlockchainAdaptor)
 	for k, v := range cfg.Adapters {
 		chainType, err := account.ParseChainType(k)
@@ -471,32 +471,20 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 			return nil, err
 		}
 
-		privKey, err := account.StringToPrivKey(privKeys[k].PrivKey, chainType)
+		privKey, err := account.StringToPrivKey(privKeys.TargetChains[k].PrivKey, chainType)
 		if err != nil {
 			return nil, err
 		}
 
-		var adaptor adaptors.IBlockchainAdaptor
-
-		switch chainType {
-		case account.Binance:
-			adaptor, err = adaptors.NewBinanceAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithBinanceGravityContract(v.GravityContractAddress))
-			if err != nil {
-				return nil, err
-			}
-		case account.Ethereum:
-			adaptor, err = adaptors.NewEthereumAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithEthereumGravityContract(v.GravityContractAddress))
-			if err != nil {
-				return nil, err
-			}
-		case account.Waves:
-			adaptor, err = adaptors.NewWavesAdapter(privKey, v.NodeUrl, v.ChainId[0], adaptors.WithWavesGravityContract(v.GravityContractAddress))
-			if err != nil {
-				return nil, err
-			}
+		opts := adaptors.AdapterOptions{
+			"gravityContract": v.GravityContractAddress,
+		}
+		adaptor, err := adaptors.NewFactory().CreateAdaptor(v.ChainType, privKey, v.NodeUrl, ctx, opts)
+		if err != nil {
+			return nil, err
 		}
 
-		bAdaptors[chainType] = adaptor
+		bAdaptors[privKeys.ChainIds[k]] = adaptor
 		if bootstrap != "" {
 			err := setOraclePubKey(bootstrap, ledgerValidator.PubKey, ledgerValidator.PrivKey, adaptor.PubKey(), chainType)
 			if err != nil {

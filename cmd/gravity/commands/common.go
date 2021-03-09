@@ -15,6 +15,7 @@ const (
 	LedgerConfigFileName   = "config.json"
 	NodeKeyFileName        = "node_key.json"
 	LedgerKeyStateFileName = "key_state.json"
+	ChainsIdsFileName      = "chains.json"
 )
 
 func InitLogger(ctx *cli.Context) (*zap.Logger, error) {

@@ -5,6 +5,7 @@ type OracleConfig struct {
 	ChainId            string
 	GravityNodeUrl     string
 	ChainType          string
+	ChainName          string
 	ExtractorUrl       string
 	BlocksInterval     uint64
 }

@@ -101,9 +101,9 @@ func (client *Client) OraclesByNebula(nebulaId account.NebulaId, chainType accou
 	return oracles, nil
 }
 
-func (client *Client) BftOraclesByNebula(chainType account.ChainType, nebulaId account.NebulaId) (storage.OraclesMap, error) {
+func (client *Client) BftOraclesByNebula(chainType account.ChainType, chainSelector account.ChainType, nebulaId account.NebulaId) (storage.OraclesMap, error) {
 	rq := query.ByNebulaRq{
-		ChainType:     chainType,
+		ChainType:     chainSelector,
 		NebulaAddress: nebulaId.ToString(chainType),
 	}
 
@@ -171,9 +171,9 @@ func (client *Client) LastRoundApproved() (uint64, error) {
 
 	return binary.BigEndian.Uint64(rs), nil
 }
-func (client *Client) CommitHash(chainType account.ChainType, nebulaId account.NebulaId, height int64, pulseId int64, oraclePubKey account.OraclesPubKey) ([]byte, error) {
+func (client *Client) CommitHash(chainType account.ChainType, chainSelector account.ChainType, nebulaId account.NebulaId, height int64, pulseId int64, oraclePubKey account.OraclesPubKey) ([]byte, error) {
 	rq := query.CommitHashRq{
-		ChainType:     chainType,
+		ChainType:     chainSelector,
 		NebulaAddress: nebulaId.ToString(chainType),
 		Height:        height,
 		PulseId:       pulseId,
@@ -187,9 +187,9 @@ func (client *Client) CommitHash(chainType account.ChainType, nebulaId account.N
 
 	return rs, nil
 }
-func (client *Client) Reveal(chainType account.ChainType, oraclePubKey account.OraclesPubKey, nebulaId account.NebulaId, height int64, pulseId int64, commitHash []byte) ([]byte, error) {
+func (client *Client) Reveal(chainType account.ChainType, chainSelector account.ChainType, oraclePubKey account.OraclesPubKey, nebulaId account.NebulaId, height int64, pulseId int64, commitHash []byte) ([]byte, error) {
 	rq := query.RevealRq{
-		ChainType:     chainType,
+		ChainType:     chainSelector,
 		NebulaAddress: nebulaId.ToString(chainType),
 		Height:        height,
 		PulseId:       pulseId,
@@ -204,9 +204,9 @@ func (client *Client) Reveal(chainType account.ChainType, oraclePubKey account.O
 
 	return rs, nil
 }
-func (client *Client) Reveals(chainType account.ChainType, nebulaId account.NebulaId, height int64, pulseId int64) ([]string, error) {
+func (client *Client) Reveals(chainType account.ChainType, chainSelector account.ChainType, nebulaId account.NebulaId, height int64, pulseId int64) ([]string, error) {
 	rq := query.RevealRq{
-		ChainType:     chainType,
+		ChainType:     chainSelector,
 		NebulaAddress: nebulaId.ToString(chainType),
 		Height:        height,
 		PulseId:       pulseId,
@@ -244,9 +244,9 @@ func (client *Client) Result(chainType account.ChainType, nebulaId account.Nebul
 
 	return rs, nil
 }
-func (client *Client) NebulaInfo(id account.NebulaId, chainType account.ChainType) (*storage.NebulaInfo, error) {
+func (client *Client) NebulaInfo(id account.NebulaId, chainType account.ChainType, chainSelector account.ChainType) (*storage.NebulaInfo, error) {
 	rq := query.ByNebulaRq{
-		ChainType:     chainType,
+		ChainType:     chainSelector,
 		NebulaAddress: id.ToString(chainType),
 	}
 
@@ -259,6 +259,7 @@ func (client *Client) NebulaInfo(id account.NebulaId, chainType account.ChainTyp
 	if err != nil {
 		return nil, err
 	}
+	nebulaInfo.ChainSelector = chainSelector
 
 	return &nebulaInfo, nil
 }
@@ -330,12 +331,12 @@ func (client *Client) SignNewConsulsByConsul(pubKey account.ConsulPubKey, chainI
 
 	return rs, nil
 }
-func (client *Client) SignNewOraclesByConsul(pubKey account.ConsulPubKey, chainId account.ChainType, nebulaId account.NebulaId, roundId int64) ([]byte, error) {
+func (client *Client) SignNewOraclesByConsul(pubKey account.ConsulPubKey, chainType account.ChainType, chainId account.ChainType, nebulaId account.NebulaId, roundId int64) ([]byte, error) {
 	rq := query.SignByConsulRq{
 		ConsulPubKey: hexutil.Encode(pubKey[:]),
 		ChainType:    chainId,
 		RoundId:      roundId,
-		NebulaId:     nebulaId.ToString(chainId),
+		NebulaId:     nebulaId.ToString(chainType),
 	}
 
 	rs, err := client.do(query.SignNewOraclesByConsulPath, rq)

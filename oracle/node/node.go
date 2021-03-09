@@ -62,7 +62,8 @@ type Extractor struct {
 type Node struct {
 	nebulaId  account.NebulaId
 	chainType account.ChainType
-
+	//Фактический номер сети в общем списке
+	chainSelector account.ChainType
 	validator     *Validator
 	oraclePubKey  account.OraclesPubKey
 	gravityClient *gravity.Client
@@ -73,7 +74,7 @@ type Node struct {
 	MaxPulseCountInBlock uint64
 }
 
-func New(nebulaId account.NebulaId, chainType account.ChainType,
+func New(nebulaId account.NebulaId, chainType string, chainSelector account.ChainType,
 	chainId byte, oracleSecretKey []byte, validator *Validator,
 	extractorUrl string, gravityNodeUrl string, blocksInterval uint64,
 	targetChainNodeUrl string, ctx context.Context) (*Node, error) {
@@ -82,24 +83,17 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 	if err != nil {
 		return nil, err
 	}
+	opts := adaptors.AdapterOptions{
+		"ghClient": ghClient,
+	}
+	adaptor, err := adaptors.NewFactory().CreateAdaptor(chainType, oracleSecretKey, targetChainNodeUrl, ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	ct, err := account.ParseChainType(chainType)
 
-	var adaptor adaptors.IBlockchainAdaptor
-	switch chainType {
-	case account.Binance:
-		adaptor, err = adaptors.NewBinanceAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.BinanceAdapterWithGhClient(ghClient))
-		if err != nil {
-			return nil, err
-		}
-	case account.Ethereum:
-		adaptor, err = adaptors.NewEthereumAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.EthAdapterWithGhClient(ghClient))
-		if err != nil {
-			return nil, err
-		}
-	case account.Waves:
-		adaptor, err = adaptors.NewWavesAdapter(oracleSecretKey, targetChainNodeUrl, chainId, adaptors.WavesAdapterWithGhClient(ghClient))
-		if err != nil {
-			return nil, err
-		}
+	if err != nil {
+		return nil, err
 	}
 
 	exType, err := adaptor.ValueType(nebulaId, ctx)
@@ -114,7 +108,8 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 			ExtractorType: exType,
 			Client:        extractor.New(extractorUrl),
 		},
-		chainType:      chainType,
+		chainType:      ct,
+		chainSelector:  chainSelector,
 		adaptor:        adaptor,
 		gravityClient:  ghClient,
 		oraclePubKey:   adaptor.PubKey(),
@@ -128,7 +123,7 @@ func (node *Node) Init() error {
 		return err
 	}
 
-	oracle, ok := oraclesByValidator[node.chainType]
+	oracle, ok := oraclesByValidator[node.chainSelector]
 	if !ok || oracle != node.oraclePubKey {
 		tx, err := transactions.New(node.validator.pubKey, transactions.AddOracle, node.validator.privKey)
 		if err != nil {
@@ -137,7 +132,7 @@ func (node *Node) Init() error {
 
 		tx.AddValues([]transactions.Value{
 			transactions.BytesValue{
-				Value: []byte{byte(node.chainType)},
+				Value: []byte{byte(node.chainSelector)},
 			},
 			transactions.BytesValue{
 				Value: node.oraclePubKey[:],
@@ -152,7 +147,7 @@ func (node *Node) Init() error {
 		time.Sleep(time.Duration(5) * time.Second)
 	}
 
-	oraclesByNebulaKey, err := node.gravityClient.OraclesByNebula(node.nebulaId, node.chainType)
+	oraclesByNebulaKey, err := node.gravityClient.OraclesByNebula(node.nebulaId, node.chainSelector)
 	if err != nil {
 		return err
 	}
@@ -182,7 +177,7 @@ func (node *Node) Init() error {
 		time.Sleep(time.Duration(5) * time.Second)
 	}
 
-	nebulaInfo, err := node.gravityClient.NebulaInfo(node.nebulaId, node.chainType)
+	nebulaInfo, err := node.gravityClient.NebulaInfo(node.nebulaId, node.chainType, node.chainSelector)
 	if err == gravity.ErrValueNotFound {
 		return errors.New("nebula not found")
 	} else if err != nil {
@@ -231,7 +226,7 @@ func (node *Node) Start(ctx context.Context) {
 			}
 		}
 
-		oraclesMap, err := node.gravityClient.BftOraclesByNebula(node.chainType, node.nebulaId)
+		oraclesMap, err := node.gravityClient.BftOraclesByNebula(node.chainType, node.chainSelector, node.nebulaId)
 		if err != nil {
 			zap.L().Error(err.Error())
 			continue
@@ -273,7 +268,7 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 		if roundState.commitHash != nil {
 			return nil
 		}
-		_, err := node.gravityClient.CommitHash(node.chainType, node.nebulaId, int64(intervalId), int64(pulseId), node.oraclePubKey)
+		_, err := node.gravityClient.CommitHash(node.chainType, node.chainSelector, node.nebulaId, int64(intervalId), int64(pulseId), node.oraclePubKey)
 		if err != nil && err != gravity.ErrValueNotFound {
 			return err
 		} else if err == nil {
@@ -303,7 +298,7 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 		if roundState.commitHash == nil || roundState.RevealExist {
 			return nil
 		}
-		_, err := node.gravityClient.Reveal(node.chainType, node.oraclePubKey, node.nebulaId, int64(intervalId), int64(pulseId), roundState.commitHash)
+		_, err := node.gravityClient.Reveal(node.chainType, node.chainSelector, node.oraclePubKey, node.nebulaId, int64(intervalId), int64(pulseId), roundState.commitHash)
 		if err != nil && err != gravity.ErrValueNotFound {
 			return err
 		} else if err == nil {
@@ -343,7 +338,7 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 			return nil
 		}
 
-		oraclesMap, err := node.gravityClient.BftOraclesByNebula(node.chainType, node.nebulaId)
+		oraclesMap, err := node.gravityClient.BftOraclesByNebula(node.chainType, node.chainSelector, node.nebulaId)
 		if err != nil {
 			zap.L().Sugar().Debugf("BFT error: %s , \n %s", err, zap.Stack("trace").String)
 			return nil

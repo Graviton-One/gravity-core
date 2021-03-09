@@ -17,6 +17,7 @@ type NebulaInfo struct {
 	MinScore             uint64
 	ChainType            account.ChainType
 	Owner                account.ConsulPubKey
+	ChainSelector        account.ChainType
 }
 
 func parseNebulaInfoKey(value []byte) (account.NebulaId, error) {

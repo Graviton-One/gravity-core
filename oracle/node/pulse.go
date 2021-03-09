@@ -89,7 +89,7 @@ func (node *Node) reveal(tcHeight uint64, pulseId uint64, reveal *extractor.Data
 }
 func (node *Node) signResult(tcHeight uint64, pulseId uint64, ctx context.Context) (*extractor.Data, []byte, error) {
 	var values []extractor.Data
-	bytesValues, err := node.gravityClient.Reveals(node.chainType, node.nebulaId, int64(tcHeight), int64(pulseId))
+	bytesValues, err := node.gravityClient.Reveals(node.chainType, node.chainSelector, node.nebulaId, int64(tcHeight), int64(pulseId))
 	if err != nil {
 		return nil, nil, err
 	}
