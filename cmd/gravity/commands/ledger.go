@@ -508,12 +508,12 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 			return nil, err
 		}
 		for chainNameString, oracle := range v {
-			chainType := privKeys.ChainIds[chainNameString]
-			//chainTypeString := cfg.Adapters[chainNameString].ChainType
-			// chainType, err := account.ParseChainType(chainTypeString)
-			// if err != nil {
-			// 	return nil, err
-			// }
+			chainSelector := privKeys.ChainIds[chainNameString]
+			chainTypeString := cfg.Adapters[chainNameString].ChainType
+			chainType, err := account.ParseChainType(chainTypeString)
+			if err != nil {
+				return nil, err
+			}
 
 			oraclePubKey, err := account.StringToOraclePubKey(oracle, chainType)
 			if err != nil {
@@ -521,7 +521,7 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 			}
 
 			genesis.OraclesAddressByValidator[validatorPubKey] = append(genesis.OraclesAddressByValidator[validatorPubKey], app.OraclesAddresses{
-				ChainType:     chainType,
+				ChainType:     chainSelector,
 				OraclesPubKey: oraclePubKey,
 			})
 		}
