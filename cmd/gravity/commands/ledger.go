@@ -507,7 +507,8 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 		if err != nil {
 			return nil, err
 		}
-		for chainTypeString, oracle := range v {
+		for chainNameString, oracle := range v {
+			chainTypeString := cfg.Adapters[chainNameString].ChainType
 			chainType, err := account.ParseChainType(chainTypeString)
 			if err != nil {
 				return nil, err
