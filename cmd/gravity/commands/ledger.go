@@ -522,10 +522,12 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 				return nil, err
 			}
 			fmt.Printf("CHAIN SELECTOR: %d\n", chainSelector)
-			genesis.OraclesAddressByValidator[validatorPubKey] = append(genesis.OraclesAddressByValidator[validatorPubKey], app.OraclesAddresses{
+			or := app.OraclesAddresses{
 				ChainType:     chainSelector,
 				OraclesPubKey: oraclePubKey,
-			})
+			}
+			fmt.Println(or)
+			genesis.OraclesAddressByValidator[validatorPubKey] = append(genesis.OraclesAddressByValidator[validatorPubKey], or)
 			fmt.Println("By Validator")
 			fmt.Println(genesis.OraclesAddressByValidator)
 		}
