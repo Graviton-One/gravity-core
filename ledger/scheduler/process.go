@@ -73,6 +73,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 	}
 
 	for k, v := range scheduler.Adaptors {
+
 		lastRound, err := v.LastRound(scheduler.ctx)
 		if err != nil {
 			fmt.Printf("Adapter lastround Error: %s\n", err.Error())
@@ -85,6 +86,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 
 		err = scheduler.signConsulsResult(roundId, k)
 		if err != nil {
+			fmt.Printf("SignConsulsResult: %d -> %d\n", roundId, k)
 			fmt.Printf("SignConsulsResult Error: %s\n", err.Error())
 			return err
 		}
