@@ -2,6 +2,7 @@ package adaptors
 
 import (
 	"context"
+
 	"github.com/Gravity-Tech/gravity-core/abi"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 
@@ -26,4 +27,5 @@ type IBlockchainAdaptor interface {
 	LastPulseId(nebulaId account.NebulaId, ctx context.Context) (uint64, error)
 	LastRound(ctx context.Context) (uint64, error)
 	RoundExist(roundId int64, ctx context.Context) (bool, error)
+	ChainType() account.ChainType
 }

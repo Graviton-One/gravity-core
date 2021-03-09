@@ -190,7 +190,7 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 			return err
 		}
 
-		oracle := oraclesByConsul[chainType]
+		oracle := oraclesByConsul[scheduler.Adaptors[chainType].ChainType()]
 		consulsAddresses = append(consulsAddresses, &oracle)
 		fmt.Println("oracle")
 		fmt.Println(oracle)

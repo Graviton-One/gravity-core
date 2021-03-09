@@ -551,7 +551,9 @@ func (adaptor *EthereumAdaptor) SignOracles(nebulaId account.NebulaId, oracles [
 
 	return sign, nil
 }
-
+func (adaptor *EthereumAdaptor) ChainType() account.ChainType {
+	return 0
+}
 func (adaptor *EthereumAdaptor) LastPulseId(nebulaId account.NebulaId, ctx context.Context) (uint64, error) {
 	nebula, err := ethereum.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {

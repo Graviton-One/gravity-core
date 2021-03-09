@@ -47,6 +47,9 @@ type BinanceAdaptor struct {
 }
 type BinanceAdapterOption func(*BinanceAdaptor) error
 
+func (adaptor *BinanceAdaptor) ChainType() account.ChainType {
+	return 2
+}
 func WithBinanceGravityContract(address string) BinanceAdapterOption {
 	return func(h *BinanceAdaptor) error {
 		hexAddress, err := hexutil.Decode(address)

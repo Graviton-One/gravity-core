@@ -2,8 +2,6 @@ package account
 
 import (
 	"errors"
-	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -29,10 +27,10 @@ func ParseChainType(chainType string) (ChainType, error) {
 	case "waves":
 		return Waves, nil
 	default:
-		i, err := strconv.ParseInt(chainType, 10, 8) //Is third parameter not honored??
-		if err == nil {
-			return ChainType(i), nil
-		}
+		// i, err := strconv.ParseInt(chainType, 10, 8) //Is third parameter not honored??
+		// if err == nil {
+		// 	return ChainType(i), nil
+		// }
 		return 0, ErrParseChainType
 	}
 }
@@ -45,6 +43,7 @@ func (ch ChainType) String() string {
 	case Binance:
 		return "bsc"
 	default:
-		return fmt.Sprintf("%d", ch)
+		return "ethereum"
+		//return fmt.Sprintf("%d", ch)
 	}
 }

@@ -41,6 +41,9 @@ type WavesAdaptor struct {
 }
 type WavesAdapterOption func(*WavesAdaptor) error
 
+func (adaptor *WavesAdaptor) ChainType() account.ChainType {
+	return 1
+}
 func (wa *WavesAdaptor) applyOpts(opts AdapterOptions) error {
 	err := validateWavesAdapterOptions(opts)
 	if err != nil {

@@ -523,7 +523,7 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 			}
 			fmt.Printf("CHAIN SELECTOR: %d\n", chainSelector)
 			or := app.OraclesAddresses{
-				ChainType:     chainSelector,
+				ChainType:     chainType,
 				OraclesPubKey: oraclePubKey,
 			}
 			fmt.Println(or)
