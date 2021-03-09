@@ -14,9 +14,11 @@ import (
 	wavesplatform "github.com/wavesplatform/go-lib-crypto"
 )
 
+type ChainIds map[string]account.ChainType
 type Keys struct {
 	Validator    Key
 	TargetChains map[string]Key
+	ChainIds     ChainIds
 }
 
 type Key struct {
@@ -52,7 +54,6 @@ func generateWavesPrivKeys(chain byte) (*Key, error) {
 func GeneratePrivKeys(wavesChainID byte) (*Keys, error) {
 	validatorPrivKey := ed25519.GenPrivKey()
 
-
 	ethPrivKeys, err := generateEthereumBasedPrivKeys()
 	if err != nil {
 		return nil, err
@@ -75,8 +76,8 @@ func GeneratePrivKeys(wavesChainID byte) (*Keys, error) {
 		},
 		TargetChains: map[string]Key{
 			account.Ethereum.String(): *ethPrivKeys,
-			account.Binance.String(): *bscPrivKeys,
-			account.Waves.String(): *wavesPrivKeys,
+			account.Binance.String():  *bscPrivKeys,
+			account.Waves.String():    *wavesPrivKeys,
 		},
 	}, nil
 }

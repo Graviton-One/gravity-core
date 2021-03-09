@@ -1,6 +1,8 @@
 package account
 
 import (
+	"fmt"
+
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/tendermint/tendermint/crypto/ed25519"
@@ -11,10 +13,14 @@ import (
 type ConsulPubKey ed25519.PubKeyEd25519
 type OraclesPubKey [33]byte
 
-func StringToPrivKey(value string, chainType ChainType) ([]byte, error) {
+func StringToPrivKey(value string, chain ChainType) ([]byte, error) {
 	var privKey []byte
 	var err error
-	switch chainType {
+	cType, err := ChainMapper.ToType(byte(chain))
+	if err != nil {
+		return nil, err
+	}
+	switch ChainType(cType) {
 	case Ethereum, Binance:
 		privKey, err = hexutil.Decode(value)
 		if err != nil {
@@ -33,9 +39,14 @@ func StringToPrivKey(value string, chainType ChainType) ([]byte, error) {
 	return privKey, nil
 }
 
-func BytesToOraclePubKey(value []byte, chainType ChainType) OraclesPubKey {
+func BytesToOraclePubKey(value []byte, chain ChainType) OraclesPubKey {
 	var pubKey OraclesPubKey
-	switch chainType {
+	cType, err := ChainMapper.ToType(byte(chain))
+	if err != nil {
+		return pubKey
+	}
+
+	switch ChainType(cType) {
 	case Ethereum, Binance:
 		copy(pubKey[:], value[0:33])
 	case Waves:
@@ -44,9 +55,13 @@ func BytesToOraclePubKey(value []byte, chainType ChainType) OraclesPubKey {
 	return pubKey
 }
 
-func (pubKey *OraclesPubKey) ToBytes(chainType ChainType) []byte {
+func (pubKey *OraclesPubKey) ToBytes(chain ChainType) []byte {
 	var v []byte
-	switch chainType {
+	cType, err := ChainMapper.ToType(byte(chain))
+	if err != nil {
+		return v
+	}
+	switch ChainType(cType) {
 	case Ethereum, Binance:
 		v = pubKey[:33]
 	case Waves:
@@ -54,9 +69,14 @@ func (pubKey *OraclesPubKey) ToBytes(chainType ChainType) []byte {
 	}
 	return v
 }
-func (pubKey *OraclesPubKey) ToString(chainType ChainType) string {
-	b := pubKey.ToBytes(chainType)
-	switch chainType {
+func (pubKey *OraclesPubKey) ToString(chain ChainType) string {
+	b := pubKey.ToBytes(chain)
+	cType, err := ChainMapper.ToType(byte(chain))
+	if err != nil {
+		fmt.Printf("Error converting OraclePubkey to String")
+	}
+
+	switch ChainType(cType) {
 	case Ethereum, Binance:
 		return hexutil.Encode(b)
 	case Waves:
@@ -66,10 +86,15 @@ func (pubKey *OraclesPubKey) ToString(chainType ChainType) string {
 	return ""
 }
 
-func StringToOraclePubKey(value string, chainType ChainType) (OraclesPubKey, error) {
+func StringToOraclePubKey(value string, chain ChainType) (OraclesPubKey, error) {
 	var pubKey []byte
 	var err error
-	switch chainType {
+	cType, err := ChainMapper.ToType(byte(chain))
+	if err != nil {
+		return OraclesPubKey{}, err
+	}
+
+	switch ChainType(cType) {
 	case Ethereum, Binance:
 		pubKey, err = hexutil.Decode(value)
 		if err != nil {
@@ -82,7 +107,7 @@ func StringToOraclePubKey(value string, chainType ChainType) (OraclesPubKey, err
 			return [33]byte{}, err
 		}
 	}
-	return BytesToOraclePubKey(pubKey, chainType), nil
+	return BytesToOraclePubKey(pubKey, chain), nil
 }
 
 func HexToValidatorPubKey(hex string) (ConsulPubKey, error) {
