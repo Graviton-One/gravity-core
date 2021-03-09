@@ -521,7 +521,7 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 			if err != nil {
 				return nil, err
 			}
-
+			fmt.Printf("CHAIN SELECTOR: %d\n", chainSelector)
 			genesis.OraclesAddressByValidator[validatorPubKey] = append(genesis.OraclesAddressByValidator[validatorPubKey], app.OraclesAddresses{
 				ChainType:     chainSelector,
 				OraclesPubKey: oraclePubKey,
