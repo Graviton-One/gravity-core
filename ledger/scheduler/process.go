@@ -169,7 +169,7 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 		fmt.Printf("ConsulsCandidate Error: %s\n", err.Error())
 		return err
 	}
-	fmt.Printf("Consulscandidate length: %d", len(consuls))
+	fmt.Printf("Consuls candidate length: %d\n", len(consuls))
 	var consulsAddresses []*account.OraclesPubKey
 	for i := 0; i < OracleCount; i++ {
 		if i >= len(consuls) {
@@ -178,6 +178,10 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 		}
 		v := consuls[i]
 		oraclesByConsul, err := scheduler.client.OraclesByValidator(v.PubKey)
+		fmt.Println("Consul: ")
+		fmt.Println(v.PubKey)
+		fmt.Println("Oracles: ")
+		fmt.Println(oraclesByConsul)
 		if err == gravity.ErrValueNotFound {
 			consulsAddresses = append(consulsAddresses, nil)
 			continue
