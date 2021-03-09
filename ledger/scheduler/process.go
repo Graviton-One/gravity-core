@@ -322,12 +322,12 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 			return err
 		}
 
-		oraclePubKey, ok := oracles[chainType]
+		oraclePubKey, ok := oracles[scheduler.Adaptors[chainType].ChainType()]
 		if !ok {
 			continue
 		}
 
-		sign, err := scheduler.client.SignNewConsulsByConsul(v.PubKey, chainType, round)
+		sign, err := scheduler.client.SignNewConsulsByConsul(v.PubKey, scheduler.Adaptors[chainType].ChainType(), round)
 		if err != nil && err != gravity.ErrValueNotFound {
 			return err
 		}
