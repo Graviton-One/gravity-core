@@ -214,6 +214,7 @@ func (app *GHApplication) BeginBlock(req abcitypes.RequestBeginBlock) abcitypes.
 
 	err = app.scheduler.HandleBlock(req.Header.Height, app.storage, app.IsSync, isConsul)
 	if err != nil {
+		fmt.Printf("Handle block\n")
 		fmt.Printf("Error: %s \n", err.Error())
 	}
 

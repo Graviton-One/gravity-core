@@ -12,6 +12,7 @@ import (
 func (scheduler *Scheduler) process(height int64) {
 	err := scheduler.processByHeight(height)
 	if err != nil {
+		fmt.Printf("Process by height\n")
 		fmt.Printf("Error:%s\n", err)
 	}
 }
@@ -53,6 +54,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 			for k, v := range nebulae {
 				nebulaId, err := account.StringToNebulaId(k, v.ChainType)
 				if err != nil {
+					fmt.Printf("Nebula Map: %s -> %d\n", k, v.ChainType)
 					fmt.Printf("Error:%s\n", err.Error())
 					continue
 				}
@@ -89,6 +91,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 		for k2, v := range nebulae {
 			nebulaId, err := account.StringToNebulaId(k2, v.ChainType)
 			if err != nil {
+				fmt.Printf("String to Nebula ID:%s -> %d\n", k2, v.ChainType)
 				fmt.Printf("Error:%s\n", err.Error())
 				continue
 			}

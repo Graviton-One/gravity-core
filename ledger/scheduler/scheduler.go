@@ -97,6 +97,7 @@ func (scheduler *Scheduler) HandleBlock(height int64, store *storage.Storage, is
 		for k, v := range nebulae {
 			nebulaId, err := account.StringToNebulaId(k, v.ChainType)
 			if err != nil {
+				fmt.Printf("Scheduler String to Nebula ID:%s -> %d\n", k, v.ChainType)
 				fmt.Printf("Error:%s\n", err.Error())
 				continue
 			}
