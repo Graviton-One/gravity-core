@@ -158,6 +158,7 @@ func (scheduler *Scheduler) consulInfo() (*ConsulInfo, error) {
 func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.ChainType) error {
 	_, err := scheduler.client.SignNewConsulsByConsul(scheduler.Ledger.PubKey, chainType, roundId)
 	if err != nil && err != gravity.ErrValueNotFound {
+		fmt.Printf("SignNewConsulsByConsul Error: %s\n", err.Error())
 		return err
 	} else if err == nil {
 		return nil
@@ -165,6 +166,7 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 
 	consuls, err := scheduler.client.ConsulsCandidate()
 	if err != nil {
+		fmt.Printf("ConsulsCandidate Error: %s\n", err.Error())
 		return err
 	}
 
@@ -180,6 +182,7 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 			consulsAddresses = append(consulsAddresses, nil)
 			continue
 		} else if err != nil {
+			fmt.Printf("OracleByValidator Error: %s\n", err.Error())
 			return err
 		}
 
@@ -189,10 +192,12 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 
 	sign, err := scheduler.Adaptors[chainType].SignConsuls(consulsAddresses, roundId)
 	if err != nil {
+		fmt.Printf("Adaptor SignConsuls Error: %s\n", err.Error())
 		return err
 	}
 	tx, err := transactions.New(scheduler.Ledger.PubKey, transactions.SignNewConsuls, scheduler.Ledger.PrivKey)
 	if err != nil {
+		fmt.Printf("Transactions Error: %s\n", err.Error())
 		return err
 	}
 
@@ -209,6 +214,7 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 	})
 	err = scheduler.client.SendTx(tx)
 	if err != nil {
+		fmt.Printf("SignNewConsulsByConsul SendTx Error: %s\n", err.Error())
 		return err
 	}
 	return nil
