@@ -10,7 +10,12 @@
             "request": "launch",
             "mode": "debug",
             "program": "${workspaceFolder}/cmd/gravity",
-            "args": ["ledger", "--home=/home/anaximen/ledger", "start", "--bootstrap="]
+            "args": [
+                "ledger",
+                "--home=/home/alex/ledger",
+                "start",
+                "--bootstrap="
+            ]
         }
     ]
 }
