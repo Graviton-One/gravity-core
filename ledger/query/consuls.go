@@ -43,8 +43,11 @@ func signNewConsulsByConsul(store *storage.Storage, value []byte) ([]byte, error
 	if err != nil {
 		return nil, err
 	}
-
-	v, err := store.SignConsulsByConsul(consul, rq.ChainType, rq.RoundId)
+	chainName, err := account.ChainMapper.ToStr(byte(rq.ChainType))
+	if err != nil {
+		return nil, err
+	}
+	v, err := store.SignConsulsByConsul(consul, chainName, rq.RoundId)
 	if err != nil {
 		return nil, err
 	}

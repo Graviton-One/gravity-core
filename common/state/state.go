@@ -303,15 +303,18 @@ func signNewConsuls(store *storage.Storage, tx *transactions.Transaction) error 
 	chainType := account.ChainType(tx.Value(0).([]byte)[0])
 	roundId := tx.Value(1).(int64)
 	sign := tx.Value(2).([]byte)
-
-	_, err := store.SignConsulsByConsul(tx.SenderPubKey, chainType, roundId)
+	chainName, err := account.ChainMapper.ToStr(byte(chainType))
+	if err != nil {
+		return err
+	}
+	_, err = store.SignConsulsByConsul(tx.SenderPubKey, chainName, roundId)
 	if err != nil && err != storage.ErrKeyNotFound {
 		return err
 	} else if err == nil {
 		return ErrSignIsExist
 	}
 
-	err = store.SetSignConsuls(tx.SenderPubKey, chainType, roundId, sign)
+	err = store.SetSignConsuls(tx.SenderPubKey, chainName, roundId, sign)
 	if err != nil {
 		return err
 	}

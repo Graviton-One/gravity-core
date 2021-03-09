@@ -464,6 +464,7 @@ func startLedger(ctx *cli.Context) error {
 }
 
 func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys config.Keys, cfg config.LedgerConfig, genesisCfg config.Genesis, bootstrap string, localHost string, ctx context.Context) (*app.GHApplication, error) {
+	account.ChainMapper.Assign(privKeys.ChainIds)
 	bAdaptors := make(map[account.ChainType]adaptors.IBlockchainAdaptor)
 	for k, v := range cfg.Adapters {
 		chainType, err := account.ParseChainType(v.ChainType)

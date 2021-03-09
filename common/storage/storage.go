@@ -38,17 +38,22 @@ var (
 
 type Key string
 type Storage struct {
-	txn *badger.Txn
+	txn    *badger.Txn
+	mapper map[byte]string
 }
 
 func formKey(args ...string) []byte {
 	return []byte(strings.Join(args, Separator))
 }
 
+func NewWithMapper(chainMapper map[byte]string) *Storage {
+	return &Storage{
+		mapper: chainMapper,
+	}
+}
 func New() *Storage {
 	return &Storage{}
 }
-
 func (storage *Storage) getValue(key []byte) ([]byte, error) {
 	item, err := storage.txn.Get(key)
 	if err != nil {

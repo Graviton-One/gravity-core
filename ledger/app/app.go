@@ -56,6 +56,7 @@ type GHApplication struct {
 var _ abcitypes.Application = (*GHApplication)(nil)
 
 func NewGHApplication(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, scheduler *scheduler.Scheduler, db *badger.DB, genesis *Genesis, ctx context.Context, config *config.LedgerConfig) (*GHApplication, error) {
+
 	return &GHApplication{
 		db:           db,
 		adaptors:     adaptors,
