@@ -193,7 +193,8 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 		oracle := oraclesByConsul[chainType]
 		consulsAddresses = append(consulsAddresses, &oracle)
 	}
-
+	fmt.Println("Consuls Addresses: ")
+	fmt.Println(consulsAddresses)
 	sign, err := scheduler.Adaptors[chainType].SignConsuls(consulsAddresses, roundId)
 	if err != nil {
 		fmt.Printf("Adaptor SignConsuls Error: %s\n", err.Error())
