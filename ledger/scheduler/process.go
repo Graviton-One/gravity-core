@@ -21,6 +21,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 
 	consulInfo, err := scheduler.consulInfo()
 	if err != nil {
+		fmt.Printf("consulInfo error\n")
 		return err
 	}
 
@@ -34,6 +35,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 			for k, v := range scheduler.Adaptors {
 				lastRound, err := v.LastRound(scheduler.ctx)
 				if err != nil {
+					fmt.Printf("lastround error\n")
 					return err
 				}
 				if uint64(roundId) <= lastRound {
@@ -49,6 +51,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 
 			nebulae, err := scheduler.client.Nebulae()
 			if err != nil {
+				fmt.Printf("client nebulae error\n")
 				return err
 			}
 
