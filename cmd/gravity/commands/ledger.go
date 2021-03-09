@@ -508,6 +508,8 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 			return nil, err
 		}
 		for chainNameString, oracle := range v {
+			fmt.Println("GENESIS INIT", chainNameString)
+			fmt.Println(oracle)
 			chainSelector := privKeys.ChainIds[chainNameString]
 			chainTypeString := cfg.Adapters[chainNameString].ChainType
 			chainType, err := account.ParseChainType(chainTypeString)
