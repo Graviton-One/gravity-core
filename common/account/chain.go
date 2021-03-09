@@ -3,6 +3,7 @@ package account
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -28,6 +29,10 @@ func ParseChainType(chainType string) (ChainType, error) {
 	case "waves":
 		return Waves, nil
 	default:
+		i, err := strconv.ParseInt(s, 10, 8) //Is third parameter not honored??
+		if err == nil {
+			return ChainType(i), nil
+		}
 		return 0, ErrParseChainType
 	}
 }
