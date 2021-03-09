@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/storage"
@@ -68,7 +69,7 @@ func (client *Client) OraclesByValidator(pubKey account.ConsulPubKey) (storage.O
 	if err == ErrValueNotFound {
 		return oracles, nil
 	}
-
+	fmt.Printf("OraclesByValidator: %s\n", string(rs))
 	err = json.Unmarshal(rs, &oracles)
 	if err != nil {
 		return nil, err
