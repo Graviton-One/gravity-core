@@ -526,6 +526,8 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 			})
 		}
 	}
+	fmt.Println("GENESIS")
+	fmt.Println(genesis)
 
 	application, err := app.NewGHApplication(bAdaptors, blockScheduler, db, &genesis, ctx, &cfg)
 	if err != nil {

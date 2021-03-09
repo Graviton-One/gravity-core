@@ -181,6 +181,8 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 
 	for validator, value := range app.genesis.OraclesAddressByValidator {
 		oracles := make(storage.OraclesByTypeMap)
+		fmt.Println("Oracles44")
+		fmt.Println(oracles)
 		for _, oracle := range value {
 			oracles[oracle.ChainType] = oracle.OraclesPubKey
 		}
