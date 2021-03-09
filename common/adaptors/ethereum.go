@@ -495,10 +495,12 @@ func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses
 func (adaptor *EthereumAdaptor) SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64) ([]byte, error) {
 	var oraclesAddresses []common.Address
 	for _, v := range consulsAddresses {
+
 		if v == nil {
 			oraclesAddresses = append(oraclesAddresses, common.Address{})
 			continue
 		}
+		fmt.Printf("Ethereum COnsul address: %s\n", v.ToString(account.Ethereum))
 		pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
 		if err != nil {
 			fmt.Printf("Ethereum DecompressPubKey Error: %s\n", err.Error())
