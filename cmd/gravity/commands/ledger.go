@@ -526,6 +526,8 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 				ChainType:     chainSelector,
 				OraclesPubKey: oraclePubKey,
 			})
+			fmt.Println("By Validator")
+			fmt.Println(genesis.OraclesAddressByValidator)
 		}
 	}
 	fmt.Println("GENESIS")
