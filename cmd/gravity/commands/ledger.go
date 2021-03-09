@@ -470,7 +470,7 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 		if err != nil {
 			return nil, err
 		}
-
+		fmt.Printf("ChainType: %d PrivKey: %s\n", chainType, privKeys.TargetChains[k].PrivKey)
 		privKey, err := account.StringToPrivKey(privKeys.TargetChains[k].PrivKey, chainType)
 		if err != nil {
 			return nil, err
