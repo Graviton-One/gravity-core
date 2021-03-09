@@ -169,7 +169,7 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 		fmt.Printf("ConsulsCandidate Error: %s\n", err.Error())
 		return err
 	}
-
+	fmt.Printf("Consulscandidate length: %d", len(consuls))
 	var consulsAddresses []*account.OraclesPubKey
 	for i := 0; i < OracleCount; i++ {
 		if i >= len(consuls) {
