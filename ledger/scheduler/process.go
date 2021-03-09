@@ -75,6 +75,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 	for k, v := range scheduler.Adaptors {
 		lastRound, err := v.LastRound(scheduler.ctx)
 		if err != nil {
+			fmt.Printf("Adapter lastround Error: %s\n", err.Error())
 			return err
 		}
 		isExist = uint64(roundId) == lastRound
@@ -84,11 +85,13 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 
 		err = scheduler.signConsulsResult(roundId, k)
 		if err != nil {
+			fmt.Printf("SignConsulsResult Error: %s\n", err.Error())
 			return err
 		}
 
 		nebulae, err := scheduler.client.Nebulae()
 		if err != nil {
+			fmt.Printf("ClientNebula Error: %s\n", err.Error())
 			return err
 		}
 
@@ -109,16 +112,20 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 
 	lastRound, err := scheduler.client.LastRoundApproved()
 	if err != nil && err != gravity.ErrValueNotFound {
+		fmt.Printf("Approve Error: %s\n", err.Error())
 		return err
 	}
 	senderIndex := height % int64(consulInfo.TotalCount)
 	if isExist && uint64(roundId) > lastRound && senderIndex == int64(consulInfo.ConsulIndex) {
 		tx, err := transactions.New(scheduler.Ledger.PubKey, transactions.ApproveLastRound, scheduler.Ledger.PrivKey)
 		if err != nil {
+			fmt.Printf("SendTx Error: %s\n", err.Error())
+			fmt.Printf("PubKey: %s\n", string(scheduler.Ledger.PrivKey.PubKey().Bytes()))
 			return err
 		}
 		err = scheduler.client.SendTx(tx)
 		if err != nil {
+			fmt.Printf("SendTxCall Error: %s\n", err.Error())
 			return err
 		}
 	}
