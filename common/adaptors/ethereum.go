@@ -6,6 +6,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"math/big"
 	"reflect"
 	"strconv"
@@ -175,6 +176,7 @@ func (adaptor *EthereumAdaptor) GetHeight(ctx context.Context) (uint64, error) {
 	return tcHeightRq.NumberU64(), nil
 }
 func (adaptor *EthereumAdaptor) Sign(msg []byte) ([]byte, error) {
+
 	sig, err := crypto.Sign(msg, adaptor.privKey)
 	if err != nil {
 		return nil, err
@@ -499,6 +501,7 @@ func (adaptor *EthereumAdaptor) SignConsuls(consulsAddresses []*account.OraclesP
 		}
 		pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
 		if err != nil {
+			fmt.Printf("Ethereum DecompressPubKey Error: %s\n", err.Error())
 			return nil, err
 		}
 		oraclesAddresses = append(oraclesAddresses, crypto.PubkeyToAddress(*pubKey))
