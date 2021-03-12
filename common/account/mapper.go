@@ -32,6 +32,7 @@ func (m *Mapper) ToType(id byte) (byte, error) {
 			return v2, nil
 		}
 		return 0, fmt.Errorf("Chain not found")
+
 	}
 	return 0, fmt.Errorf("Chain not found")
 }
