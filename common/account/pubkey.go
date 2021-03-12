@@ -91,7 +91,7 @@ func StringToOraclePubKey(value string, chain ChainType) (OraclesPubKey, error) 
 	var err error
 	cType, err := ChainMapper.ToType(byte(chain))
 	if err != nil {
-		return OraclesPubKey{}, err
+		return OraclesPubKey{}, nil
 	}
 
 	switch ChainType(cType) {

@@ -75,9 +75,9 @@ func GeneratePrivKeys(wavesChainID byte) (*Keys, error) {
 			PrivKey: hexutil.Encode(validatorPrivKey[:]),
 		},
 		TargetChains: map[string]Key{
-			account.Ethereum.String(): *ethPrivKeys,
-			account.Binance.String():  *bscPrivKeys,
-			account.Waves.String():    *wavesPrivKeys,
+			"ethereum": *ethPrivKeys,
+			"bsc":      *bscPrivKeys,
+			"waves":    *wavesPrivKeys,
 		},
 	}, nil
 }

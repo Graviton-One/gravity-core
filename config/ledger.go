@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 
-	"github.com/Gravity-Tech/gravity-core/common/account"
 	cfg "github.com/tendermint/tendermint/config"
 )
 
@@ -63,13 +62,15 @@ func DefaultLedgerConfig() LedgerConfig {
 		P2P:        cfg.DefaultP2PConfig(),
 		Details:    (&ValidatorDetails{}).DefaultNew(),
 		Adapters: map[string]AdaptorsConfig{
-			account.Ethereum.String(): {
+			"ethereum": {
 				NodeUrl:                "",
 				GravityContractAddress: "",
+				ChainType:              "ethereum",
 			},
-			account.Waves.String(): {
+			"waves": {
 				NodeUrl:                "",
 				GravityContractAddress: "",
+				ChainType:              "waves",
 			},
 		},
 	}

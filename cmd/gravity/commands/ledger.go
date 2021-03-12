@@ -76,14 +76,16 @@ var (
 		Mempool:    cfg.DefaultMempoolConfig(),
 		Details:    (&config.ValidatorDetails{}).DefaultNew(),
 		Adapters: map[string]config.AdaptorsConfig{
-			account.Ethereum.String(): {
+			"ethereum": {
 				NodeUrl:                "https://ropsten.infura.io/v3/598efca7168947c6a186e2f85b600be1",
 				GravityContractAddress: "0x80C52beF8622cDF368Bf8AaD5ee4A78cB68E2a79",
+				ChainType:              "ethereum",
 			},
-			account.Waves.String(): {
+			"waves": {
 				NodeUrl:                "https://nodes-stagenet.wavesnodes.com",
 				GravityContractAddress: "3MfrQBknYJSnifUxD86yMPTSHEhgcPe3NBq",
 				ChainId:                "S",
+				ChainType:              "waves",
 			},
 		},
 	}
@@ -333,7 +335,7 @@ func startLedger(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
+	account.ChainMapper.Assign(privKeysCfg.ChainIds)
 	var genesis config.Genesis
 	err = config.ParseConfig(path.Join(home, GenesisFileName), &genesis)
 	if err != nil {
@@ -464,7 +466,7 @@ func startLedger(ctx *cli.Context) error {
 }
 
 func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys config.Keys, cfg config.LedgerConfig, genesisCfg config.Genesis, bootstrap string, localHost string, ctx context.Context) (*app.GHApplication, error) {
-	account.ChainMapper.Assign(privKeys.ChainIds)
+
 	bAdaptors := make(map[account.ChainType]adaptors.IBlockchainAdaptor)
 	for k, v := range cfg.Adapters {
 		cid, err := account.ChainMapper.ToByte(k)
