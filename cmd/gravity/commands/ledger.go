@@ -185,6 +185,7 @@ var (
 		},
 	}
 )
+
 func getPublicIP() (string, error) {
 	ifaces, _ := net.Interfaces()
 
@@ -209,7 +210,6 @@ func getPublicIP() (string, error) {
 
 	return "", fmt.Errorf("not found valid ip")
 }
-
 
 func initLedgerConfig(ctx *cli.Context) error {
 	var err error
@@ -376,7 +376,7 @@ func startLedger(ctx *cli.Context) error {
 		PubKey:  ledgerPubKey,
 	}
 
-	gravityApp, err := createApp(db, ledgerValidator, privKeysCfg.TargetChains, ledgerConf, genesis, bootstrap, tConfig.RPC.ListenAddress, sysCtx)
+	gravityApp, err := createApp(db, ledgerValidator, privKeysCfg, ledgerConf, genesis, bootstrap, tConfig.RPC.ListenAddress, sysCtx)
 	if err != nil {
 		return fmt.Errorf("failed to parse gravity config: %w", err)
 	}
@@ -455,15 +455,23 @@ func startLedger(ctx *cli.Context) error {
 	return nil
 }
 
-func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys map[string]config.Key, cfg config.LedgerConfig, genesisCfg config.Genesis, bootstrap string, localHost string, ctx context.Context) (*app.GHApplication, error) {
+func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys config.Keys, cfg config.LedgerConfig, genesisCfg config.Genesis, bootstrap string, localHost string, ctx context.Context) (*app.GHApplication, error) {
+	account.ChainMapper.Assign(privKeys.ChainIds)
 	bAdaptors := make(map[account.ChainType]adaptors.IBlockchainAdaptor)
 	for k, v := range cfg.Adapters {
-		chainType, err := account.ParseChainType(k)
+		cid, err := account.ChainMapper.ToByte(k)
+		if err != nil {
+			fmt.Printf("Chaintype '%s' error: %s", k, err)
+			continue
+		}
+		account.ChainMapper.ApendAdaptor(cid, v.ChainType)
+
+		chainType, err := account.ParseChainType(v.ChainType) //подключить маппер и парсить cid
 		if err != nil {
 			return nil, err
 		}
-
-		privKey, err := account.StringToPrivKey(privKeys[k].PrivKey, chainType)
+		//TODO: Изменить функции на маппер
+		privKey, err := account.StringToPrivKey(privKeys.TargetChains[k].PrivKey, account.ChainType(cid))
 		if err != nil {
 			return nil, err
 		}

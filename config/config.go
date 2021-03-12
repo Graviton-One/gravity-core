@@ -14,9 +14,11 @@ import (
 	wavesplatform "github.com/wavesplatform/go-lib-crypto"
 )
 
+type ChainIds map[string]account.ChainType
 type Keys struct {
 	Validator    Key
 	TargetChains map[string]Key
+	ChainIds     ChainIds
 }
 
 type Key struct {

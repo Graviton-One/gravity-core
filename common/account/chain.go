@@ -2,7 +2,6 @@ package account
 
 import (
 	"errors"
-	"strings"
 )
 
 type ChainType byte
@@ -19,26 +18,30 @@ var (
 )
 
 func ParseChainType(chainType string) (ChainType, error) {
-	switch strings.ToLower(chainType) {
-	case "bsc":
-		return Binance, nil
-	case "ethereum":
-		return Ethereum, nil
-	case "waves":
-		return Waves, nil
-	default:
-		return 0, ErrParseChainType
-	}
+	val, err := ChainMapper.ToByte(chainType)
+	return ChainType(val), err
+	// switch strings.ToLower(chainType) {
+	// case "bsc":
+	// 	return Binance, nil
+	// case "ethereum":
+	// 	return Ethereum, nil
+	// case "waves":
+	// 	return Waves, nil
+	// default:
+	// 	return 0, ErrParseChainType
+	// }
 }
 func (ch ChainType) String() string {
-	switch ch {
-	case Ethereum:
-		return "ethereum"
-	case Waves:
-		return "waves"
-	case Binance:
-		return "bsc"
-	default:
-		return "ethereum"
-	}
+	val, _ := ChainMapper.ToStr(byte(ch))
+	return val
+	// switch ch {
+	// case Ethereum:
+	// 	return "ethereum"
+	// case Waves:
+	// 	return "waves"
+	// case Binance:
+	// 	return "bsc"
+	// default:
+	// 	return "ethereum"
+	// }
 }
