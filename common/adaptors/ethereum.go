@@ -257,7 +257,8 @@ func (adaptor *EthereumAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint
 	var s [5][32]byte
 	var v [5]uint8
 	for _, validator := range validators {
-		pubKey, err := crypto.DecompressPubkey(validator.ToBytes(account.Ethereum))
+		//pubKey, err := crypto.DecompressPubkey(validator.ToBytes(account.Ethereum))
+		pubKey, err := crypto.DecompressPubkey(validator[:33])
 		if err != nil {
 			return "", err
 		}
@@ -383,7 +384,8 @@ func (adaptor *EthereumAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, or
 			continue
 		}
 
-		pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
+		//pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
+		pubKey, err := crypto.DecompressPubkey(v[:33])
 		if err != nil {
 			return "", err
 		}
@@ -400,7 +402,8 @@ func (adaptor *EthereumAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, or
 	var v [5]uint8
 	for pubKey, sign := range signs {
 		index := -1
-		ethPubKey, err := crypto.DecompressPubkey(pubKey.ToBytes(account.Ethereum))
+		// ethPubKey, err := crypto.DecompressPubkey(pubKey.ToBytes(account.Ethereum))
+		ethPubKey, err := crypto.DecompressPubkey(pubKey[:33])
 		if err != nil {
 			return "", err
 		}
@@ -445,7 +448,8 @@ func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses
 			consulsAddress = append(consulsAddress, common.Address{})
 			continue
 		}
-		pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
+		// pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
+		pubKey, err := crypto.DecompressPubkey(v[:33])
 		if err != nil {
 			return "", err
 		}
@@ -457,7 +461,8 @@ func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses
 	var v [5]uint8
 	for pubKey, sign := range signs {
 		index := -1
-		ethPubKey, err := crypto.DecompressPubkey(pubKey.ToBytes(account.Ethereum))
+		// ethPubKey, err := crypto.DecompressPubkey(pubKey.ToBytes(account.Ethereum))
+		ethPubKey, err := crypto.DecompressPubkey(pubKey[:33])
 		if err != nil {
 			return "", err
 		}
@@ -497,7 +502,8 @@ func (adaptor *EthereumAdaptor) SignConsuls(consulsAddresses []*account.OraclesP
 			oraclesAddresses = append(oraclesAddresses, common.Address{})
 			continue
 		}
-		pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
+
+		pubKey, err := crypto.DecompressPubkey(v[:33])
 		if err != nil {
 			return nil, err
 		}
@@ -527,7 +533,9 @@ func (adaptor *EthereumAdaptor) SignOracles(nebulaId account.NebulaId, oracles [
 			oraclesAddresses = append(oraclesAddresses, common.Address{})
 			continue
 		}
-		pubKey, err := crypto.DecompressPubkey(v.ToBytes(account.Ethereum))
+		//pubKey, err := crypto.DecompressPubkey( v.ToBytes(account.Ethereum))
+		pubKey, err := crypto.DecompressPubkey(v[:33])
+
 		if err != nil {
 			return nil, err
 		}

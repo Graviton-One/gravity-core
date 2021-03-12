@@ -15,15 +15,16 @@ type Consul struct {
 }
 
 func formSignConsulsByConsulKey(pubKey account.ConsulPubKey, chainType account.ChainType, roundId int64) []byte {
-	prefix := ""
-	switch chainType {
-	case account.Waves:
-		prefix = "waves"
-	case account.Ethereum:
-		prefix = "ethereum"
-	case account.Binance:
-		prefix = "bsc"
-	}
+	prefix, _ := account.ChainMapper.ToStr(byte(chainType))
+	// prefix := ""
+	// switch chainType {
+	// case account.Waves:
+	// 	prefix = "waves"
+	// case account.Ethereum:
+	// 	prefix = "ethereum"
+	// case account.Binance:
+	// 	prefix = "bsc"
+	// }
 	return formKey(string(SignConsulsResultByConsulKey), hexutil.Encode(pubKey[:]), prefix, fmt.Sprintf("%d", roundId))
 }
 
