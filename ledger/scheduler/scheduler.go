@@ -19,7 +19,7 @@ const (
 	HardforkHeight = 95574
 
 	StarValueForNewRound      = 1000
-	CalculateScoreInterval    = 15
+	CalculateScoreInterval    = 100
 	NewCalculateScoreInterval = 9600
 	OracleCount               = 5
 )
