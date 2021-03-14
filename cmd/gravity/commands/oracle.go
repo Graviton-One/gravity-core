@@ -124,7 +124,7 @@ func startOracle(ctx *cli.Context) error {
 	}
 	zap.L().Sugar().Debugf("Chain Ids: %s", privKeysCfg.ChainIds)
 	account.ChainMapper.Assign(privKeysCfg.ChainIds)
-
+	account.ChainMapper.ApendAdaptor(byte(0), "ethereum") // for backward compatibility
 	validatorPrivKey, err := hexutil.Decode(privKeysCfg.Validator.PrivKey)
 	if err != nil {
 		return err
