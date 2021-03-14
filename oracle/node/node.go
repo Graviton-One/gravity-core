@@ -184,8 +184,8 @@ func (node *Node) Init() error {
 	}
 	ctype, err := account.ChainMapper.ToType(byte(node.chainType))
 
-	zap.L().Sugar().Debugf("Oracles by Nebula: %s , with chain type: %d\n", node.nebulaId.ToString(account.ChainType(ctype)), ctype)
-	oraclesByNebulaKey, err := node.gravityClient.OraclesByNebula(node.nebulaId, account.ChainType(ctype))
+	zap.L().Sugar().Debugf("Oracles by Nebula: %s , with chain type: %d\n", node.nebulaId.ToString(account.ChainType(ctype)), node.chainType)
+	oraclesByNebulaKey, err := node.gravityClient.OraclesByNebula(node.nebulaId, node.chainType)
 	if err != nil {
 		zap.L().Error(err.Error())
 		return err
