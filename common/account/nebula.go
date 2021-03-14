@@ -4,6 +4,7 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/wavesplatform/gowaves/pkg/crypto"
+	"go.uber.org/zap"
 )
 
 const (
@@ -50,16 +51,16 @@ func BytesToNebulaId(value []byte) NebulaId {
 }
 
 func (id NebulaId) ToString(chainType ChainType) string {
-	// zap.L().Sugar().Debugf("chainType: %d", chainType)
-	// cid, err := ChainMapper.ToType(byte(chainType))
-	// if err != nil {
-	// 	zap.L().Error(err.Error())
-	// 	return ""
-	// }
-	// ctype := ChainType(cid)
+	zap.L().Sugar().Debugf("chainType: %d", chainType)
+	cid, err := ChainMapper.ToType(byte(chainType))
+	if err != nil {
+		zap.L().Error(err.Error())
+		return ""
+	}
+	ctype := ChainType(cid)
 
 	nebula := id.ToBytes(chainType)
-	switch chainType {
+	switch ctype {
 	case Ethereum, Binance:
 		return hexutil.Encode(nebula[:])
 	case Waves:
