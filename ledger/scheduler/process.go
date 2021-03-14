@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
+	"go.uber.org/zap"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
@@ -16,8 +17,9 @@ func (scheduler *Scheduler) process(height int64) {
 	}
 }
 func (scheduler *Scheduler) processByHeight(height int64) error {
+	logger, _ := zap.NewDevelopment()
 	roundId := CalculateRound(height)
-
+	logger.Sugar().Debugf("Process by height, round id: %d", roundId)
 	consulInfo, err := scheduler.consulInfo()
 	if err != nil {
 		return err
@@ -25,17 +27,21 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 
 	isExist := true
 	if IsRoundStart(height) {
+		logger.Sugar().Debugf("Round start")
 		roundId := int64(CalculateRound(height) - 1)
-
+		logger.Sugar().Debugf("Round started, id: %d", roundId)
 		index := roundId % int64(consulInfo.TotalCount)
 
 		if index == int64(consulInfo.ConsulIndex) {
 			for k, v := range scheduler.Adaptors {
+
 				lastRound, err := v.LastRound(scheduler.ctx)
+				logger.Sugar().Debugf("Round: chain: %d, Last round: %d", k, lastRound)
 				if err != nil {
 					return err
 				}
 				if uint64(roundId) <= lastRound {
+					logger.Sugar().Debugf("roundid <= lastround")
 					continue
 				}
 
@@ -250,20 +256,26 @@ func (scheduler *Scheduler) signOraclesByNebula(roundId int64, nebulaId account.
 	return nil
 }
 func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType account.ChainType) error {
+
+	logger, err := zap.NewDevelopment()
+	logger.Sugar().Debugf("Send consuls to gravity contract Round: %d, Chain: %d\n", round, chainType)
 	exist, err := scheduler.Adaptors[chainType].RoundExist(round, scheduler.ctx)
 	if err != nil {
+		logger.Sugar().Debugf("Exist error: %s\n", err.Error())
 		return err
 	}
 
 	if exist {
+		logger.Sugar().Debugf("Round exist")
 		return nil
 	}
 
 	lastRound, err := scheduler.Adaptors[chainType].LastRound(scheduler.ctx)
 	if err != nil {
+		logger.Sugar().Debugf("last round error: %s", err.Error())
 		return err
 	}
-
+	logger.Sugar().Debugf("last round: %d , chain type: %d", lastRound, chainType)
 	if round <= int64(lastRound) {
 		return nil
 	}
