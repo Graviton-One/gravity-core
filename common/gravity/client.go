@@ -84,11 +84,13 @@ func (client *Client) OraclesByNebula(nebulaId account.NebulaId, chainType accou
 		ChainType:     chainType,
 		NebulaAddress: nebulaId.ToString(chainType),
 	}
-
+	zap.L().Sugar().Debug("Client oracles by nebula rq: ", rq)
 	rs, err := client.do(query.OracleByNebulaPath, rq)
 	if err != nil && err != ErrValueNotFound {
 		return nil, err
 	}
+
+	zap.L().Sugar().Debug("Client oracles by nebula rs: ", string(rs))
 
 	oracles := make(storage.OraclesMap)
 	if err == ErrValueNotFound {
