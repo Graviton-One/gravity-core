@@ -11,6 +11,7 @@ import (
 	"github.com/Gravity-Tech/gravity-core/ledger/query"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
+	"go.uber.org/zap"
 )
 
 const (
@@ -38,6 +39,7 @@ func New(host string) (*Client, error) {
 
 func (client *Client) SendTx(transaction *transactions.Transaction) error {
 	txBytes, err := json.Marshal(transaction)
+	zap.L().Sugar().Debug("Send TX: ", string(txBytes))
 	if err != nil {
 		return err
 	}
