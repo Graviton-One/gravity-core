@@ -59,7 +59,7 @@ func (id NebulaId) ToString(chainType ChainType) string {
 	}
 	ctype := ChainType(cid)
 
-	nebula := id.ToBytes(chainType)
+	nebula := id.ToBytes(ctype)
 	switch ctype {
 	case Ethereum, Binance:
 		return hexutil.Encode(nebula[:])
