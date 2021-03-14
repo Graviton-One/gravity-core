@@ -192,6 +192,7 @@ func (node *Node) Init() error {
 	}
 
 	zap.L().Sugar().Debugf(node.oraclePubKey.ToString(node.chainType))
+	zap.L().Sugar().Debug("Oracles by nebulakey: ", oraclesByNebulaKey)
 	_, ok = oraclesByNebulaKey[node.oraclePubKey.ToString(node.chainType)]
 	if !ok {
 		zap.L().Sugar().Debugf("!OK")
