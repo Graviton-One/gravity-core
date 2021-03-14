@@ -80,6 +80,7 @@ func (client *Client) OraclesByValidator(pubKey account.ConsulPubKey) (storage.O
 }
 
 func (client *Client) OraclesByNebula(nebulaId account.NebulaId, chainType account.ChainType) (storage.OraclesMap, error) {
+	zap.L().Sugar().Debug("Client oracles by nebula start: ", nebulaId)
 	rq := query.ByNebulaRq{
 		ChainType:     chainType,
 		NebulaAddress: nebulaId.ToString(chainType),
