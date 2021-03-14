@@ -82,25 +82,36 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 	if err != nil {
 		return nil, err
 	}
-
-	var adaptor adaptors.IBlockchainAdaptor
-	switch chainType {
-	case account.Binance:
-		adaptor, err = adaptors.NewBinanceAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.BinanceAdapterWithGhClient(ghClient))
-		if err != nil {
-			return nil, err
-		}
-	case account.Ethereum:
-		adaptor, err = adaptors.NewEthereumAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.EthAdapterWithGhClient(ghClient))
-		if err != nil {
-			return nil, err
-		}
-	case account.Waves:
-		adaptor, err = adaptors.NewWavesAdapter(oracleSecretKey, targetChainNodeUrl, chainId, adaptors.WavesAdapterWithGhClient(ghClient))
-		if err != nil {
-			return nil, err
-		}
+	ctype, err := account.ChainMapper.ToStr(byte(chainType))
+	if err != nil {
+		return nil, err
 	}
+	opts := adaptors.AdapterOptions{
+		"ghClient": ghClient,
+		"chainID":  chainId,
+	}
+	adaptor, err := adaptors.NewFactory().CreateAdaptor(ctype, oracleSecretKey, targetChainNodeUrl, ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	// var adaptor adaptors.IBlockchainAdaptor
+	// switch chainType {
+	// case account.Binance:
+	// 	adaptor, err = adaptors.NewBinanceAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.BinanceAdapterWithGhClient(ghClient))
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// case account.Ethereum:
+	// 	adaptor, err = adaptors.NewEthereumAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.EthAdapterWithGhClient(ghClient))
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// case account.Waves:
+	// 	adaptor, err = adaptors.NewWavesAdapter(oracleSecretKey, targetChainNodeUrl, chainId, adaptors.WavesAdapterWithGhClient(ghClient))
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
 	exType, err := adaptor.ValueType(nebulaId, ctx)
 	if err != nil {

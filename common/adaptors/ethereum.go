@@ -15,6 +15,7 @@ import (
 	"github.com/Gravity-Tech/gravity-core/abi/ethereum"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 	"github.com/gookit/validate"
+	"go.uber.org/zap"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -437,14 +438,18 @@ func (adaptor *EthereumAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, or
 	return tx.Hash().Hex(), nil
 }
 func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
+	logger, err := zap.NewDevelopment()
+
 	consuls, err := adaptor.gravityContract.GetConsuls(nil)
 	if err != nil {
+		logger.Debug(err.Error())
 		return "", err
 	}
 
 	var consulsAddress []common.Address
 	for _, v := range newConsulsAddresses {
 		if v == nil {
+			logger.Sugar().Debugf("Append common.Address %s", common.Address{}.String())
 			consulsAddress = append(consulsAddress, common.Address{})
 			continue
 		}
@@ -453,6 +458,7 @@ func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses
 		if err != nil {
 			return "", err
 		}
+		logger.Sugar().Debugf("Append consul %s", crypto.PubkeyToAddress(*pubKey).String())
 		consulsAddress = append(consulsAddress, crypto.PubkeyToAddress(*pubKey))
 	}
 
@@ -464,6 +470,7 @@ func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses
 		// ethPubKey, err := crypto.DecompressPubkey(pubKey.ToBytes(account.Ethereum))
 		ethPubKey, err := crypto.DecompressPubkey(pubKey[:33])
 		if err != nil {
+			logger.Sugar().Debugf("DecompressPubkey error: %s", crypto.PubkeyToAddress(*ethPubKey).String())
 			return "", err
 		}
 		validatorAddress := crypto.PubkeyToAddress(*ethPubKey)
@@ -487,13 +494,16 @@ func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses
 		s[index] = bytes32S
 		v[index] = sign[64:][0] + 27
 	}
-
+	// logger.Sugar().Debugf("v:%s r:%s s:%s",string(v[:]),string(r[:]),string(s[:]))
 	tx, err := adaptor.gravityContract.UpdateConsuls(bind.NewKeyedTransactor(adaptor.privKey), consulsAddress, v[:], r[:], s[:], big.NewInt(round))
+
 	if err != nil {
+		logger.Sugar().Debugf("UpdateConsuls eror: %s", err.Error())
 		return "", err
 	}
-
+	logger.Sugar().Debugf("Transaction: %s", tx.Hash().String())
 	return tx.Hash().Hex(), nil
+
 }
 func (adaptor *EthereumAdaptor) SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64) ([]byte, error) {
 	var oraclesAddresses []common.Address

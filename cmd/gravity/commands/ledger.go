@@ -485,25 +485,17 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 		if err != nil {
 			return nil, err
 		}
-
-		var adaptor adaptors.IBlockchainAdaptor
-		cType, _ := account.ChainMapper.ToType(cid)
-		switch account.ChainType(cType) {
-		case account.Binance:
-			adaptor, err = adaptors.NewBinanceAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithBinanceGravityContract(v.GravityContractAddress))
-			if err != nil {
-				return nil, err
-			}
-		case account.Ethereum:
-			adaptor, err = adaptors.NewEthereumAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithEthereumGravityContract(v.GravityContractAddress))
-			if err != nil {
-				return nil, err
-			}
-		case account.Waves:
-			adaptor, err = adaptors.NewWavesAdapter(privKey, v.NodeUrl, v.ChainId[0], adaptors.WithWavesGravityContract(v.GravityContractAddress))
-			if err != nil {
-				return nil, err
-			}
+		chain := byte(0)
+		if len(v.ChainId) > 0 {
+			chain = byte(v.ChainId[0])
+		}
+		opts := adaptors.AdapterOptions{
+			"gravityContract": v.GravityContractAddress,
+			"chainID":         chain,
+		}
+		adaptor, err := adaptors.NewFactory().CreateAdaptor(v.ChainType, privKey, v.NodeUrl, ctx, opts)
+		if err != nil {
+			return nil, err
 		}
 
 		bAdaptors[chainType] = adaptor

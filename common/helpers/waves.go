@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -29,7 +30,6 @@ func NewClientHelper(client *client.Client) ClientHelper {
 
 func (helper *ClientHelper) GetStateByAddressAndKey(address string, key string, ctx context.Context) (*State, *client.Response, error) {
 	url := fmt.Sprintf("%s/%s/%s?key=%s", helper.client.GetOptions().BaseUrl, GetStateByAddressPath, address, key)
-
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, nil, err
@@ -42,7 +42,8 @@ func (helper *ClientHelper) GetStateByAddressAndKey(address string, key string, 
 	}
 
 	if len(out) == 0 {
-		return nil, response, fmt.Errorf("States array is empty")
+		log.Printf("Waves helper: States array is empty")
+		return nil, response, nil //fmt.Errorf("States array is empty")
 	}
 	return &out[0], response, nil
 }

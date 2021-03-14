@@ -12,6 +12,7 @@ import (
 	"github.com/Gravity-Tech/gravity-core/abi"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 	"github.com/gookit/validate"
+	"go.uber.org/zap"
 
 	"github.com/Gravity-Tech/gravity-core/common/storage"
 
@@ -458,6 +459,7 @@ func (adaptor *WavesAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracl
 	return tx.ID.String(), nil
 }
 func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
+	logger, err := zap.NewDevelopment()
 	var stringSigns [5]string
 	lastRoundState, _, err := adaptor.helper.GetStateByAddressAndKey(adaptor.gravityContract, "last_round", ctx)
 	if err != nil {
@@ -467,12 +469,14 @@ func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []
 	lastRound := uint64(lastRoundState.Value.(float64))
 	consulsState, _, err := adaptor.helper.GetStateByAddressAndKey(adaptor.gravityContract, fmt.Sprintf("consuls_%d", lastRound), ctx)
 	if err != nil {
+		logger.Sugar().Debugf("Error: %s", err.Error())
 		return "", err
 	}
 
 	consuls := strings.Split(consulsState.Value.(string), ",")
 	for k, v := range signs {
 		pubKey := k.ToString(account.Waves)
+		logger.Sugar().Debugf("signs: %s", pubKey)
 		index := -1
 
 		for i, v := range consuls {
@@ -501,9 +505,11 @@ func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []
 
 	for _, v := range newConsulsAddresses {
 		if v == nil {
+			logger.Sugar().Debugf("Append default address")
 			newConsulsString = append(newConsulsString, base58.Encode([]byte{0}))
 			continue
 		}
+		logger.Sugar().Debugf("Append: %s", base58.Encode(v.ToBytes(account.Waves)))
 		newConsulsString = append(newConsulsString, base58.Encode(v.ToBytes(account.Waves)))
 	}
 
@@ -514,11 +520,13 @@ func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []
 
 	asset, err := proto.NewOptionalAssetFromString("WAVES")
 	if err != nil {
+		logger.Sugar().Debugf("Asset: %s", asset.String())
 		return "", err
 	}
 
 	contract, err := proto.NewRecipientFromString(adaptor.gravityContract)
 	if err != nil {
+		logger.Sugar().Debugf("Recipient: %s", asset.String())
 		return "", err
 	}
 
@@ -548,13 +556,15 @@ func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []
 		Timestamp: wclient.NewTimestampFromTime(time.Now()),
 	}
 
+	logger.Sugar().Debugf("Sign")
 	err = tx.Sign(adaptor.chainID, adaptor.secret)
 	if err != nil {
 		return "", err
 	}
-
+	logger.Sugar().Debugf("Broadcast")
 	_, err = adaptor.wavesClient.Transactions.Broadcast(ctx, tx)
 	if err != nil {
+		logger.Sugar().Debugf("Error: %s", err.Error())
 		return "", err
 	}
 
