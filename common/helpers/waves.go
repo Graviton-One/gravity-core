@@ -42,7 +42,7 @@ func (helper *ClientHelper) GetStateByAddressAndKey(address string, key string, 
 	}
 
 	if len(out) == 0 {
-		return nil, response, fmt.Errorf("States array is empty")
+		return nil, response, nil //fmt.Errorf("States array is empty")
 	}
 	return &out[0], response, nil
 }
