@@ -23,6 +23,8 @@ func formSignConsulsByConsulKey(pubKey account.ConsulPubKey, chainType account.C
 		prefix = "ethereum"
 	case account.Binance:
 		prefix = "bsc"
+	case account.Heco:
+		prefix = "heco"
 	}
 	return formKey(string(SignConsulsResultByConsulKey), hexutil.Encode(pubKey[:]), prefix, fmt.Sprintf("%d", roundId))
 }
