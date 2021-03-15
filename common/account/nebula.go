@@ -69,14 +69,14 @@ func (id NebulaId) ToString(chainType ChainType) string {
 	return ""
 }
 func (id NebulaId) ToBytes(chainType ChainType) []byte {
-	cid, err := ChainMapper.ToType(byte(chainType))
-	if err != nil {
-		zap.L().Error(err.Error())
-		return nil
-	}
-	ctype := ChainType(cid)
+	// cid, err := ChainMapper.ToType(byte(chainType))
+	// if err != nil {
+	// 	zap.L().Error(err.Error())
+	// 	return nil
+	// }
+	// ctype := ChainType(cid)
 
-	switch ctype {
+	switch chainType {
 	case Binance:
 		return id[NebulaIdLength-BSCAddressLength:]
 	case Ethereum:
