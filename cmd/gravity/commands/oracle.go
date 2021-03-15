@@ -155,7 +155,7 @@ func startOracle(ctx *cli.Context) error {
 		zap.L().Error(err.Error())
 		return err
 	}
-
+	zap.L().Sugar().Debug("Oracle secret key is ", oracleSecretKey)
 	var chainId byte
 	if len(cfg.ChainId) > 0 {
 		chainId = cfg.ChainId[0]
