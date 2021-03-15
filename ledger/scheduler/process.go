@@ -93,6 +93,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 		}
 
 		for k, v := range nebulae {
+			zap.L().Sugar().Debug("Iterate Nebula: ", k, v.ChainType)
 			nebulaId, err := account.StringToNebulaId(k, v.ChainType)
 			if err != nil {
 				fmt.Printf("Error:%s\n", err.Error())
