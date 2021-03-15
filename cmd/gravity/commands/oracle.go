@@ -168,11 +168,13 @@ func startOracle(ctx *cli.Context) error {
 		sysCtx)
 
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
 	err = oracleNode.Init()
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
