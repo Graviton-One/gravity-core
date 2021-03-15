@@ -121,6 +121,7 @@ func startOracle(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	zap.L().Sugar().Debugf("Chain Ids: %s", privKeysCfg.ChainIds)
 	account.ChainMapper.Assign(privKeysCfg.ChainIds)
 
 	validatorPrivKey, err := hexutil.Decode(privKeysCfg.Validator.PrivKey)
