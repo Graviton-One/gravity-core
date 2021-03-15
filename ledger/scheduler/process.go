@@ -24,7 +24,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 	if err != nil {
 		return err
 	}
-
+	zap.L().Sugar().Debug("Check round")
 	isExist := true
 	if IsRoundStart(height) {
 		logger.Sugar().Debugf("Round start")
@@ -71,7 +71,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 			}
 		}
 	}
-
+	zap.L().Sugar().Debug("Check adaptors")
 	for k, v := range scheduler.Adaptors {
 		zap.L().Sugar().Debug("Iterate adaptors: ", k)
 		lastRound, err := v.LastRound(scheduler.ctx)
