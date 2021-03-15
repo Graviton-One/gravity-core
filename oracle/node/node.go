@@ -82,16 +82,23 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 	if err != nil {
 		return nil, err
 	}
-	ctype, err := account.ChainMapper.ToStr(byte(chainType))
+	ctype, err := account.ChainMapper.ToType(byte(chainType))
 	if err != nil {
 		zap.L().Error(err.Error())
 		return nil, err
 	}
+
+	chType, err := account.ChainMapper.ToStr(ctype)
+	if err != nil {
+		zap.L().Error(err.Error())
+		return nil, err
+	}
+
 	opts := adaptors.AdapterOptions{
 		"ghClient": ghClient,
 		"chainID":  chainId,
 	}
-	adaptor, err := adaptors.NewFactory().CreateAdaptor(ctype, oracleSecretKey, targetChainNodeUrl, ctx, opts)
+	adaptor, err := adaptors.NewFactory().CreateAdaptor(chType, oracleSecretKey, targetChainNodeUrl, ctx, opts)
 	if err != nil {
 		zap.L().Error(err.Error())
 		return nil, err
