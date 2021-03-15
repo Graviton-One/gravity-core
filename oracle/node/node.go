@@ -179,15 +179,17 @@ func (node *Node) Init() error {
 		zap.L().Sugar().Infof("Add oracle (TXID): %s\n", hexutil.Encode(tx.Id[:]))
 		time.Sleep(time.Duration(5) * time.Second)
 	}
-	zap.L().Sugar().Debug("Oracles by Nebula: %s , with chain type: %d\n", node.nebulaId.ToString(node.chainType), node.chainType)
+	zap.L().Sugar().Debugf("Oracles by Nebula: %s , with chain type: %d\n", node.nebulaId.ToString(node.chainType), node.chainType)
 	oraclesByNebulaKey, err := node.gravityClient.OraclesByNebula(node.nebulaId, node.chainType)
 	if err != nil {
 		zap.L().Error(err.Error())
 		return err
 	}
 
+	zap.L().Sugar().Debugf(node.oraclePubKey.ToString(node.chainType))
 	_, ok = oraclesByNebulaKey[node.oraclePubKey.ToString(node.chainType)]
 	if !ok {
+		zap.L().Sugar().Debugf("!OK")
 		tx, err := transactions.New(node.validator.pubKey, transactions.AddOracleInNebula, node.validator.privKey)
 		if err != nil {
 			zap.L().Error(err.Error())
