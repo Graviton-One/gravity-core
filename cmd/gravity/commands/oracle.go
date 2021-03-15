@@ -139,7 +139,7 @@ func startOracle(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
+	zap.L().Sugar().Debugf("PrivKey is: %s", privKeysCfg.TargetChains[cfg.ChainName].PrivKey)
 	oracleSecretKey, err := account.StringToPrivKey(privKeysCfg.TargetChains[cfg.ChainName].PrivKey, chainType)
 	if err != nil {
 		return err
@@ -149,10 +149,14 @@ func startOracle(ctx *cli.Context) error {
 	if len(cfg.ChainId) > 0 {
 		chainId = cfg.ChainId[0]
 	}
+	chain, err := account.ChainMapper.ToByte(cfg.ChainName)
+	if err != nil {
+		return err
+	}
 	sysCtx := context.Background()
 	oracleNode, err := node.New(
 		nebulaId,
-		chainType,
+		account.ChainType(chain),
 		chainId,
 		oracleSecretKey,
 		node.NewValidator(validatorPrivKey),
