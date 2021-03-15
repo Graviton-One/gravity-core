@@ -204,6 +204,7 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 	return nil
 }
 func (scheduler *Scheduler) signOraclesByNebula(roundId int64, nebulaId account.NebulaId, chainType account.ChainType) error {
+	zap.L().Sugar().Debug("SignOraclesByNebula chain: ", chainType)
 	_, err := scheduler.client.SignNewOraclesByConsul(scheduler.Ledger.PubKey, chainType, nebulaId, roundId)
 	if err != nil && err != gravity.ErrValueNotFound {
 		return err
