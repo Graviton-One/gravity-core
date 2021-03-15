@@ -37,7 +37,7 @@ func StringToPrivKey(value string, chain ChainType) ([]byte, error) {
 		}
 		privKey = secret.Bytes()
 	}
-
+	zap.L().Sugar().Debug("PrivKey", privKey)
 	return privKey, nil
 }
 
