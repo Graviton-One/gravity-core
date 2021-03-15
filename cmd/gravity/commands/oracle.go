@@ -151,6 +151,7 @@ func startOracle(ctx *cli.Context) error {
 	}
 	chain, err := account.ChainMapper.ToByte(cfg.ChainName)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 	sysCtx := context.Background()
