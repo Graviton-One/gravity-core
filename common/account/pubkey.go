@@ -8,6 +8,7 @@ import (
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	wavesplatform "github.com/wavesplatform/go-lib-crypto"
 	"github.com/wavesplatform/gowaves/pkg/crypto"
+	"go.uber.org/zap"
 )
 
 type ConsulPubKey ed25519.PubKeyEd25519
@@ -20,6 +21,7 @@ func StringToPrivKey(value string, chain ChainType) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	zap.L().Sugar().Debugf("Converting string to PrivKey. Chain: %d, privKey: %s", cType, value)
 	switch ChainType(cType) {
 	case Ethereum, Binance:
 		privKey, err = hexutil.Decode(value)
