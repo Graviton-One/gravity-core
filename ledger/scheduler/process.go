@@ -226,7 +226,7 @@ func (scheduler *Scheduler) signOraclesByNebula(roundId int64, nebulaId account.
 	for i := len(newOracles); i < OracleCount; i++ {
 		newOracles = append(newOracles, nil)
 	}
-
+	zap.L().Sugar().Debug("SignOracles chain: ", chainType, scheduler.Adaptors)
 	sign, err := scheduler.Adaptors[chainType].SignOracles(nebulaId, newOracles)
 	if err != nil {
 		return err
