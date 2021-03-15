@@ -212,6 +212,7 @@ func (node *Node) Init() error {
 
 		err = node.gravityClient.SendTx(tx)
 		if err != nil {
+			zap.L().Error(err.Error())
 			return err
 		}
 
