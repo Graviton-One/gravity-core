@@ -73,6 +73,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 	}
 
 	for k, v := range scheduler.Adaptors {
+		zap.L().Sugar().Debug("Iterate adaptors: ", k)
 		lastRound, err := v.LastRound(scheduler.ctx)
 		if err != nil {
 			return err
