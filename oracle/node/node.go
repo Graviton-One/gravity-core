@@ -210,6 +210,7 @@ func (node *Node) Init() error {
 			},
 		})
 
+		zap.L().Sugar().Debug("Send Tx:", tx)
 		err = node.gravityClient.SendTx(tx)
 		if err != nil {
 			zap.L().Error(err.Error())
