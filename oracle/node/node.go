@@ -84,6 +84,7 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 	}
 	ctype, err := account.ChainMapper.ToStr(byte(chainType))
 	if err != nil {
+		zap.L().Error(err.Error())
 		return nil, err
 	}
 	opts := adaptors.AdapterOptions{
@@ -92,6 +93,7 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 	}
 	adaptor, err := adaptors.NewFactory().CreateAdaptor(ctype, oracleSecretKey, targetChainNodeUrl, ctx, opts)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return nil, err
 	}
 	// var adaptor adaptors.IBlockchainAdaptor
