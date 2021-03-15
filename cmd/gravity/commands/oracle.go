@@ -134,7 +134,7 @@ func startOracle(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
+	zap.L().Sugar().Debugf("Chain type is: %d", chainType)
 	nebulaId, err := account.StringToNebulaId(nebulaIdStr, chainType)
 	if err != nil {
 		return err
