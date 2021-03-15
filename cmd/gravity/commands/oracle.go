@@ -142,6 +142,7 @@ func startOracle(ctx *cli.Context) error {
 	zap.L().Sugar().Debugf("PrivKey is: %s", privKeysCfg.TargetChains[cfg.ChainName].PrivKey)
 	oracleSecretKey, err := account.StringToPrivKey(privKeysCfg.TargetChains[cfg.ChainName].PrivKey, chainType)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
