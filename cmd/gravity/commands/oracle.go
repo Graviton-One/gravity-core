@@ -130,12 +130,6 @@ func startOracle(ctx *cli.Context) error {
 		return err
 	}
 
-	// zap.L().Sugar().Debugf("parsing chain type: %s", cfg.ChainType)
-	// chainType, err := account.ParseChainType(cfg.ChainType)
-	// if err != nil {
-	// 	return err
-	// }
-
 	chain, err := account.ChainMapper.ToByte(cfg.ChainName)
 	if err != nil {
 		return err
@@ -143,8 +137,14 @@ func startOracle(ctx *cli.Context) error {
 	chainType := account.ChainType(chain)
 	account.ChainMapper.ApendAdaptor(byte(chainType), cfg.ChainType)
 
+	zap.L().Sugar().Debugf("parsing chain type: %s", cfg.ChainType)
+	cType, err := account.ParseChainType(cfg.ChainType)
+	if err != nil {
+		return err
+	}
+
 	zap.L().Sugar().Debugf("Chain type is: %d for nebulae id: %s", chainType, nebulaIdStr)
-	nebulaId, err := account.StringToNebulaId(nebulaIdStr, chainType)
+	nebulaId, err := account.StringToNebulaId(nebulaIdStr, cType)
 	if err != nil {
 		return err
 	}
