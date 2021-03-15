@@ -211,7 +211,9 @@ func (adaptor *EthereumAdaptor) WaitTx(id string, ctx context.Context) error {
 }
 func (adaptor *EthereumAdaptor) PubKey() account.OraclesPubKey {
 	pubKey := crypto.CompressPubkey(&adaptor.privKey.PublicKey)
-	oraclePubKey := account.BytesToOraclePubKey(pubKey[:], account.Ethereum)
+	var oraclePubKey account.OraclesPubKey
+	copy(oraclePubKey[:], pubKey[0:33])
+
 	return oraclePubKey
 }
 func (adaptor *EthereumAdaptor) ValueType(nebulaId account.NebulaId, ctx context.Context) (abi.ExtractorType, error) {
