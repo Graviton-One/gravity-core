@@ -125,6 +125,7 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 
 	exType, err := adaptor.ValueType(nebulaId, ctx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return nil, err
 	}
 
