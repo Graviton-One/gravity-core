@@ -138,7 +138,7 @@ func startOracle(ctx *cli.Context) error {
 		return err
 	}
 
-	oracleSecretKey, err := account.StringToPrivKey(privKeysCfg.TargetChains[chainType.String()].PrivKey, chainType)
+	oracleSecretKey, err := account.StringToPrivKey(privKeysCfg.TargetChains[cfg.ChainName].PrivKey, chainType)
 	if err != nil {
 		return err
 	}
