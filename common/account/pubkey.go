@@ -73,7 +73,7 @@ func (pubKey *OraclesPubKey) ToString(chain ChainType) string {
 	b := pubKey.ToBytes(chain)
 	cType, err := ChainMapper.ToType(byte(chain))
 	if err != nil {
-		fmt.Printf("Error converting OraclePubkey to String")
+		fmt.Printf("Error converting OraclePubkey to String\n")
 	}
 
 	switch ChainType(cType) {
