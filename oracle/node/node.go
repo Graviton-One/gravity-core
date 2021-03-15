@@ -155,6 +155,9 @@ func (node *Node) Init() error {
 	}
 	zap.L().Sugar().Debug(oraclesByValidator)
 	oracle, ok := oraclesByValidator[node.chainType]
+	zap.L().Sugar().Debug("Oracle:", oracle)
+	zap.L().Sugar().Debug("Oracle PubKey:", node.oraclePubKey)
+
 	if !ok || oracle != node.oraclePubKey {
 		tx, err := transactions.New(node.validator.pubKey, transactions.AddOracle, node.validator.privKey)
 		if err != nil {
