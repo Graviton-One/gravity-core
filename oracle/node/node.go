@@ -147,6 +147,7 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 
 func (node *Node) Init() error {
 	zap.L().Sugar().Debugf("Oracles by validator pubKey: %s", node.validator.pubKey)
+	zap.L().Sync()
 	oraclesByValidator, err := node.gravityClient.OraclesByValidator(node.validator.pubKey)
 	if err != nil {
 		zap.L().Error(err.Error())
