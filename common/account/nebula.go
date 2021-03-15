@@ -1,9 +1,11 @@
 package account
 
 import (
+	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/wavesplatform/gowaves/pkg/crypto"
+	"go.uber.org/zap"
 )
 
 const (
@@ -16,9 +18,14 @@ const (
 type NebulaId [NebulaIdLength]byte
 
 func StringToNebulaId(address string, chainType ChainType) (NebulaId, error) {
+	cid, err := account.ChainMapper.ToType()
+	if err != nil {
+		return NebulaId{}, err
+	}
+	ctype := account.ChainType(cid)
 	var nebula NebulaId
 
-	switch chainType {
+	switch ctype {
 	case Ethereum, Binance:
 		nebulaBytes, err := hexutil.Decode(address)
 		if err != nil {
@@ -45,7 +52,14 @@ func BytesToNebulaId(value []byte) NebulaId {
 }
 
 func (id NebulaId) ToString(chainType ChainType) string {
-	nebula := id.ToBytes(chainType)
+	cid, err := account.ChainMapper.ToType()
+	if err != nil {
+		zap.L().Error(err.Error())
+		return ""
+	}
+	ctype := account.ChainType(cid)
+
+	nebula := id.ToBytes(ctype)
 	switch chainType {
 	case Ethereum, Binance:
 		return hexutil.Encode(nebula[:])
@@ -56,7 +70,14 @@ func (id NebulaId) ToString(chainType ChainType) string {
 	return ""
 }
 func (id NebulaId) ToBytes(chainType ChainType) []byte {
-	switch chainType {
+	cid, err := account.ChainMapper.ToType()
+	if err != nil {
+		zap.L().Error(err.Error())
+		return nil
+	}
+	ctype := account.ChainType(cid)
+
+	switch ctype {
 	case Binance:
 		return id[NebulaIdLength-BSCAddressLength:]
 	case Ethereum:

@@ -110,7 +110,7 @@ func startOracle(ctx *cli.Context) error {
 
 	home := ctx.String(HomeFlag)
 	nebulaIdStr := ctx.Args().First()
-	zap.L().Sugar().Debug("Nebule id from args is: %s", nebulaIdStr)
+	zap.L().Sugar().Debugf("Nebule id from args is: [%s]", nebulaIdStr)
 	var cfg config.OracleConfig
 	err = config.ParseConfig(path.Join(home, DefaultNebulaeDir, fmt.Sprintf("%s.json", nebulaIdStr)), &cfg)
 	if err != nil {
@@ -143,11 +143,12 @@ func startOracle(ctx *cli.Context) error {
 	chainType := account.ChainType(chain)
 	account.ChainMapper.ApendAdaptor(byte(chainType), cfg.ChainType)
 
-	zap.L().Sugar().Debugf("Chain type is: %d", chainType)
+	zap.L().Sugar().Debugf("Chain type is: %d for nebulae id: %s", chainType, nebulaIdStr)
 	nebulaId, err := account.StringToNebulaId(nebulaIdStr, chainType)
 	if err != nil {
 		return err
 	}
+
 	zap.L().Sugar().Debugf("PrivKey is: %s", privKeysCfg.TargetChains[cfg.ChainName].PrivKey)
 	oracleSecretKey, err := account.StringToPrivKey(privKeysCfg.TargetChains[cfg.ChainName].PrivKey, chainType)
 	if err != nil {
