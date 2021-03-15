@@ -55,8 +55,8 @@ const (
 	NetworkFlag                   = "network"
 	BootstrapUrlFlag              = "bootstrap"
 
-	Custom Network = "custom"
-	DevNet Network = "devnet"
+	Custom  Network = "custom"
+	DevNet  Network = "devnet"
 	Mainnet Network = "mainnet"
 
 	DevNetId ChainId = "gravity-devnet"
@@ -186,6 +186,7 @@ var (
 		},
 	}
 )
+
 func getPublicIP() (string, error) {
 	ifaces, _ := net.Interfaces()
 
@@ -210,7 +211,6 @@ func getPublicIP() (string, error) {
 
 	return "", fmt.Errorf("not found valid ip")
 }
-
 
 func initLedgerConfig(ctx *cli.Context) error {
 	var err error
@@ -479,6 +479,11 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 		var adaptor adaptors.IBlockchainAdaptor
 
 		switch chainType {
+		case account.Heco:
+			adaptor, err = adaptors.NewHecoAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithHecoGravityContract(v.GravityContractAddress))
+			if err != nil {
+				return nil, err
+			}
 		case account.Binance:
 			adaptor, err = adaptors.NewBinanceAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithBinanceGravityContract(v.GravityContractAddress))
 			if err != nil {

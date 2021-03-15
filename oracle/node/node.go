@@ -85,6 +85,11 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 
 	var adaptor adaptors.IBlockchainAdaptor
 	switch chainType {
+	case account.Heco:
+		adaptor, err = adaptors.NewHecoAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.HecoAdapterWithGhClient(ghClient))
+		if err != nil {
+			return nil, err
+		}
 	case account.Binance:
 		adaptor, err = adaptors.NewBinanceAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.BinanceAdapterWithGhClient(ghClient))
 		if err != nil {

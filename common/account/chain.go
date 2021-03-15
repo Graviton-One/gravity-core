@@ -11,6 +11,7 @@ const (
 	Ethereum ChainType = iota
 	Waves
 	Binance
+	Heco
 )
 
 var (
@@ -20,6 +21,8 @@ var (
 
 func ParseChainType(chainType string) (ChainType, error) {
 	switch strings.ToLower(chainType) {
+	case "heco":
+		return Heco, nil
 	case "bsc":
 		return Binance, nil
 	case "ethereum":
@@ -38,6 +41,8 @@ func (ch ChainType) String() string {
 		return "waves"
 	case Binance:
 		return "bsc"
+	case Heco:
+		return "heco"
 	default:
 		return "ethereum"
 	}
