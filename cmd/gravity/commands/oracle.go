@@ -128,6 +128,7 @@ func startOracle(ctx *cli.Context) error {
 		return err
 	}
 
+	zap.L().Sugar().Debugf("parsing chain type: %s", cfg.ChainType)
 	chainType, err := account.ParseChainType(cfg.ChainType)
 	if err != nil {
 		return err
