@@ -123,7 +123,7 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 	// 	}
 	// }
 
-	zap.L().Sugar().Debugf("NebulaId", nebulaId.ToString(account.ChainType(ctype)))
+	zap.L().Sugar().Debugf("NebulaId %s", nebulaId.ToString(account.ChainType(ctype)))
 	exType, err := adaptor.ValueType(nebulaId, ctx)
 	if err != nil {
 		zap.L().Error(err.Error())

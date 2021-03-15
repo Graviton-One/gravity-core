@@ -110,6 +110,7 @@ func startOracle(ctx *cli.Context) error {
 
 	home := ctx.String(HomeFlag)
 	nebulaIdStr := ctx.Args().First()
+	zap.L().Sugar().Debug("Nebule id from args is: %s", nebulaIdStr)
 	var cfg config.OracleConfig
 	err = config.ParseConfig(path.Join(home, DefaultNebulaeDir, fmt.Sprintf("%s.json", nebulaIdStr)), &cfg)
 	if err != nil {
