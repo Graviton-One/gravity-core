@@ -156,6 +156,7 @@ func (adaptor *WavesAdaptor) Sign(msg []byte) ([]byte, error) {
 }
 func (adaptor *WavesAdaptor) PubKey() account.OraclesPubKey {
 	var oraclePubKey account.OraclesPubKey
+	zap.L().Sugar().Debug("Waves get PubKey")
 	pubKey := crypto.GeneratePublicKey(adaptor.secret)
 	copy(oraclePubKey[:], append([]byte{0}, pubKey[0:32]...))
 	return oraclePubKey
