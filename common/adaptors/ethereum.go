@@ -540,6 +540,7 @@ func (adaptor *EthereumAdaptor) SignOracles(nebulaId account.NebulaId, oracles [
 	}
 
 	var oraclesAddresses []common.Address
+	zap.L().Sugar().Debug("Ethereum sign oracles")
 	for _, v := range oracles {
 		if v == nil {
 			oraclesAddresses = append(oraclesAddresses, common.Address{})
