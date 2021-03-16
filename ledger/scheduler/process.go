@@ -94,14 +94,15 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 			return err
 		}
 
-		for k, v := range nebulae {
-			zap.L().Sugar().Debug("Iterate Nebula: ", k, v.ChainType)
-			nebulaId, err := account.StringToNebulaId(k, v.ChainType)
+		for kn, v := range nebulae {
+			zap.L().Sugar().Debug("Iterate Nebula: ", kn, v.ChainType)
+			nebulaId, err := account.StringToNebulaId(kn, k)
 			if err != nil {
 				fmt.Printf("Error:%s\n", err.Error())
 				continue
 			}
-			err = scheduler.signOraclesByNebula(roundId, nebulaId, v.ChainType)
+
+			err = scheduler.signOraclesByNebula(roundId, nebulaId, kn)
 			if err != nil {
 				continue
 			}
