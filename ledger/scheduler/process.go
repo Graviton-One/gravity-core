@@ -102,7 +102,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 				continue
 			}
 
-			err = scheduler.signOraclesByNebula(roundId, nebulaId, kn)
+			err = scheduler.signOraclesByNebula(roundId, nebulaId, k)
 			if err != nil {
 				continue
 			}
