@@ -12,7 +12,7 @@
             "program": "${workspaceFolder}/cmd/gravity",
             "args": [
                 "ledger",
-                "--home=/home/alex/ledger",
+                "--home=/home/anaximen/ledger",
                 "start",
                 "--bootstrap="
             ]

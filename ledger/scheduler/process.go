@@ -18,6 +18,7 @@ func (scheduler *Scheduler) process(height int64) {
 }
 func (scheduler *Scheduler) processByHeight(height int64) error {
 	logger, _ := zap.NewDevelopment()
+	zap.ReplaceGlobals(logger)
 	roundId := CalculateRound(height)
 	logger.Sugar().Debugf("Process by height, round id: %d", roundId)
 	consulInfo, err := scheduler.consulInfo()
