@@ -280,6 +280,7 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 		}
 		_, err := node.gravityClient.CommitHash(node.chainType, node.nebulaId, int64(intervalId), int64(pulseId), node.oraclePubKey)
 		if err != nil && err != gravity.ErrValueNotFound {
+			zap.L().Error(err.Error())
 			return err
 		} else if err == nil {
 			return nil
@@ -287,12 +288,14 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 
 		data, err := node.extractor.Extract(ctx)
 		if err != nil && err != extractor.NotFoundErr {
+			zap.L().Error(err.Error())
 			return err
 		} else if err == extractor.NotFoundErr {
 			return nil
 		}
 
 		if data == nil {
+			zap.L().Debug("Commit subround Extractor Data is empty")
 			return nil
 		}
 
@@ -328,6 +331,7 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 
 		value, hash, err := node.signResult(intervalId, pulseId, ctx)
 		if err != nil {
+			zap.L().Error(err.Error())
 			return err
 		}
 		//TODO migrate to err
