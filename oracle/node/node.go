@@ -278,14 +278,13 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 		if roundState.commitHash != nil {
 			return nil
 		}
-		rs, err := node.gravityClient.CommitHash(node.chainType, node.nebulaId, int64(intervalId), int64(pulseId), node.oraclePubKey)
+		_, err := node.gravityClient.CommitHash(node.chainType, node.nebulaId, int64(intervalId), int64(pulseId), node.oraclePubKey)
 		if err != nil && err != gravity.ErrValueNotFound {
 			zap.L().Error(err.Error())
 			return err
 		} else if err == nil {
 			return nil
 		}
-		zap.L().Sugar().Debug("CommitHash res", rs)
 
 		data, err := node.extractor.Extract(ctx)
 		if err != nil && err != extractor.NotFoundErr {
@@ -310,12 +309,14 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 	case state.RevealSubRound:
 		zap.L().Debug("Reveal subround")
 		if roundState.commitHash == nil || roundState.RevealExist {
+			zap.L().Sugar().Debugf("CommitHash is nil: %t, RevealExist: %t", roundState.commitHash == nil, roundState.RevealExist)
 			return nil
 		}
 		_, err := node.gravityClient.Reveal(node.chainType, node.oraclePubKey, node.nebulaId, int64(intervalId), int64(pulseId), roundState.commitHash)
 		if err != nil && err != gravity.ErrValueNotFound {
+			zap.L().Error(err.Error())
 			return err
-		} else if err == nil {
+		} else if err != nil {
 			return nil
 		}
 
