@@ -88,13 +88,15 @@ func (node *Node) reveal(tcHeight uint64, pulseId uint64, reveal *extractor.Data
 	return nil
 }
 func (node *Node) signResult(tcHeight uint64, pulseId uint64, ctx context.Context) (*extractor.Data, []byte, error) {
+	zap.L().Sugar().Debugf("signResults: height: %d, pulseId: %d", tcHeight, pulseId)
 	var values []extractor.Data
 	bytesValues, err := node.gravityClient.Reveals(node.chainType, node.nebulaId, int64(tcHeight), int64(pulseId))
 	if err != nil {
 		return nil, nil, err
 	}
-
+	zap.L().Sugar().Debugf("signResults: value len: %d", len(bytesValues))
 	for _, v := range bytesValues {
+		zap.L().Sugar().Debugf("signResults: decoding: ", v)
 		b, err := base64.StdEncoding.DecodeString(v)
 		if err != nil {
 			continue
