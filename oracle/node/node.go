@@ -278,13 +278,14 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 		if roundState.commitHash != nil {
 			return nil
 		}
-		_, err := node.gravityClient.CommitHash(node.chainType, node.nebulaId, int64(intervalId), int64(pulseId), node.oraclePubKey)
+		rs, err := node.gravityClient.CommitHash(node.chainType, node.nebulaId, int64(intervalId), int64(pulseId), node.oraclePubKey)
 		if err != nil && err != gravity.ErrValueNotFound {
 			zap.L().Error(err.Error())
 			return err
 		} else if err == nil {
 			return nil
 		}
+		zap.L().Sugar().Debug("CommitHash res", rs)
 
 		data, err := node.extractor.Extract(ctx)
 		if err != nil && err != extractor.NotFoundErr {
