@@ -306,6 +306,7 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 
 		roundState.commitHash = commit
 		roundState.data = data
+		zap.L().Sugar().Debug("Commit round end ", roundState)
 	case state.RevealSubRound:
 		zap.L().Debug("Reveal subround")
 		if roundState.commitHash == nil || roundState.RevealExist {
@@ -326,6 +327,7 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 			return err
 		}
 		roundState.RevealExist = true
+		zap.L().Sugar().Debug("Reveal round end ", roundState)
 	case state.ResultSubRound:
 		zap.L().Debug("Result subround")
 		if roundState.data == nil && !roundState.RevealExist {
