@@ -11,6 +11,7 @@ import (
 	"github.com/Gravity-Tech/gravity-core/ledger/query"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
+	"go.uber.org/zap"
 )
 
 const (
@@ -216,7 +217,7 @@ func (client *Client) Reveals(chainType account.ChainType, nebulaId account.Nebu
 	if err != nil {
 		return nil, err
 	}
-
+	zap.L().Sugar().Debug("Reveals res: %s", string(rs))
 	var reveals []string
 	if err == ErrValueNotFound {
 		return reveals, nil
