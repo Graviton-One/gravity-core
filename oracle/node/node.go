@@ -316,12 +316,13 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 		if err != nil && err != gravity.ErrValueNotFound {
 			zap.L().Error(err.Error())
 			return err
-		} else if err != nil {
+		} else if err == nil {
 			return nil
 		}
 
 		err = node.reveal(intervalId, pulseId, roundState.data, roundState.commitHash)
 		if err != nil {
+			zap.L().Error(err.Error())
 			return err
 		}
 		roundState.RevealExist = true
