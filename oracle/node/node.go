@@ -221,7 +221,7 @@ func (node *Node) Start(ctx context.Context) {
 			lastPulseId = newLastPulseId
 			roundState = new(RoundState)
 		}
-
+		zap.L().Sugar().Debugf("Round Loop Pulse new: %d last:%d", newLastPulseId, lastPulseId)
 		tcHeight, err := node.adaptor.GetHeight(ctx)
 		if err != nil {
 			zap.L().Error(err.Error())
