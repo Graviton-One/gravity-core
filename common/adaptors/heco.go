@@ -280,7 +280,7 @@ func (adaptor *HecoAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId u
 				return err
 			}
 		case Bytes:
-			println(value.Value)
+			//println(value.Value)
 			v, err := base64.StdEncoding.DecodeString(value.Value)
 			if err != nil {
 				return err
