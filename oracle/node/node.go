@@ -262,11 +262,12 @@ func (node *Node) Start(ctx context.Context) {
 		interval := (lastTcHeight - 2*node.blocksInterval/state.SubRoundCount) / node.blocksInterval
 
 		fmt.Printf("Interval: %d\n", interval)
+		fmt.Printf("TcHeight: %d\n", tcHeight)
 		round := state.CalculateSubRound(tcHeight, node.blocksInterval)
 
 		fmt.Printf("Round: %d\n", round)
 
-		err = node.execute(lastPulseId+1, round, lastTcHeight, interval, roundState, ctx)
+		err = node.execute(lastPulseId+1, round, tcHeight, interval, roundState, ctx)
 		if err != nil {
 			zap.L().Error(err.Error())
 		}
