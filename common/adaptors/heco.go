@@ -258,36 +258,41 @@ func (adaptor *HecoAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId u
 	}
 
 	for _, id := range ids {
+		zap.L().Sugar().Debug("IDs iterate", id)
 		t, err := nebula.DataType(nil)
 		if err != nil {
 			return err
 		}
 
 		transactOpt := bind.NewKeyedTransactor(adaptor.privKey)
+		zap.L().Sugar().Debug("transactOpt is nil", transactOpt == nil)
 		switch SubType(t) {
 		case Int64:
 			v, err := strconv.ParseInt(value.Value, 10, 64)
 			if err != nil {
+				zap.L().Error(err.Error())
 				return err
 			}
 			_, err = nebula.SendValueToSubInt(transactOpt, v, big.NewInt(int64(pulseId)), id)
 			if err != nil {
+				zap.L().Error(err.Error())
 				return err
 			}
 		case String:
 			_, err = nebula.SendValueToSubString(transactOpt, value.Value, big.NewInt(int64(pulseId)), id)
 			if err != nil {
+				zap.L().Error(err.Error())
 				return err
 			}
 		case Bytes:
 			//println(value.Value)
-			zap.L().Sugar().Debug("Value is nil", value == nil)
+			zap.L().Sugar().Debug("SendValueToSubs Value is nil", value == nil)
 			v, err := base64.StdEncoding.DecodeString(value.Value)
 			if err != nil {
 				zap.L().Error(err.Error())
 				return err
 			}
-
+			zap.L().Sugar().Debug("transactOpt is nil", transactOpt == nil)
 			_, err = nebula.SendValueToSubByte(transactOpt, v, big.NewInt(int64(pulseId)), id)
 
 			if err != nil {
