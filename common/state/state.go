@@ -8,6 +8,7 @@ import (
 	"errors"
 
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
+	"go.uber.org/zap"
 
 	"github.com/Gravity-Tech/gravity-core/ledger/scheduler"
 
@@ -125,6 +126,7 @@ func reveal(store *storage.Storage, tx *transactions.Transaction) error {
 	pubKeyBytes := tx.Value(5).([]byte)
 	var pubKey account.OraclesPubKey
 	copy(pubKey[:], pubKeyBytes)
+	zap.L().Sugar().Debug("State reveal", commit, nebula, pulseId, height, reveal, pubKeyBytes)
 
 	_, err := store.Reveal(nebula, height, pulseId, commit, pubKey)
 	if err == storage.ErrKeyNotFound {
