@@ -217,7 +217,7 @@ func (client *Client) Reveals(chainType account.ChainType, nebulaId account.Nebu
 	if err != nil {
 		return nil, err
 	}
-	zap.L().Sugar().Debug("Reveals res: %s", string(rs))
+	zap.L().Sugar().Debugf("Reveals res: %s", string(rs))
 	var reveals []string
 	if err == ErrValueNotFound {
 		return reveals, nil

@@ -97,7 +97,7 @@ func (node *Node) signResult(tcHeight uint64, pulseId uint64, ctx context.Contex
 	}
 	zap.L().Sugar().Debugf("signResults: value len: %d", len(bytesValues))
 	for _, v := range bytesValues {
-		zap.L().Sugar().Debugf("signResults: decoding: ", v)
+		zap.L().Sugar().Debugf("signResults: decoding: %s", v)
 		b, err := base64.StdEncoding.DecodeString(v)
 		if err != nil {
 			continue
