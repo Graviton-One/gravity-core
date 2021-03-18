@@ -281,14 +281,17 @@ func (adaptor *HecoAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId u
 			}
 		case Bytes:
 			//println(value.Value)
+			zap.L().Sugar().Debug("Value is nil", value == nil)
 			v, err := base64.StdEncoding.DecodeString(value.Value)
 			if err != nil {
+				zap.L().Error(err.Error())
 				return err
 			}
 
 			_, err = nebula.SendValueToSubByte(transactOpt, v, big.NewInt(int64(pulseId)), id)
-			zap.L().Error(err.Error())
+
 			if err != nil {
+				zap.L().Error(err.Error())
 				continue
 			}
 		}
