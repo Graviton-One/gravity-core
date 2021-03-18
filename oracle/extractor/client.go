@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"go.uber.org/zap"
 )
 
 const (
@@ -23,6 +25,7 @@ const (
 var (
 	NotFoundErr = errors.New("data not found")
 )
+
 type DataType string
 type Data struct {
 	Type  DataType
@@ -59,7 +62,7 @@ func (client *Client) Aggregate(values []Data, ctx context.Context) (*Data, erro
 	if err != nil {
 		return nil, err
 	}
-
+	zap.L().Sugar().Debugf("Aggragate response: %s", string(rs))
 	var result Data
 	err = json.Unmarshal(rs, &result)
 	if err != nil {
