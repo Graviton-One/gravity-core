@@ -254,7 +254,7 @@ func (node *Node) Start(ctx context.Context) {
 			lastLedgerHeight = ledgerHeight
 		}
 
-		interval := (lastLedgerHeight - 2*node.blocksInterval/state.SubRoundCount) / node.blocksInterval
+		interval := (lastTcHeight - 2*node.blocksInterval/state.SubRoundCount) / node.blocksInterval
 
 		fmt.Printf("Interval: %d\n", interval)
 		round := state.CalculateSubRound(tcHeight, node.blocksInterval)
