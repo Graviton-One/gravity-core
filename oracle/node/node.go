@@ -226,13 +226,15 @@ func (node *Node) Start(ctx context.Context) {
 		if err != nil {
 			zap.L().Error(err.Error())
 		}
-
-		if tcHeight != lastTcHeight {
-			zap.L().Sugar().Infof("Tc Height: %d\n", tcHeight)
-			lastTcHeight = tcHeight
-			if tcHeight%node.blocksInterval == 0 {
-				pulseCountInBlock = 0
-				roundState = new(RoundState)
+		checkRound := state.CalculateSubRound(tcHeight, node.blocksInterval)
+		if checkRound == state.CommitSubRound {
+			if tcHeight != lastTcHeight {
+				zap.L().Sugar().Infof("Tc Height: %d\n", tcHeight)
+				lastTcHeight = tcHeight
+				if tcHeight%node.blocksInterval == 0 {
+					pulseCountInBlock = 0
+					roundState = new(RoundState)
+				}
 			}
 		}
 
@@ -264,7 +266,7 @@ func (node *Node) Start(ctx context.Context) {
 
 		fmt.Printf("Round: %d\n", round)
 
-		err = node.execute(lastPulseId+1, round, tcHeight, interval, roundState, ctx)
+		err = node.execute(lastPulseId+1, round, lastTcHeight, interval, roundState, ctx)
 		if err != nil {
 			zap.L().Error(err.Error())
 		}
