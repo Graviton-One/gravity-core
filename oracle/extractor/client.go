@@ -95,6 +95,7 @@ func (client *Client) do(route string, method string, rqBody interface{}, ctx co
 			return nil, err
 		}
 	}
+	req.Header.Set("Content-Type", "application/json")
 	response, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
