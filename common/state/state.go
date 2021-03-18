@@ -65,7 +65,7 @@ func SetState(tx *transactions.Transaction, store *storage.Storage, adaptors map
 		zap.L().Sugar().Error(err.Error())
 		return err
 	}
-	zap.L().Sugar().Debug("SetState func[%s]", tx.Func)
+	zap.L().Sugar().Debugf("SetState func[%s]", tx.Func)
 	switch tx.Func {
 	case transactions.Commit:
 		return commit(store, tx)
