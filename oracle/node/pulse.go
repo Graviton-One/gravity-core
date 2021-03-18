@@ -100,22 +100,25 @@ func (node *Node) signResult(tcHeight uint64, pulseId uint64, ctx context.Contex
 		zap.L().Sugar().Debugf("signResults: decoding: %s", v)
 		b, err := base64.StdEncoding.DecodeString(v)
 		if err != nil {
+			zap.L().Sugar().Error(err.Error())
 			continue
 		}
 		values = append(values, *fromBytes(b, node.extractor.ExtractorType))
 	}
-
+	zap.L().Sugar().Debug("Decoded values: ", values)
 	if len(values) == 0 {
 		return nil, nil, nil
 	}
 	result, err := node.extractor.Aggregate(values, ctx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return nil, nil, err
 	}
 
 	hash := crypto.Keccak256(toBytes(result, node.extractor.ExtractorType))
 	sign, err := node.adaptor.Sign(hash)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return nil, nil, err
 	}
 	zap.L().Sugar().Infof("Result hash: %s \n", hexutil.Encode(hash))
