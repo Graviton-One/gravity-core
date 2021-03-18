@@ -101,7 +101,7 @@ func (client *Client) do(route string, method string, rqBody interface{}, ctx co
 	}
 
 	defer response.Body.Close()
-
+	zap.L().Sugar().Debug("Response: ", response)
 	if response.StatusCode == 404 {
 		return nil, NotFoundErr
 	}
