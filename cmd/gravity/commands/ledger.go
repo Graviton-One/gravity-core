@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/tendermint/tendermint/privval"
+	"go.uber.org/zap"
 
 	"github.com/tendermint/tendermint/crypto"
 
@@ -308,6 +309,9 @@ func initLedgerConfig(ctx *cli.Context) error {
 }
 
 func startLedger(ctx *cli.Context) error {
+	zaplog, _ := zap.NewDevelopment()
+	zap.ReplaceGlobals(zaplog)
+
 	home := ctx.String(HomeFlag)
 	bootstrap := ctx.String(BootstrapUrlFlag)
 	rpcHost := ctx.String(PrivateRPCHostFlag)
