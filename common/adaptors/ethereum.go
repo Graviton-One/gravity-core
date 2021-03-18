@@ -15,6 +15,7 @@ import (
 	"github.com/Gravity-Tech/gravity-core/abi/ethereum"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 	"github.com/gookit/validate"
+	"go.uber.org/zap"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -324,14 +325,18 @@ func (adaptor *EthereumAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulse
 	}
 
 	for _, id := range ids {
+		zap.L().Sugar().Debug("IDs iterate", id)
 		t, err := nebula.DataType(nil)
 		if err != nil {
 			return err
 		}
 
 		transactOpt := bind.NewKeyedTransactor(adaptor.privKey)
+		zap.L().Sugar().Debug("transactOpt is nil", transactOpt == nil)
+
 		switch SubType(t) {
 		case Int64:
+			zap.L().Sugar().Debugf("SendIntValueToSubs")
 			v, err := strconv.ParseInt(value.Value, 10, 64)
 			if err != nil {
 				return err
@@ -341,12 +346,13 @@ func (adaptor *EthereumAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulse
 				return err
 			}
 		case String:
+			zap.L().Sugar().Debugf("SendStringValueToSubs")
 			_, err = nebula.SendValueToSubString(transactOpt, value.Value, big.NewInt(int64(pulseId)), id)
 			if err != nil {
 				return err
 			}
 		case Bytes:
-			println(value.Value)
+			//println(value.Value)
 			v, err := base64.StdEncoding.DecodeString(value.Value)
 			if err != nil {
 				return err
@@ -354,6 +360,7 @@ func (adaptor *EthereumAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulse
 
 			_, err = nebula.SendValueToSubByte(transactOpt, v, big.NewInt(int64(pulseId)), id)
 			if err != nil {
+				zap.L().Error(err.Error())
 				continue
 			}
 		}
