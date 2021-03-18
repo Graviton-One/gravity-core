@@ -54,15 +54,18 @@ func CalculateSubRound(tcHeight uint64, blocksInterval uint64) SubRound {
 }
 
 func SetState(tx *transactions.Transaction, store *storage.Storage, adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, isSync bool, ctx context.Context) error {
+
 	if err := isValidSigns(store, tx); err != nil {
+		zap.L().Sugar().Error(err.Error())
 		return err
 	}
 
 	height, err := store.LastHeight()
 	if err != nil {
+		zap.L().Sugar().Error(err.Error())
 		return err
 	}
-
+	zap.L().Sugar().Debug("SetState func[%s]", tx.Func)
 	switch tx.Func {
 	case transactions.Commit:
 		return commit(store, tx)
