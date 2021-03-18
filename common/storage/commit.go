@@ -24,6 +24,6 @@ func (storage *Storage) CommitHash(nebulaId account.NebulaId, tcHeight int64, pu
 }
 
 func (storage *Storage) SetCommitHash(nebulaId account.NebulaId, tcHeight int64, pulseId int64, oraclePubKey account.OraclesPubKey, commit []byte) error {
-	zap.L().Sugar().Debugf("CommitHash key: %s", formCommitKey(nebulaId, tcHeight, pulseId, oraclePubKey))
+	zap.L().Sugar().Debugf("SetCommitHash key: %s", formCommitKey(nebulaId, tcHeight, pulseId, oraclePubKey))
 	return storage.setValue(formCommitKey(nebulaId, tcHeight, pulseId, oraclePubKey), commit)
 }
