@@ -6,15 +6,14 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"math/big"
-	"reflect"
 	"strconv"
 	"time"
 
 	"github.com/Gravity-Tech/gravity-core/abi"
 	"github.com/Gravity-Tech/gravity-core/abi/ethereum"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
-	"github.com/gookit/validate"
 	"go.uber.org/zap"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -29,94 +28,27 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-const (
-	Int64  SubType = 0
-	String SubType = 1
-	Bytes  SubType = 2
+//const (
+//	Int64  SubType = 0
+//	String SubType = 1
+//	Bytes  SubType = 2
+//
+//	waitTimeout = 240
+//)
+//
+//type SubType uint8
+type HecoAdaptor struct {
+	privKey *ecdsa.PrivateKey
 
-	waitTimeout = 240
-)
+	ghClient  *gravity.Client
+	ethClient *ethclient.Client
 
-type SubType uint8
-type EthereumAdaptor struct {
-	privKey *ecdsa.PrivateKey `option:"-"`
-
-	ghClient  *gravity.Client   `option:"ghClient"`
-	ethClient *ethclient.Client `option:"ethClient"`
-
-	gravityContract *ethereum.Gravity `option:"gravityContract"`
+	gravityContract *ethereum.Gravity
 }
-type EthereumAdapterOption func(*EthereumAdaptor) error
+type HecoAdapterOption func(*HecoAdaptor) error
 
-func (ea *EthereumAdaptor) applyOpts(opts AdapterOptions) error {
-	err := validateEthereumAdapterOptions(opts)
-	if err != nil {
-		return err
-	}
-	v := reflect.TypeOf(*ea)
-	for i := 0; i < v.NumField(); i++ {
-		field := v.Field(i)
-		tag := field.Tag.Get("option")
-		val, ok := opts[tag]
-		if ok {
-			switch tag {
-			case "ghClient":
-				ea.ghClient = val.(*gravity.Client)
-			case "wvClient":
-				ea.ethClient = val.(*ethclient.Client)
-			case "gravityContract":
-				err := WithEthereumGravityContract(val.(string))(ea)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func validateEthereumAdapterOptions(opts AdapterOptions) error {
-	v := validate.Map(opts)
-	v.AddRule("ghClient", "isGhClient")
-	v.AddRule("ethClient", "isEthClient")
-	v.AddRule("gravityContract", "string")
-
-	if !v.Validate() { // validate ok
-		return v.Errors
-	}
-	return nil
-}
-
-func NewEthereumsAdapterByOpts(seed []byte, nodeUrl string, ctx context.Context, opts AdapterOptions) (*EthereumAdaptor, error) {
-	ethClient, err := ethclient.DialContext(ctx, nodeUrl)
-	if err != nil {
-		return nil, err
-	}
-
-	ethPrivKey := &ecdsa.PrivateKey{
-		PublicKey: ecdsa.PublicKey{
-			Curve: secp256k1.S256(),
-		},
-		D: new(big.Int),
-	}
-	ethPrivKey.D.SetBytes(seed)
-	ethPrivKey.PublicKey.X, ethPrivKey.PublicKey.Y = ethPrivKey.PublicKey.Curve.ScalarBaseMult(seed)
-
-	adapter := &EthereumAdaptor{
-		privKey:   ethPrivKey,
-		ethClient: ethClient,
-	}
-
-	err = adapter.applyOpts(opts)
-	if err != nil {
-		return nil, err
-	}
-
-	return adapter, nil
-}
-
-func WithEthereumGravityContract(address string) EthereumAdapterOption {
-	return func(h *EthereumAdaptor) error {
+func WithHecoGravityContract(address string) HecoAdapterOption {
+	return func(h *HecoAdaptor) error {
 		hexAddress, err := hexutil.Decode(address)
 		if err != nil {
 			return err
@@ -131,14 +63,14 @@ func WithEthereumGravityContract(address string) EthereumAdapterOption {
 		return nil
 	}
 }
-func EthAdapterWithGhClient(ghClient *gravity.Client) EthereumAdapterOption {
-	return func(h *EthereumAdaptor) error {
+func HecoAdapterWithGhClient(ghClient *gravity.Client) HecoAdapterOption {
+	return func(h *HecoAdaptor) error {
 		h.ghClient = ghClient
 		return nil
 	}
 }
 
-func NewEthereumAdaptor(privKey []byte, nodeUrl string, ctx context.Context, opts ...EthereumAdapterOption) (*EthereumAdaptor, error) {
+func NewHecoAdaptor(privKey []byte, nodeUrl string, ctx context.Context, opts ...HecoAdapterOption) (*HecoAdaptor, error) {
 	ethClient, err := ethclient.DialContext(ctx, nodeUrl)
 	if err != nil {
 		return nil, err
@@ -153,7 +85,7 @@ func NewEthereumAdaptor(privKey []byte, nodeUrl string, ctx context.Context, opt
 	ethPrivKey.D.SetBytes(privKey)
 	ethPrivKey.PublicKey.X, ethPrivKey.PublicKey.Y = ethPrivKey.PublicKey.Curve.ScalarBaseMult(privKey)
 
-	adapter := &EthereumAdaptor{
+	adapter := &HecoAdaptor{
 		privKey:   ethPrivKey,
 		ethClient: ethClient,
 	}
@@ -167,7 +99,7 @@ func NewEthereumAdaptor(privKey []byte, nodeUrl string, ctx context.Context, opt
 	return adapter, nil
 }
 
-func (adaptor *EthereumAdaptor) GetHeight(ctx context.Context) (uint64, error) {
+func (adaptor *HecoAdaptor) GetHeight(ctx context.Context) (uint64, error) {
 	tcHeightRq, err := adaptor.ethClient.BlockByNumber(ctx, nil)
 	if err != nil {
 		return 0, err
@@ -175,7 +107,7 @@ func (adaptor *EthereumAdaptor) GetHeight(ctx context.Context) (uint64, error) {
 
 	return tcHeightRq.NumberU64(), nil
 }
-func (adaptor *EthereumAdaptor) Sign(msg []byte) ([]byte, error) {
+func (adaptor *HecoAdaptor) Sign(msg []byte) ([]byte, error) {
 	sig, err := crypto.Sign(msg, adaptor.privKey)
 	if err != nil {
 		return nil, err
@@ -183,7 +115,7 @@ func (adaptor *EthereumAdaptor) Sign(msg []byte) ([]byte, error) {
 
 	return sig, nil
 }
-func (adaptor *EthereumAdaptor) WaitTx(id string, ctx context.Context) error {
+func (adaptor *HecoAdaptor) WaitTx(id string, ctx context.Context) error {
 	nCtx, _ := context.WithTimeout(ctx, waitTimeout*time.Second)
 	queryTicker := time.NewTicker(time.Second * 3)
 	defer queryTicker.Stop()
@@ -209,12 +141,12 @@ func (adaptor *EthereumAdaptor) WaitTx(id string, ctx context.Context) error {
 	}
 
 }
-func (adaptor *EthereumAdaptor) PubKey() account.OraclesPubKey {
+func (adaptor *HecoAdaptor) PubKey() account.OraclesPubKey {
 	pubKey := crypto.CompressPubkey(&adaptor.privKey.PublicKey)
 	oraclePubKey := account.BytesToOraclePubKey(pubKey[:], account.Ethereum)
 	return oraclePubKey
 }
-func (adaptor *EthereumAdaptor) ValueType(nebulaId account.NebulaId, ctx context.Context) (abi.ExtractorType, error) {
+func (adaptor *HecoAdaptor) ValueType(nebulaId account.NebulaId, ctx context.Context) (abi.ExtractorType, error) {
 	nebula, err := ethereum.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return 0, err
@@ -228,7 +160,7 @@ func (adaptor *EthereumAdaptor) ValueType(nebulaId account.NebulaId, ctx context
 	return abi.ExtractorType(exType), nil
 }
 
-func (adaptor *EthereumAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
+func (adaptor *HecoAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
 	nebula, err := ethereum.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return "", err
@@ -291,6 +223,7 @@ func (adaptor *EthereumAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint
 	}
 
 	if realSignCount < int(bft.Uint64()) {
+		fmt.Printf("Exist bft count %d < min bft count (%d)", realSignCount, bft.Uint64())
 		return "", nil
 	}
 
@@ -311,7 +244,7 @@ func (adaptor *EthereumAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint
 	}
 	return tx.Hash().String(), nil
 }
-func (adaptor *EthereumAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId uint64, value *extractor.Data, ctx context.Context) error {
+func (adaptor *HecoAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId uint64, value *extractor.Data, ctx context.Context) error {
 	var err error
 
 	nebula, err := ethereum.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
@@ -333,32 +266,35 @@ func (adaptor *EthereumAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulse
 
 		transactOpt := bind.NewKeyedTransactor(adaptor.privKey)
 		zap.L().Sugar().Debug("transactOpt is nil", transactOpt == nil)
-
 		switch SubType(t) {
 		case Int64:
-			zap.L().Sugar().Debugf("SendIntValueToSubs")
 			v, err := strconv.ParseInt(value.Value, 10, 64)
 			if err != nil {
+				zap.L().Error(err.Error())
 				return err
 			}
 			_, err = nebula.SendValueToSubInt(transactOpt, v, big.NewInt(int64(pulseId)), id)
 			if err != nil {
+				zap.L().Error(err.Error())
 				return err
 			}
 		case String:
-			zap.L().Sugar().Debugf("SendStringValueToSubs")
 			_, err = nebula.SendValueToSubString(transactOpt, value.Value, big.NewInt(int64(pulseId)), id)
 			if err != nil {
+				zap.L().Error(err.Error())
 				return err
 			}
 		case Bytes:
 			//println(value.Value)
+			zap.L().Sugar().Debug("SendValueToSubs Value is nil", value == nil)
 			v, err := base64.StdEncoding.DecodeString(value.Value)
 			if err != nil {
+				zap.L().Error(err.Error())
 				return err
 			}
-
+			zap.L().Sugar().Debug("transactOpt is nil", transactOpt == nil)
 			_, err = nebula.SendValueToSubByte(transactOpt, v, big.NewInt(int64(pulseId)), id)
+
 			if err != nil {
 				zap.L().Error(err.Error())
 				continue
@@ -368,7 +304,7 @@ func (adaptor *EthereumAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulse
 	return nil
 }
 
-func (adaptor *EthereumAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
+func (adaptor *HecoAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
 	nebula, err := ethereum.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return "", err
@@ -440,7 +376,7 @@ func (adaptor *EthereumAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, or
 
 	return tx.Hash().Hex(), nil
 }
-func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
+func (adaptor *HecoAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
 	consuls, err := adaptor.gravityContract.GetConsuls(nil)
 	if err != nil {
 		return "", err
@@ -497,7 +433,7 @@ func (adaptor *EthereumAdaptor) SendConsulsToGravityContract(newConsulsAddresses
 
 	return tx.Hash().Hex(), nil
 }
-func (adaptor *EthereumAdaptor) SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64) ([]byte, error) {
+func (adaptor *HecoAdaptor) SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64) ([]byte, error) {
 	var oraclesAddresses []common.Address
 	for _, v := range consulsAddresses {
 		if v == nil {
@@ -522,7 +458,7 @@ func (adaptor *EthereumAdaptor) SignConsuls(consulsAddresses []*account.OraclesP
 
 	return sign, nil
 }
-func (adaptor *EthereumAdaptor) SignOracles(nebulaId account.NebulaId, oracles []*account.OraclesPubKey) ([]byte, error) {
+func (adaptor *HecoAdaptor) SignOracles(nebulaId account.NebulaId, oracles []*account.OraclesPubKey) ([]byte, error) {
 	nebula, err := ethereum.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return nil, err
@@ -554,7 +490,7 @@ func (adaptor *EthereumAdaptor) SignOracles(nebulaId account.NebulaId, oracles [
 	return sign, nil
 }
 
-func (adaptor *EthereumAdaptor) LastPulseId(nebulaId account.NebulaId, ctx context.Context) (uint64, error) {
+func (adaptor *HecoAdaptor) LastPulseId(nebulaId account.NebulaId, ctx context.Context) (uint64, error) {
 	nebula, err := ethereum.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return 0, err
@@ -567,7 +503,7 @@ func (adaptor *EthereumAdaptor) LastPulseId(nebulaId account.NebulaId, ctx conte
 
 	return lastId.Uint64(), nil
 }
-func (adaptor *EthereumAdaptor) LastRound(ctx context.Context) (uint64, error) {
+func (adaptor *HecoAdaptor) LastRound(ctx context.Context) (uint64, error) {
 	lastRound, err := adaptor.gravityContract.LastRound(nil)
 	if err != nil {
 		return 0, err
@@ -575,7 +511,7 @@ func (adaptor *EthereumAdaptor) LastRound(ctx context.Context) (uint64, error) {
 
 	return lastRound.Uint64(), nil
 }
-func (adaptor *EthereumAdaptor) RoundExist(roundId int64, ctx context.Context) (bool, error) {
+func (adaptor *HecoAdaptor) RoundExist(roundId int64, ctx context.Context) (bool, error) {
 	consuls, err := adaptor.gravityContract.GetConsulsByRoundId(nil, big.NewInt(roundId))
 	if err != nil {
 		return false, err

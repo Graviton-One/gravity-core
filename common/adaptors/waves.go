@@ -12,6 +12,7 @@ import (
 	"github.com/Gravity-Tech/gravity-core/abi"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 	"github.com/gookit/validate"
+	"go.uber.org/zap"
 
 	"github.com/Gravity-Tech/gravity-core/common/storage"
 
@@ -259,40 +260,52 @@ func (adaptor *WavesAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64,
 }
 func (adaptor *WavesAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId uint64, value *extractor.Data, ctx context.Context) error {
 	nebulaAddress := base58.Encode(nebulaId.ToBytes(account.Waves))
+	zap.L().Sugar().Debugf("SendValueToSubs: nebulaAddress - %s", nebulaAddress)
 	state, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, fmt.Sprintf("data_hash_%d", pulseId), ctx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	} else if state == nil {
+		zap.L().Debug("SendValueToSubs: state is nil")
 		return nil
 	}
 
 	subContract, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, "subscriber_address", ctx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
+	zap.L().Sugar().Debug("SendValueToSubs: subcontract ", subContract)
 
 	pubKeyNebulaContract, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, "contract_pubkey", ctx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
+	zap.L().Sugar().Debug("SendValueToSubs: pubKeyNebulaContract ", pubKeyNebulaContract)
 
 	asset, err := proto.NewOptionalAssetFromString("WAVES")
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
 	contract, err := proto.NewRecipientFromString(subContract.Value.(string))
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
+	zap.L().Sugar().Debug("SendValueToSubs: contract ", contract)
 
 	pubKey, err := crypto.NewPublicKeyFromBase58(pubKeyNebulaContract.Value.(string))
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
 	nebulaType, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, "type", ctx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
@@ -342,14 +355,16 @@ func (adaptor *WavesAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId 
 		Fee:       900000,
 		Timestamp: wclient.NewTimestampFromTime(time.Now()),
 	}
-
+	zap.L().Sugar().Debug("SendValueToSubs: tx ", tx)
 	err = tx.Sign(adaptor.chainID, adaptor.secret)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
-
+	zap.L().Sugar().Debug("SendValueToSubs: Broadcast ", tx)
 	_, err = adaptor.wavesClient.Transactions.Broadcast(ctx, tx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"go.uber.org/zap"
 )
 
 const (
@@ -23,6 +25,7 @@ const (
 var (
 	NotFoundErr = errors.New("data not found")
 )
+
 type DataType string
 type Data struct {
 	Type  DataType
@@ -59,7 +62,7 @@ func (client *Client) Aggregate(values []Data, ctx context.Context) (*Data, erro
 	if err != nil {
 		return nil, err
 	}
-
+	zap.L().Sugar().Debugf("Aggragate response: %s", string(rs))
 	var result Data
 	err = json.Unmarshal(rs, &result)
 	if err != nil {
@@ -71,7 +74,7 @@ func (client *Client) Aggregate(values []Data, ctx context.Context) (*Data, erro
 
 func (client *Client) do(route string, method string, rqBody interface{}, ctx context.Context) ([]byte, error) {
 	rqUrl := fmt.Sprintf("%v/%v", client.hostUrl, route)
-
+	zap.L().Sugar().Debugf("Reuest URL: %s", rqUrl)
 	var buf *bytes.Buffer
 	var req *http.Request
 	var err error
@@ -80,6 +83,7 @@ func (client *Client) do(route string, method string, rqBody interface{}, ctx co
 		if err != nil {
 			return nil, err
 		}
+		zap.L().Sugar().Debugf("Reuest Body: %s", string(b))
 		buf = bytes.NewBuffer(b)
 		req, err = http.NewRequestWithContext(ctx, method, rqUrl, buf)
 		if err != nil {
@@ -91,13 +95,14 @@ func (client *Client) do(route string, method string, rqBody interface{}, ctx co
 			return nil, err
 		}
 	}
+	req.Header.Set("Content-Type", "application/json")
 	response, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 
 	defer response.Body.Close()
-
+	zap.L().Sugar().Debug("Response: ", response)
 	if response.StatusCode == 404 {
 		return nil, NotFoundErr
 	}

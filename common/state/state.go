@@ -8,6 +8,7 @@ import (
 	"errors"
 
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
+	"go.uber.org/zap"
 
 	"github.com/Gravity-Tech/gravity-core/ledger/scheduler"
 
@@ -53,15 +54,18 @@ func CalculateSubRound(tcHeight uint64, blocksInterval uint64) SubRound {
 }
 
 func SetState(tx *transactions.Transaction, store *storage.Storage, adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, isSync bool, ctx context.Context) error {
+
 	if err := isValidSigns(store, tx); err != nil {
+		zap.L().Sugar().Error(err.Error())
 		return err
 	}
 
 	height, err := store.LastHeight()
 	if err != nil {
+		zap.L().Sugar().Error(err.Error())
 		return err
 	}
-
+	zap.L().Sugar().Debugf("SetState func[%s]", tx.Func)
 	switch tx.Func {
 	case transactions.Commit:
 		return commit(store, tx)
@@ -125,6 +129,7 @@ func reveal(store *storage.Storage, tx *transactions.Transaction) error {
 	pubKeyBytes := tx.Value(5).([]byte)
 	var pubKey account.OraclesPubKey
 	copy(pubKey[:], pubKeyBytes)
+	zap.L().Sugar().Debug("State reveal", commit, nebula, pulseId, height, reveal, pubKeyBytes)
 
 	_, err := store.Reveal(nebula, height, pulseId, commit, pubKey)
 	if err == storage.ErrKeyNotFound {

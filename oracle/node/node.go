@@ -85,6 +85,11 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 
 	var adaptor adaptors.IBlockchainAdaptor
 	switch chainType {
+	case account.Heco:
+		adaptor, err = adaptors.NewHecoAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.HecoAdapterWithGhClient(ghClient))
+		if err != nil {
+			return nil, err
+		}
 	case account.Binance:
 		adaptor, err = adaptors.NewBinanceAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.BinanceAdapterWithGhClient(ghClient))
 		if err != nil {
@@ -216,7 +221,7 @@ func (node *Node) Start(ctx context.Context) {
 			lastPulseId = newLastPulseId
 			roundState = new(RoundState)
 		}
-
+		zap.L().Sugar().Debugf("Round Loop Pulse new: %d last:%d", newLastPulseId, lastPulseId)
 		tcHeight, err := node.adaptor.GetHeight(ctx)
 		if err != nil {
 			zap.L().Error(err.Error())
@@ -257,6 +262,7 @@ func (node *Node) Start(ctx context.Context) {
 		interval := (lastTcHeight - 2*node.blocksInterval/state.SubRoundCount) / node.blocksInterval
 
 		fmt.Printf("Interval: %d\n", interval)
+		fmt.Printf("TcHeight: %d\n", tcHeight)
 		round := state.CalculateSubRound(tcHeight, node.blocksInterval)
 
 		fmt.Printf("Round: %d\n", round)
@@ -271,12 +277,13 @@ func (node *Node) Start(ctx context.Context) {
 func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64, intervalId uint64, roundState *RoundState, ctx context.Context) error {
 	switch round {
 	case state.CommitSubRound:
-		zap.L().Debug("Commit subround")
+		zap.L().Sugar().Debugf("Commit subround pulseId: %d", pulseId)
 		if roundState.commitHash != nil {
 			return nil
 		}
 		_, err := node.gravityClient.CommitHash(node.chainType, node.nebulaId, int64(intervalId), int64(pulseId), node.oraclePubKey)
 		if err != nil && err != gravity.ErrValueNotFound {
+			zap.L().Error(err.Error())
 			return err
 		} else if err == nil {
 			return nil
@@ -284,12 +291,14 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 
 		data, err := node.extractor.Extract(ctx)
 		if err != nil && err != extractor.NotFoundErr {
+			zap.L().Error(err.Error())
 			return err
 		} else if err == extractor.NotFoundErr {
 			return nil
 		}
 
 		if data == nil {
+			zap.L().Debug("Commit subround Extractor Data is empty")
 			return nil
 		}
 
@@ -300,13 +309,16 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 
 		roundState.commitHash = commit
 		roundState.data = data
+		zap.L().Sugar().Debug("Commit round end ", roundState)
 	case state.RevealSubRound:
 		zap.L().Debug("Reveal subround")
 		if roundState.commitHash == nil || roundState.RevealExist {
+			zap.L().Sugar().Debugf("CommitHash is nil: %t, RevealExist: %t", roundState.commitHash == nil, roundState.RevealExist)
 			return nil
 		}
 		_, err := node.gravityClient.Reveal(node.chainType, node.oraclePubKey, node.nebulaId, int64(intervalId), int64(pulseId), roundState.commitHash)
 		if err != nil && err != gravity.ErrValueNotFound {
+			zap.L().Error(err.Error())
 			return err
 		} else if err == nil {
 			return nil
@@ -314,9 +326,11 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 
 		err = node.reveal(intervalId, pulseId, roundState.data, roundState.commitHash)
 		if err != nil {
+			zap.L().Error(err.Error())
 			return err
 		}
 		roundState.RevealExist = true
+		zap.L().Sugar().Debug("Reveal round end ", roundState)
 	case state.ResultSubRound:
 		zap.L().Debug("Result subround")
 		if roundState.data == nil && !roundState.RevealExist {
@@ -325,6 +339,7 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 
 		value, hash, err := node.signResult(intervalId, pulseId, ctx)
 		if err != nil {
+			zap.L().Error(err.Error())
 			return err
 		}
 		//TODO migrate to err

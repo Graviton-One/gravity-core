@@ -8,6 +8,7 @@ import (
 
 	"github.com/Gravity-Tech/gravity-core/config"
 	"github.com/tendermint/tendermint/version"
+	"go.uber.org/zap"
 
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
 
@@ -96,6 +97,7 @@ func (app *GHApplication) DeliverTx(req abcitypes.RequestDeliverTx) abcitypes.Re
 }
 
 func (app *GHApplication) CheckTx(req abcitypes.RequestCheckTx) abcitypes.ResponseCheckTx {
+	zap.L().Sugar().Debugf("CheckTx: %s", string(req.Tx))
 	tx, err := transactions.UnmarshalJson(req.Tx)
 	if err != nil {
 		return abcitypes.ResponseCheckTx{Code: Error, Info: err.Error()}
