@@ -23,6 +23,8 @@ func formSignConsulsByConsulKey(pubKey account.ConsulPubKey, chainType account.C
 		prefix = "ethereum"
 	case account.Binance:
 		prefix = "bsc"
+	case account.Fantom:
+		prefix = "ftm"
 	case account.Heco:
 		prefix = "heco"
 	}
