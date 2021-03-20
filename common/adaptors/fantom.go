@@ -371,8 +371,9 @@ func (adaptor *FantomAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, orac
 		s[index] = bytes32S
 		v[index] = sign[64:][0] + 27
 	}
-
-	tx, err := nebula.UpdateOracles(bind.NewKeyedTransactor(adaptor.privKey), oraclesAddresses, v[:], r[:], s[:], big.NewInt(round))
+	transactor := bind.NewKeyedTransactor(adaptor.privKey)
+	transactor.GasLimit = 150000 * 5
+	tx, err := nebula.UpdateOracles(transactor, oraclesAddresses, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
 		return "", err
 	}
@@ -428,8 +429,9 @@ func (adaptor *FantomAdaptor) SendConsulsToGravityContract(newConsulsAddresses [
 		s[index] = bytes32S
 		v[index] = sign[64:][0] + 27
 	}
-
-	tx, err := adaptor.gravityContract.UpdateConsuls(bind.NewKeyedTransactor(adaptor.privKey), consulsAddress, v[:], r[:], s[:], big.NewInt(round))
+	transactor := bind.NewKeyedTransactor(adaptor.privKey)
+	transactor.GasLimit = 150000 * 5
+	tx, err := adaptor.gravityContract.UpdateConsuls(transactor, consulsAddress, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
 		return "", err
 	}
