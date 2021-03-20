@@ -488,6 +488,11 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 			if err != nil {
 				return nil, err
 			}
+		case account.Fantom:
+			adaptor, err = adaptors.NewFantomAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithFantomGravityContract(v.GravityContractAddress))
+			if err != nil {
+				return nil, err
+			}
 		case account.Binance:
 			adaptor, err = adaptors.NewBinanceAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithBinanceGravityContract(v.GravityContractAddress))
 			if err != nil {

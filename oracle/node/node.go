@@ -90,6 +90,11 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 		if err != nil {
 			return nil, err
 		}
+	case account.Fantom:
+		adaptor, err = adaptors.NewFantomAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.FantomAdapterWithGhClient(ghClient))
+		if err != nil {
+			return nil, err
+		}
 	case account.Binance:
 		adaptor, err = adaptors.NewBinanceAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.BinanceAdapterWithGhClient(ghClient))
 		if err != nil {
