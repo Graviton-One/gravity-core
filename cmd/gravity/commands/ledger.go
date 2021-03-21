@@ -323,11 +323,13 @@ func startLedger(ctx *cli.Context) error {
 	if _, err := os.Stat(dbDir); os.IsNotExist(err) {
 		err = os.Mkdir(dbDir, 0644)
 		if err != nil {
+			zap.L().Error(err.Error())
 			return err
 		}
 	}
 	db, err := badger.Open(badger.DefaultOptions(dbDir).WithTruncate(true))
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 	defer db.Close()
@@ -335,23 +337,27 @@ func startLedger(ctx *cli.Context) error {
 	var privKeysCfg config.Keys
 	err = config.ParseConfig(path.Join(home, PrivKeysConfigFileName), &privKeysCfg)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
 	var genesis config.Genesis
 	err = config.ParseConfig(path.Join(home, GenesisFileName), &genesis)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
 	var ledgerConf config.LedgerConfig
 	err = config.ParseConfig(path.Join(home, LedgerConfigFileName), &ledgerConf)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
 	nodeKey, err := p2p.LoadOrGenNodeKey(path.Join(home, NodeKeyFileName))
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
@@ -369,12 +375,14 @@ func startLedger(ctx *cli.Context) error {
 
 	logger, err := tmflags.ParseLogLevel(tConfig.LogLevel, log.NewTMLogger(log.NewSyncWriter(os.Stdout)), cfg.DefaultLogLevel())
 	if err != nil {
+		zap.L().Error(err.Error())
 		return fmt.Errorf("failed to parse log level: %w", err)
 	}
 
 	var ledgerPrivKey ed25519.PrivKeyEd25519
 	ledgerPrivKeyBytes, err := hexutil.Decode(privKeysCfg.Validator.PrivKey)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 	copy(ledgerPrivKey[:], ledgerPrivKeyBytes)
@@ -390,6 +398,7 @@ func startLedger(ctx *cli.Context) error {
 
 	gravityApp, err := createApp(db, ledgerValidator, privKeysCfg.TargetChains, ledgerConf, genesis, bootstrap, tConfig.RPC.ListenAddress, sysCtx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return fmt.Errorf("failed to parse gravity config: %w", err)
 	}
 
@@ -398,6 +407,7 @@ func startLedger(ctx *cli.Context) error {
 	for k, v := range genesis.InitScore {
 		pubKey, err := account.HexToValidatorPubKey(k)
 		if err != nil {
+			zap.L().Error(err.Error())
 			return err
 		}
 
@@ -437,12 +447,14 @@ func startLedger(ctx *cli.Context) error {
 		nm.DefaultMetricsProvider(tConfig.Instrumentation),
 		logger)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
 	gravityApp.IsSync = false
 	err = node.Start()
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 	defer func() {
@@ -456,6 +468,7 @@ func startLedger(ctx *cli.Context) error {
 
 	rpcConfig, err := rpc.NewConfig(rpcHost, tConfig.RPC.ListenAddress, ledgerValidator.PrivKey)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 	go rpc.ListenRpcServer(rpcConfig)
@@ -472,11 +485,13 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 	for k, v := range cfg.Adapters {
 		chainType, err := account.ParseChainType(k)
 		if err != nil {
+			zap.L().Error(err.Error())
 			return nil, err
 		}
 
 		privKey, err := account.StringToPrivKey(privKeys[k].PrivKey, chainType)
 		if err != nil {
+			zap.L().Error(err.Error())
 			return nil, err
 		}
 
@@ -486,26 +501,31 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 		case account.Heco:
 			adaptor, err = adaptors.NewHecoAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithHecoGravityContract(v.GravityContractAddress))
 			if err != nil {
+				zap.L().Error(err.Error())
 				return nil, err
 			}
 		case account.Fantom:
 			adaptor, err = adaptors.NewFantomAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithFantomGravityContract(v.GravityContractAddress))
 			if err != nil {
+				zap.L().Error(err.Error())
 				return nil, err
 			}
 		case account.Binance:
 			adaptor, err = adaptors.NewBinanceAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithBinanceGravityContract(v.GravityContractAddress))
 			if err != nil {
+				zap.L().Error(err.Error())
 				return nil, err
 			}
 		case account.Ethereum:
 			adaptor, err = adaptors.NewEthereumAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithEthereumGravityContract(v.GravityContractAddress))
 			if err != nil {
+				zap.L().Error(err.Error())
 				return nil, err
 			}
 		case account.Waves:
 			adaptor, err = adaptors.NewWavesAdapter(privKey, v.NodeUrl, v.ChainId[0], adaptors.WithWavesGravityContract(v.GravityContractAddress))
 			if err != nil {
+				zap.L().Error(err.Error())
 				return nil, err
 			}
 		}
@@ -514,12 +534,14 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 		if bootstrap != "" {
 			err := setOraclePubKey(bootstrap, ledgerValidator.PubKey, ledgerValidator.PrivKey, adaptor.PubKey(), chainType)
 			if err != nil {
+				zap.L().Error(err.Error())
 				return nil, err
 			}
 		}
 	}
 	blockScheduler, err := scheduler.New(bAdaptors, ledgerValidator, localHost, ctx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return nil, err
 	}
 
@@ -536,11 +558,13 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 		for chainTypeString, oracle := range v {
 			chainType, err := account.ParseChainType(chainTypeString)
 			if err != nil {
+				zap.L().Error(err.Error())
 				return nil, err
 			}
 
 			oraclePubKey, err := account.StringToOraclePubKey(oracle, chainType)
 			if err != nil {
+				zap.L().Error(err.Error())
 				return nil, err
 			}
 
@@ -553,6 +577,7 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 
 	application, err := app.NewGHApplication(bAdaptors, blockScheduler, db, &genesis, ctx, &cfg)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return nil, err
 	}
 
