@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/url"
 	"os"
 	"os/signal"
 	"path"
@@ -533,13 +534,17 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 		bAdaptors[chainType] = adaptor
 		endpoint := bootstrap
 		if endpoint == "" {
-			endpoint = cfg.RPC.ListenAddress
+			u, err := url.Parse(cfg.RPC.ListenAddress)
+			if err == nil {
+				endpoint = fmt.Sprintf("http://localhost:%s", u.Port())
+			}
 		}
-
-		err = setOraclePubKey(bootstrap, ledgerValidator.PubKey, ledgerValidator.PrivKey, adaptor.PubKey(), chainType)
-		if err != nil {
-			zap.L().Error(err.Error())
-			return nil, err
+		if endpoint != "" {
+			err = setOraclePubKey(bootstrap, ledgerValidator.PubKey, ledgerValidator.PrivKey, adaptor.PubKey(), chainType)
+			if err != nil {
+				zap.L().Error(err.Error())
+				return nil, err
+			}
 		}
 
 	}
