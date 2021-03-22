@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
-	"net/url"
 	"os"
 	"os/signal"
 	"path"
@@ -476,6 +475,7 @@ func startLedger(ctx *cli.Context) error {
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
 	<-c
 
 	return nil
@@ -532,14 +532,8 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 		}
 
 		bAdaptors[chainType] = adaptor
-		endpoint := bootstrap
-		if endpoint == "" {
-			u, err := url.Parse(cfg.RPC.ListenAddress)
-			if err == nil {
-				endpoint = fmt.Sprintf("http://localhost:%s", u.Port())
-			}
-		}
-		if endpoint != "" {
+
+		if bootstrap != "" {
 			err = setOraclePubKey(bootstrap, ledgerValidator.PubKey, ledgerValidator.PrivKey, adaptor.PubKey(), chainType)
 			if err != nil {
 				zap.L().Error(err.Error())
