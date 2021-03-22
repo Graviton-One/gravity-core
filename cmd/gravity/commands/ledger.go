@@ -531,13 +531,17 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 		}
 
 		bAdaptors[chainType] = adaptor
-		if bootstrap != "" {
-			err := setOraclePubKey(bootstrap, ledgerValidator.PubKey, ledgerValidator.PrivKey, adaptor.PubKey(), chainType)
-			if err != nil {
-				zap.L().Error(err.Error())
-				return nil, err
-			}
+		endpoint := bootstrap
+		if endpoint == "" {
+			endpoint = cfg.RPC.ListenAddress
 		}
+
+		err = setOraclePubKey(bootstrap, ledgerValidator.PubKey, ledgerValidator.PrivKey, adaptor.PubKey(), chainType)
+		if err != nil {
+			zap.L().Error(err.Error())
+			return nil, err
+		}
+
 	}
 	blockScheduler, err := scheduler.New(bAdaptors, ledgerValidator, localHost, ctx)
 	if err != nil {
