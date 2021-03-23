@@ -1,48 +1,31 @@
-#!/bin/bash
+#!/bin/bash 
 
-update_config_field() {
-  local key=$1
-  local value=$2 
+override_config() {
+	local relevant_path=$1
+	local override_path=$2
 
-  temp_config=/etc/gravity/config_tmp.json
-  # shellcheck disable=SC2002
-  cat /etc/gravity/config.json | jq "$key = \"$value\"" > "$temp_config"
-  # cat /etc/gravity/config.json | jq ".Adapters.ethereum.NodeUrl = \"$ETH_NODE_URL\"" > "$temp_config"
-  cat $temp_config > /etc/gravity/config.json 
-  rm $temp_config
+  temp_config="/etc/gravity/config_tmp.json"
+
+	cat "$relevant_path" | jq ". += $(echo $(cat $override_path))" > "$temp_config"
+
+  cat $temp_config > "$relevant_path" 
+  rm $temp_config	
+
 }
 
-if [ "$INIT_CONFIG" -eq 1 ]
+if [ ! -z $ADAPTERS_CFG_PATH ]
 then
-  # Config folder is empty, generating keys
-  if [ -z "$(ls -A /etc/gravity/)" ]; then
-    gravity ledger --home=/etc/gravity/ init --network="$GRAVITY_NETWORK"
-  fi
+	override_config '/etc/gravity/config.json' "$ADAPTERS_CFG_PATH"
+fi      
+
+if [ ! -z $GENESIS_CFG_PATH ]
+then
+	override_config '/etc/gravity/genesis.json' "$GENESIS_CFG_PATH"
 fi
-
-
-env_keys=('.Adapters.ethereum.NodeUrl' '.Adapters.ethereum.GravityContractAddress' '.Adapters.waves.GravityContractAddress' '.Adapters.waves.ChainId' '.Adapters.waves.NodeUrl')
-env_values=("$ETH_NODE_URL" "$GRAVITY_ETH_ADDRESS" "$GRAVITY_WAVES_ADDRESS" "$GRAVITY_WAVES_CHAINID" "$WAVES_NODE_URL")
-list_len=${#env_keys[@]}
-
-
-for (( i=0; i < list_len; i++ ))
-do
-  env_key="${env_keys[i]}"
-  value="${env_values[i]}"
-
-  echo "KEY: $env_key; VALUE: $value"
-
-  if [ -n "$value" ]
-  then
-    update_config_field "$env_key" "$value"
-  fi
-
-done
 
 if [ -n "$GRAVITY_BOOTSTRAP" ]
 then
-  gravity ledger --home=/etc/gravity start --rpc="$GRAVITY_RPC" --bootstrap="$GRAVITY_BOOTSTRAP"
+  gravity ledger --home=/etc/gravity start --rpc="$GRAVITY_PRIVATE_RPC" --bootstrap="$GRAVITY_BOOTSTRAP"
 else
-  gravity ledger --home=/etc/gravity start --rpc="$GRAVITY_RPC" --bootstrap=""
+  gravity ledger --home=/etc/gravity start --rpc="$GRAVITY_PRIVATE_RPC" --bootstrap=""
 fi
