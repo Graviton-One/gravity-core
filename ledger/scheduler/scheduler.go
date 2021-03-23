@@ -79,7 +79,11 @@ func (scheduler *Scheduler) HandleBlock(height int64, store *storage.Storage, is
 	}
 
 	roundId := CalculateRound(height)
-	scheduler.setConsuleTargetChainsPubKey(store)
+	//Refresh targetchains pubkeys
+	if height%20 == 0 {
+		scheduler.updateTargetChainsPubKeys()
+	}
+
 	if IsRoundStart(height) || height == 1 {
 		if err := scheduler.calculateScores(store); err != nil {
 			return err
@@ -242,33 +246,5 @@ func (scheduler *Scheduler) updateOracles(roundId int64, nebulaId account.Nebula
 		return err
 	}
 
-	return nil
-}
-
-func (scheduler *Scheduler) setConsuleTargetChainsPubKey(store *storage.Storage) error {
-	var pubKey account.ConsulPubKey
-	copy(pubKey[:], scheduler.Ledger.PrivKey.PubKey().Bytes())
-
-	oracles, err := store.OraclesByConsul(pubKey)
-	if err != nil && err != storage.ErrKeyNotFound {
-		return err
-	}
-	if err == storage.ErrKeyNotFound {
-		oracles = make(storage.OraclesByTypeMap)
-	}
-	updated := false
-	for chain, adaptor := range scheduler.Adaptors {
-		_, ok := oracles[chain]
-		if !ok {
-			oracles[chain] = adaptor.PubKey()
-			updated = true
-		}
-	}
-	if updated {
-		err = store.SetOraclesByConsul(pubKey, oracles)
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }

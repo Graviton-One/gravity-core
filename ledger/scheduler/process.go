@@ -417,3 +417,42 @@ func (scheduler *Scheduler) sendOraclesToNebula(nebulaId account.NebulaId, chain
 
 	return nil
 }
+
+func (scheduler *Scheduler) updateTargetChainsPubKeys() {
+	for chain, adaptor := range scheduler.Adaptors {
+		scheduler.setConsulTargetChainPubKey(adaptor.PubKey(), chain)
+	}
+}
+
+func (scheduler *Scheduler) setConsulTargetChainPubKey(oracle account.OraclesPubKey, chainType account.ChainType) error {
+
+	oracles, err := scheduler.client.OraclesByValidator(scheduler.Ledger.PubKey)
+	if err != nil && err != gravity.ErrValueNotFound {
+		return err
+	}
+
+	if _, ok := oracles[chainType]; ok {
+		return nil
+	}
+
+	tx, err := transactions.New(scheduler.Ledger.PubKey, transactions.AddOracle, scheduler.Ledger.PrivKey)
+	if err != nil {
+		return err
+	}
+
+	tx.AddValues([]transactions.Value{
+		transactions.BytesValue{
+			Value: []byte{byte(chainType)},
+		},
+		transactions.BytesValue{
+			Value: oracle[:],
+		},
+	})
+
+	err = scheduler.client.SendTx(tx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
