@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
+	"go.uber.org/zap"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
@@ -16,11 +17,17 @@ func (scheduler *Scheduler) process(height int64) {
 	}
 }
 func (scheduler *Scheduler) processByHeight(height int64) error {
+
 	roundId := CalculateRound(height)
 
 	consulInfo, err := scheduler.consulInfo()
 	if err != nil {
 		return err
+	}
+
+	//Refresh targetchains pubkeys
+	if height%20 == 0 {
+		scheduler.updateTargetChainsPubKeys()
 	}
 
 	isExist := true
@@ -425,21 +432,25 @@ func (scheduler *Scheduler) updateTargetChainsPubKeys() {
 }
 
 func (scheduler *Scheduler) setConsulTargetChainPubKey(oracle account.OraclesPubKey, chainType account.ChainType) error {
-
+	zap.L().Debug("Start adding oracles")
 	oracles, err := scheduler.client.OraclesByValidator(scheduler.Ledger.PubKey)
 	if err != nil && err != gravity.ErrValueNotFound {
+		zap.L().Error(err.Error())
 		return err
 	}
+	zap.L().Sugar().Debug("Oracles", oracles)
 
 	if _, ok := oracles[chainType]; ok {
+		zap.L().Sugar().Debugf("pubkey for chain [%s] exists", chainType)
 		return nil
 	}
-
+	zap.L().Debug("Creating transaction")
 	tx, err := transactions.New(scheduler.Ledger.PubKey, transactions.AddOracle, scheduler.Ledger.PrivKey)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
-
+	zap.L().Debug("Adding values")
 	tx.AddValues([]transactions.Value{
 		transactions.BytesValue{
 			Value: []byte{byte(chainType)},
@@ -448,9 +459,10 @@ func (scheduler *Scheduler) setConsulTargetChainPubKey(oracle account.OraclesPub
 			Value: oracle[:],
 		},
 	})
-
+	zap.L().Debug("Sending transaction")
 	err = scheduler.client.SendTx(tx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 

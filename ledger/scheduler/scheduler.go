@@ -79,10 +79,6 @@ func (scheduler *Scheduler) HandleBlock(height int64, store *storage.Storage, is
 	}
 
 	roundId := CalculateRound(height)
-	//Refresh targetchains pubkeys
-	if height%20 == 0 {
-		scheduler.updateTargetChainsPubKeys()
-	}
 
 	if IsRoundStart(height) || height == 1 {
 		if err := scheduler.calculateScores(store); err != nil {
