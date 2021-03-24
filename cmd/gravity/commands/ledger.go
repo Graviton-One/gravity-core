@@ -595,15 +595,18 @@ func setOraclePubKey(bootstrapUrl string, pubKey account.ConsulPubKey, privKey c
 
 	oracles, err := gravityClient.OraclesByValidator(pubKey)
 	if err != nil && err != gravity.ErrValueNotFound {
+		zap.L().Error(err.Error())
 		return err
 	}
 
 	if _, ok := oracles[chainType]; ok {
+		zap.L().Error(err.Error())
 		return nil
 	}
 
 	tx, err := transactions.New(pubKey, transactions.AddOracle, privKey)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
@@ -618,6 +621,7 @@ func setOraclePubKey(bootstrapUrl string, pubKey account.ConsulPubKey, privKey c
 
 	err = gravityClient.SendTx(tx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
