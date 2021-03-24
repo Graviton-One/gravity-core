@@ -590,6 +590,7 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 func setOraclePubKey(bootstrapUrl string, pubKey account.ConsulPubKey, privKey crypto.PrivKey, oracle account.OraclesPubKey, chainType account.ChainType) error {
 	gravityClient, err := gravity.New(bootstrapUrl)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 

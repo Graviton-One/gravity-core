@@ -40,11 +40,13 @@ func New(host string) (*Client, error) {
 func (client *Client) SendTx(transaction *transactions.Transaction) error {
 	txBytes, err := json.Marshal(transaction)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
 	rs, err := client.HttpClient.BroadcastTxCommit(txBytes)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 	if rs.CheckTx.Code == InternalServerErrCode {
