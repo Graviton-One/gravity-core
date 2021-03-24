@@ -50,8 +50,10 @@ func (client *Client) SendTx(transaction *transactions.Transaction) error {
 		return err
 	}
 	if rs.CheckTx.Code == InternalServerErrCode {
+		zap.L().Error(err.Error())
 		return errors.New(rs.CheckTx.Info)
 	} else if rs.DeliverTx.Code == InternalServerErrCode {
+		zap.L().Error(err.Error())
 		return errors.New(rs.DeliverTx.Info)
 	}
 	return err
