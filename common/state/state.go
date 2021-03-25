@@ -272,6 +272,9 @@ func setNebula(store *storage.Storage, tx *transactions.Transaction) error {
 func isValidSigns(store *storage.Storage, tx *transactions.Transaction) error {
 	score, err := store.Score(tx.SenderPubKey)
 	if err != nil || score < 0 {
+		if err != nil {
+			zap.L().Error(err.Error())
+		}
 		return ErrInvalidScore
 	}
 

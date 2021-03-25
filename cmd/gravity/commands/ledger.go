@@ -601,7 +601,7 @@ func setOraclePubKey(bootstrapUrl string, pubKey account.ConsulPubKey, privKey c
 	}
 
 	if _, ok := oracles[chainType]; ok {
-		zap.L().Error(err.Error())
+		zap.L().Debug("Oracle exists")
 		return nil
 	}
 
