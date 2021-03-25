@@ -143,6 +143,7 @@ func (app *GHApplication) Query(reqQuery abcitypes.RequestQuery) (resQuery abcit
 }
 
 func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.ResponseInitChain {
+	zap.L().Debug("InitChain called")
 	app.storage.NewTransaction(app.db)
 
 	err := app.storage.SetConsulsCount(app.genesis.ConsulsCount)
@@ -152,6 +153,7 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 
 	var consuls []storage.Consul
 	for _, value := range req.Validators {
+
 		var pubKey account.ConsulPubKey
 		copy(pubKey[:], value.PubKey.GetData())
 		err := app.storage.SetScore(pubKey, uint64(value.Power))
@@ -163,6 +165,7 @@ func (app *GHApplication) InitChain(req abcitypes.RequestInitChain) abcitypes.Re
 			PubKey: pubKey,
 			Value:  uint64(value.Power),
 		})
+		zap.L().Sugar().Debug("consuls ", consuls)
 	}
 
 	sort.SliceStable(consuls, func(i, j int) bool {
