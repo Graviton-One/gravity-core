@@ -1,5 +1,7 @@
 #!/bin/bash 
 
+set -e
+
 override_config() {
 	local relevant_path=$1
 	local override_path=$2
@@ -8,15 +10,23 @@ override_config() {
 
 	cat "$relevant_path" | jq ". += $(echo $(cat $override_path))" > "$temp_config"
 
-  cat $temp_config > "$relevant_path" 
-  rm $temp_config	
+  cat $temp_config > "$relevant_path"
+  rm $temp_config
 
 }
+
+if [ "$INIT_CONFIG" -eq 1 ]
+then
+  # Config folder is empty, generating keys
+  if [ -z "$(ls -A /etc/gravity/)" ]; then
+    gravity ledger --home=/etc/gravity/ init --network="$GRAVITY_NETWORK"
+  fi
+fi
 
 if [ ! -z $ADAPTERS_CFG_PATH ]
 then
 	override_config '/etc/gravity/config.json' "$ADAPTERS_CFG_PATH"
-fi      
+fi
 
 if [ ! -z $GENESIS_CFG_PATH ]
 then
