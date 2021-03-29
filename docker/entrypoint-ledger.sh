@@ -19,7 +19,7 @@ if [ "$INIT_CONFIG" -eq 1 ]
 then
   # Config folder is empty, generating keys
   if [ -z "$(ls -A /etc/gravity/)" ]; then
-    gravity ledger --home=/etc/gravity/ init --network="$GRAVITY_NETWORK"
+    /bin/gravity ledger --home=/etc/gravity/ init --network="$GRAVITY_NETWORK"
   fi
 fi
 
@@ -35,7 +35,7 @@ fi
 
 if [ -n "$GRAVITY_BOOTSTRAP" ]
 then
-  gravity ledger --home=/etc/gravity start --rpc="$GRAVITY_PRIVATE_RPC" --bootstrap="$GRAVITY_BOOTSTRAP"
+  /bin/gravity ledger --home=/etc/gravity start --rpc="$GRAVITY_PRIVATE_RPC" --bootstrap="$GRAVITY_BOOTSTRAP"
 else
-  gravity ledger --home=/etc/gravity start --rpc="$GRAVITY_PRIVATE_RPC" --bootstrap=""
+  /bin/gravity ledger --home=/etc/gravity start --rpc="$GRAVITY_PRIVATE_RPC" --bootstrap=""
 fi
