@@ -475,6 +475,7 @@ func startLedger(ctx *cli.Context) error {
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
 	<-c
 
 	return nil
@@ -531,13 +532,15 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 		}
 
 		bAdaptors[chainType] = adaptor
+
 		if bootstrap != "" {
-			err := setOraclePubKey(bootstrap, ledgerValidator.PubKey, ledgerValidator.PrivKey, adaptor.PubKey(), chainType)
+			err = setOraclePubKey(bootstrap, ledgerValidator.PubKey, ledgerValidator.PrivKey, adaptor.PubKey(), chainType)
 			if err != nil {
 				zap.L().Error(err.Error())
 				return nil, err
 			}
 		}
+
 	}
 	blockScheduler, err := scheduler.New(bAdaptors, ledgerValidator, localHost, ctx)
 	if err != nil {
@@ -587,20 +590,24 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 func setOraclePubKey(bootstrapUrl string, pubKey account.ConsulPubKey, privKey crypto.PrivKey, oracle account.OraclesPubKey, chainType account.ChainType) error {
 	gravityClient, err := gravity.New(bootstrapUrl)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
 	oracles, err := gravityClient.OraclesByValidator(pubKey)
 	if err != nil && err != gravity.ErrValueNotFound {
+		zap.L().Error(err.Error())
 		return err
 	}
 
 	if _, ok := oracles[chainType]; ok {
+		zap.L().Debug("Oracle exists")
 		return nil
 	}
 
 	tx, err := transactions.New(pubKey, transactions.AddOracle, privKey)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
@@ -615,6 +622,7 @@ func setOraclePubKey(bootstrapUrl string, pubKey account.ConsulPubKey, privKey c
 
 	err = gravityClient.SendTx(tx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 

@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
+	"go.uber.org/zap"
 
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
 
@@ -82,19 +83,23 @@ func (scheduler *Scheduler) HandleBlock(height int64, store *storage.Storage, is
 
 	if IsRoundStart(height) || height == 1 {
 		if err := scheduler.calculateScores(store); err != nil {
+			zap.L().Error(err.Error())
 			return err
 		}
 
 		if err := scheduler.updateConsulsAndCandidate(store, roundId-1); err != nil {
+			zap.L().Error(err.Error())
 			return err
 		}
 
 		nebulae, err := store.Nebulae()
 		if err != nil {
+			zap.L().Error(err.Error())
 			return err
 		}
 
 		for k, v := range nebulae {
+			zap.L().Sugar().Debugf("Iterate nebule: %s", k)
 			nebulaId, err := account.StringToNebulaId(k, v.ChainType)
 			if err != nil {
 				fmt.Printf("Error:%s\n", err.Error())
@@ -196,8 +201,10 @@ func (scheduler *Scheduler) calculateScores(store *storage.Storage) error {
 	return nil
 }
 func (scheduler *Scheduler) updateOracles(roundId int64, nebulaId account.NebulaId, store *storage.Storage) error {
+	zap.L().Debug("updateOracles called")
 	nebulaInfo, err := store.NebulaInfo(nebulaId)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
@@ -205,6 +212,7 @@ func (scheduler *Scheduler) updateOracles(roundId int64, nebulaId account.Nebula
 	if err == storage.ErrKeyNotFound {
 		return nil
 	} else if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
@@ -215,6 +223,7 @@ func (scheduler *Scheduler) updateOracles(roundId int64, nebulaId account.Nebula
 	for k, v := range oraclesByNebula {
 		oracleAddress, err := account.StringToOraclePubKey(k, v)
 		if err != nil {
+			zap.L().Error(err.Error())
 			return err
 		}
 		oracles = append(oracles, oracleAddress)
@@ -239,6 +248,7 @@ func (scheduler *Scheduler) updateOracles(roundId int64, nebulaId account.Nebula
 
 	err = store.SetBftOraclesByNebula(nebulaId, newOraclesMap)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
