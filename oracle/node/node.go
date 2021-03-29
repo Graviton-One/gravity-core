@@ -248,7 +248,9 @@ func (node *Node) Start(ctx context.Context) {
 			zap.L().Error(err.Error())
 			continue
 		}
+		zap.L().Sugar().Debug("oracles: ", oraclesMap)
 		if _, ok := oraclesMap[node.oraclePubKey.ToString(node.chainType)]; !ok {
+			zap.L().Sugar().Debugf("oracle [%s] not found in map", node.oraclePubKey.ToString(node.chainType))
 			continue
 		}
 
