@@ -32,3 +32,5 @@ oracle/config.*.json
 # Deploy vendor
 nebula-address.txt
 migration.txt
+
+cmd/gravity/gravity
