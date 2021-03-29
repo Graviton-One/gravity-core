@@ -18,4 +18,14 @@ pipeline:
     when:
       branch:
         - master
-        - add-drone
+
+  publish-oracle:
+    image: plugins/docker
+    dockerfile: docker/oracle.dockerfile
+    context: .
+    repo: gravityhuborg/gravity-oracle
+    tags: [master]
+    secrets: [docker_username,docker_password]
+    when:
+      branch:
+        - master
