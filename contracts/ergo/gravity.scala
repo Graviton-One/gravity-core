@@ -1,6 +1,7 @@
 val gravityScript =
       s"""{
          |  val bftValue = SELF.R4[Int].get
+         |  val bftValueOut = OUTPUTS(0).R4[Int].get
          |  val newConsuls = OUTPUTS(0).R5[Coll[Coll[Byte]]].get
          |
          |  val consuls: Coll[GroupElement] = SELF.R5[Coll[Coll[Byte]]].get.map({(consul: Coll[Byte]) => decodePoint(consul)})
@@ -20,11 +21,15 @@ val gravityScript =
          |  }}
          |
          |  val count = validateSign( ( (msg, consuls(0)), (signs_a(0), signs_z(0)) ) ) +
-         |              validateSign( ( (msg, consuls(1)), (signs_a(1), signs_z(1)) ) )
+         |              validateSign( ( (msg, consuls(1)), (signs_a(1), signs_z(1)) ) ) +
+         |              validateSign( ( (msg, consuls(2)), (signs_a(2), signs_z(2)) ) ) +
+         |              validateSign( ( (msg, consuls(3)), (signs_a(3), signs_z(3)) ) ) +
+         |              validateSign( ( (msg, consuls(4)), (signs_a(4), signs_z(4)) ) )
          |
          |  sigmaProp (
          |    allOf(Coll(
-         |      bftValue > 0,
+         |      bftValue > 0 &&  bftValue < 5,
+         |      bftValueOut > 0 &&  bftValueOut < 5,
          |      OUTPUTS(0).propositionBytes == SELF.propositionBytes,
          |      OUTPUTS(0).tokens(0)._1 == tokenId, // Build-time assignment
          |      OUTPUTS(0).tokens(0)._2 == 1,
