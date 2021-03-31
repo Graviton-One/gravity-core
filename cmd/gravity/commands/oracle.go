@@ -117,9 +117,18 @@ func startOracle(ctx *cli.Context) error {
 	}
 
 	var privKeysCfg config.Keys
-	err = config.ParseConfig(path.Join(home, PrivKeysConfigFileName), &privKeysCfg)
-	if err != nil {
-		return err
+	if cfg.Vault.Url != "" {
+		c, err := config.LoadConfigFromVault(cfg.Vault.Url, cfg.Vault.Token, cfg.Vault.Path)
+		if err != nil {
+			zap.L().Error(err.Error())
+			return err
+		}
+		if err := json.Unmarshal([]byte(c), &privKeysCfg); err != nil {
+			zap.L().Error(err.Error())
+			return err
+		}
+	} else {
+		return fmt.Errorf("Vault is not configured")
 	}
 
 	validatorPrivKey, err := hexutil.Decode(privKeysCfg.Validator.PrivKey)

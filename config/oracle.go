@@ -7,4 +7,5 @@ type OracleConfig struct {
 	ChainType          string
 	ExtractorUrl       string
 	BlocksInterval     uint64
+	Vault              VaultConfig
 }

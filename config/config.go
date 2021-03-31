@@ -3,8 +3,11 @@ package config
 import (
 	"encoding/json"
 	"io/ioutil"
+	"net/http"
+	"time"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -23,6 +26,30 @@ type Key struct {
 	Address string
 	PubKey  string
 	PrivKey string
+}
+type VaultConfig struct {
+	Url   string
+	Token string
+	Path  string
+}
+
+func LoadConfigFromVault(url string, token string, path string) (string, error) {
+	httpClient := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	client, err := api.NewClient(&api.Config{Address: url, HttpClient: httpClient})
+	if err != nil {
+		return "", err
+	}
+
+	client.SetToken(token)
+	data, err := client.Logical().Read(path)
+	if err != nil {
+		return "", err
+	}
+
+	b, _ := json.Marshal(data.Data)
+	return string(b), nil
 }
 
 func generateEthereumBasedPrivKeys() (*Key, error) {
@@ -52,7 +79,6 @@ func generateWavesPrivKeys(chain byte) (*Key, error) {
 func GeneratePrivKeys(wavesChainID byte) (*Keys, error) {
 	validatorPrivKey := ed25519.GenPrivKey()
 
-
 	ethPrivKeys, err := generateEthereumBasedPrivKeys()
 	if err != nil {
 		return nil, err
@@ -75,8 +101,8 @@ func GeneratePrivKeys(wavesChainID byte) (*Keys, error) {
 		},
 		TargetChains: map[string]Key{
 			account.Ethereum.String(): *ethPrivKeys,
-			account.Binance.String(): *bscPrivKeys,
-			account.Waves.String(): *wavesPrivKeys,
+			account.Binance.String():  *bscPrivKeys,
+			account.Waves.String():    *wavesPrivKeys,
 		},
 	}, nil
 }

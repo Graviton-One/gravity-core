@@ -12,9 +12,9 @@
             "program": "${workspaceFolder}/cmd/gravity",
             "args": [
                 "ledger",
-                "--home=/home/alex/development/test/home2",
+                "--home=/home/anaximen/ledger",
                 "start",
-                "--bootstrap=http://localhost:26657"
+                "--bootstrap="
             ]
         },
         {
@@ -25,9 +25,9 @@
             "program": "${workspaceFolder}/cmd/gravity",
             "args": [
                 "oracle",
-                "--home=/home/alex/ledger",
+                "--home=/home/anaximen/ledger",
                 "start",
-                "0xecc58132203ca8dfed5a7d2f252aaa8c4d1620ef"
+                "3P2UzKyojeQuZ9PrSL9am4L7YWGX3goownZ"
             ]
         }
     ]

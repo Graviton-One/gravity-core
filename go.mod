@@ -8,6 +8,7 @@ require (
 	github.com/dgraph-io/badger v1.6.1
 	github.com/ethereum/go-ethereum v1.9.23
 	github.com/gookit/validate v1.2.8
+	github.com/hashicorp/vault/api v1.0.4
 	github.com/mr-tron/base58 v1.1.2
 	github.com/tendermint/tendermint v0.33.4
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect

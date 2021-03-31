@@ -334,13 +334,6 @@ func startLedger(ctx *cli.Context) error {
 	}
 	defer db.Close()
 
-	var privKeysCfg config.Keys
-	err = config.ParseConfig(path.Join(home, PrivKeysConfigFileName), &privKeysCfg)
-	if err != nil {
-		zap.L().Error(err.Error())
-		return err
-	}
-
 	var genesis config.Genesis
 	err = config.ParseConfig(path.Join(home, GenesisFileName), &genesis)
 	if err != nil {
@@ -353,6 +346,21 @@ func startLedger(ctx *cli.Context) error {
 	if err != nil {
 		zap.L().Error(err.Error())
 		return err
+	}
+
+	var privKeysCfg config.Keys
+	if ledgerConf.Vault.Url != "" {
+		c, err := config.LoadConfigFromVault(ledgerConf.Vault.Url, ledgerConf.Vault.Token, ledgerConf.Vault.Path)
+		if err != nil {
+			zap.L().Error(err.Error())
+			return err
+		}
+		if err := json.Unmarshal([]byte(c), &privKeysCfg); err != nil {
+			zap.L().Error(err.Error())
+			return err
+		}
+	} else {
+		return fmt.Errorf("Vault is not configured")
 	}
 
 	nodeKey, err := p2p.LoadOrGenNodeKey(path.Join(home, NodeKeyFileName))

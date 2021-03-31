@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	cfg "github.com/tendermint/tendermint/config"
 )
@@ -46,10 +47,11 @@ type LedgerConfig struct {
 	RPC        *cfg.RPCConfig
 	P2P        *cfg.P2PConfig
 
-	Details    *ValidatorDetails
-	PublicIP   string
+	Details  *ValidatorDetails
+	PublicIP string
 
 	Adapters map[string]AdaptorsConfig
+	Vault    VaultConfig
 }
 
 func DefaultLedgerConfig() LedgerConfig {
