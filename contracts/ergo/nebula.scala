@@ -53,10 +53,6 @@ val hashValueScript =
 
    val oracleScript =
    s"""{
-      | // We get bftCoefficient from R4
-      | val bftValue = SELF.R4[Int].get
-      | val bftValueOut = OUTPUT(0).R4[Int].get
-      |
       | // We get oracles from R5
       | val newSortedOracles = OUTPUTS(0).R5[Coll[Coll[Byte]]].get
       |
@@ -102,11 +98,13 @@ val hashValueScript =
       |   + validateSign(((newSortedOracles1, consuls(3)),(signs_a(3), signs_z(3))))
       |   + validateSign(((newSortedOracles1, consuls(4)),(signs_a(4), signs_z(4))))
       |
-      | // We Expect number of consuls that verified new oracles list bigger than bftValue
+      | // We get bftCoefficient from R4
+      | val bftValue = SELF.R4[Int].get
+      |
+      | // We Expect the numbers of consuls that verified the new oracles list, to be more than three. TODO: in the future, with a change in the contract, this parameter can be dynamic.
       | val check_bftCoefficient = { allOf(Coll(
       |   count >= bftValue,
-      |   bftValueOut <= 5,
-      |   bftValueOut > 0
+      |   bftValue == OUTPUT(0).R4[Int].get
       | ))}
       |
       | sigmaProp (check_NFT_tokens && check_bftCoefficient && check_oracles)
