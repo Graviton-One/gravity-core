@@ -1,26 +1,33 @@
-FROM golang:1.14-buster
+FROM golang:1.16-alpine as oracle
 
 WORKDIR /node
 
+RUN apk update \
+	&& apk --no-cache --update add build-base linux-headers
+
 COPY . /node
 
+RUN chmod 755 docker/entrypoint-oracle.sh
+
+RUN cd cmd/gravity/ && \
+    go build -o gravity
+
+FROM alpine:3.11.3
+
+RUN apk add bash
 
 ENV NEBULA_ADDRESS=''
-# Either 'waves' or 'ethereum'
 ENV CHAIN_TYPE=''
 
-ENV GRAVITY_HOME=/etc/gravity-oracle
 ENV GRAVITY_PUBLIC_LEDGER_RPC=''
 ENV GRAVITY_TARGET_CHAIN_NODE_URL=''
 ENV GRAVITY_EXTRACTOR_ENDPOINT=''
 
-RUN ./docker/entrypoint-oracle.sh --validate
+ENV INIT_CONFIG=0
 
-RUN cd cmd/gravity/ && \
-    go build -o gravity && \
-    cp gravity /bin/
+COPY --from=oracle /node/docker/entrypoint-oracle.sh .
+COPY --from=oracle /node/cmd/gravity/gravity /bin/
 
+VOLUME /etc/gravity
 
-VOLUME /etc/gravity-oracle
-
-ENTRYPOINT ./docker/entrypoint-oracle.sh
+ENTRYPOINT ["/bin/sh", "./entrypoint-oracle.sh"]

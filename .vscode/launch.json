@@ -12,9 +12,9 @@
             "program": "${workspaceFolder}/cmd/gravity",
             "args": [
                 "ledger",
-                "--home=/home/alex/ledger",
+                "--home=/home/alex/development/test/home2",
                 "start",
-                "--bootstrap="
+                "--bootstrap=http://localhost:26657"
             ]
         },
         {
