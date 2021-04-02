@@ -68,7 +68,6 @@ func (er *ErgoAdaptor) applyOpts(opts AdapterOptions) error {
 
 func validateErgoAdapterOptions(opts AdapterOptions) error {
 	v := validate.Map(opts)
-
 	v.AddRule("ghClient", "isGhClient")
 	v.AddRule("gravityContract", "string")
 
