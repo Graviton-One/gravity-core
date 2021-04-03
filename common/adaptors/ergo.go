@@ -21,8 +21,6 @@ const (
 type ErgoAdaptor struct {
 	secret 			crypto.SecretKey
 	ghClient        *gravity.Client      `option:"ghClient"`
-	//wavesClient     *wclient.Client      `option:"wvClient"`
-	//helper          helpers.ClientHelper `option:"-"`
 	gravityContract string               `option:"gravityContract"`
 }
 
@@ -77,10 +75,6 @@ func ErgoAdapterWithGhClient(ghClient *gravity.Client) ErgoAdapterOption {
 }
 
 func NewErgoAdapterByOpts(seed []byte, nodeUrl string, opts AdapterOptions) (*ErgoAdaptor, error) {
-	//wClient, err := wclient.NewClient(wclient.Options{ApiKey: "", BaseUrl: nodeUrl})
-	//if err != nil {
-	//	return nil, err
-	//}
 
 	secret, err := crypto.NewSecretKeyFromBytes(seed)
 	adapter := &ErgoAdaptor{
@@ -95,10 +89,6 @@ func NewErgoAdapterByOpts(seed []byte, nodeUrl string, opts AdapterOptions) (*Er
 }
 
 func NewErgoAdapter(seed []byte, nodeUrl string, ctx context.Context, opts ...ErgoAdapterOption) (*ErgoAdaptor, error) {
-	//wClient, err := wclient.NewClient(wclient.Options{ApiKey: "", BaseUrl: nodeUrl})
-	//if err != nil {
-	//	return nil, err
-	//}
 
 	secret, err := crypto.NewSecretKeyFromBytes(seed)
 	if err != nil {
