@@ -34,7 +34,7 @@ func ParseChainType(chainType string) (ChainType, error) {
 	case "waves":
 		return Waves, nil
 	case "ergo":
-		return Waves, nil
+		return Ergo, nil
 	default:
 		return 0, ErrParseChainType
 	}
