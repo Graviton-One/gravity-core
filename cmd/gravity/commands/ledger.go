@@ -511,6 +511,12 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 				zap.L().Error(err.Error())
 				return nil, err
 			}
+		case account.Avax:
+			adaptor, err = adaptors.NewAvaxAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithAvaxGravityContract(v.GravityContractAddress))
+			if err != nil {
+				zap.L().Error(err.Error())
+				return nil, err
+			}
 		case account.Binance:
 			adaptor, err = adaptors.NewBinanceAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithBinanceGravityContract(v.GravityContractAddress))
 			if err != nil {
