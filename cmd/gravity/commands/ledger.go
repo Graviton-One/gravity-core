@@ -530,7 +530,7 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 				return nil, err
 			}
 		case account.Ergo:
-			adaptor, err = adaptors.NewErgoAdapter(privKey, v.NodeUrl, ctx, adaptors.WithErgoGravityContract(v.GravityContractAddress))
+			adaptor, err = adaptors.NewErgoAdapter(privKey, v.NodeUrl, adaptors.WithErgoGravityContract(v.GravityContractAddress))
 			if err != nil {
 				zap.L().Error(err.Error())
 				return nil, err

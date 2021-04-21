@@ -1,17 +1,24 @@
 package adaptors
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/Gravity-Tech/gravity-core/abi"
+	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 	"github.com/gookit/validate"
 	"io/ioutil"
 	"net/http"
 	"reflect"
+	"time"
 
+	crypto "crypto/ed25519"
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
-	"github.com/wavesplatform/gowaves/pkg/crypto"
+	"github.com/Gravity-Tech/gravity-core/common/helpers"
 )
 
 const (
@@ -19,9 +26,11 @@ const (
 )
 
 type ErgoAdaptor struct {
-	secret 			crypto.SecretKey
-	ghClient        *gravity.Client      `option:"ghClient"`
-	gravityContract string               `option:"gravityContract"`
+	secret crypto.PrivateKey
+
+	ergoClient      *helpers.ErgClient `option:"ergClient"`
+	ghClient        *gravity.Client    `option:"ghClient"`
+	gravityContract string             `option:"gravityContract"`
 }
 
 type ErgoAdapterOption func(*ErgoAdaptor) error
@@ -40,6 +49,8 @@ func (er *ErgoAdaptor) applyOpts(opts AdapterOptions) error {
 			switch tag {
 			case "ghClient":
 				er.ghClient = val.(*gravity.Client)
+			case "ergClient":
+				er.ergoClient = val.(*helpers.ErgClient)
 			case "gravityContract":
 				er.gravityContract = val.(string)
 
@@ -52,6 +63,7 @@ func (er *ErgoAdaptor) applyOpts(opts AdapterOptions) error {
 func validateErgoAdapterOptions(opts AdapterOptions) error {
 	v := validate.Map(opts)
 	v.AddRule("ghClient", "isGhClient")
+	v.AddRule("ergClient", "isErgClient")
 	v.AddRule("gravityContract", "string")
 
 	if !v.Validate() { // validate ok
@@ -75,10 +87,15 @@ func ErgoAdapterWithGhClient(ghClient *gravity.Client) ErgoAdapterOption {
 }
 
 func NewErgoAdapterByOpts(seed []byte, nodeUrl string, opts AdapterOptions) (*ErgoAdaptor, error) {
+	client, err := helpers.NewClient(helpers.ErgOptions{ApiKey: "", BaseUrl: nodeUrl})
+	if err != nil {
+		return nil, err
+	}
 
-	secret, err := crypto.NewSecretKeyFromBytes(seed)
+	secret := crypto.NewKeyFromSeed(seed)
 	adapter := &ErgoAdaptor{
-		secret:      secret,
+		secret:     secret,
+		ergoClient: client,
 	}
 	err = adapter.applyOpts(opts)
 	if err != nil {
@@ -88,55 +105,171 @@ func NewErgoAdapterByOpts(seed []byte, nodeUrl string, opts AdapterOptions) (*Er
 	return adapter, nil
 }
 
-func NewErgoAdapter(seed []byte, nodeUrl string, ctx context.Context, opts ...ErgoAdapterOption) (*ErgoAdaptor, error) {
-
-	secret, err := crypto.NewSecretKeyFromBytes(seed)
+func NewErgoAdapter(seed []byte, nodeUrl string, opts ...ErgoAdapterOption) (*ErgoAdaptor, error) {
+	client, err := helpers.NewClient(helpers.ErgOptions{ApiKey: "", BaseUrl: nodeUrl})
 	if err != nil {
 		return nil, err
 	}
-	adapter := &ErgoAdaptor{
-		secret:      secret,
-
+	secret := crypto.NewKeyFromSeed(seed)
+	er := &ErgoAdaptor{
+		ergoClient: client,
+		secret:     secret,
 	}
 	for _, opt := range opts {
-		err := opt(adapter)
+		err := opt(er)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return adapter, nil
+	return er, nil
 }
 
-
-func (adaptor *ErgoAdaptor) GetHeight(ctx context.Context) (uint64, error) {
+func (er *ErgoAdaptor) WaitTx(id string, ctx context.Context) error {
 	type Response struct {
-		Status  bool    `json:"name"`
-		Height	uint64	`json:"pokemon_entries"`
+		Status  bool `json:"success"`
+		Confirm int  `json:"numConfirmations"`
 	}
-	res, err := http.NewRequest("GET", "http://127.0.0.1:9000/height", nil)
+	out := make(chan error)
+	const TxWaitCount = 10
+	url, err := helpers.JoinUrl(er.ergoClient.Options.BaseUrl, "/numConfirmations")
 	if err != nil {
-		return 0, err
+		out <- err
 	}
-	responseData, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return 0, err
-	}
-	var responseObject Response
-	json.Unmarshal(responseData, &responseObject)
-	if !responseObject.Status {
-		err = fmt.Errorf("proxy connection problem")
-	}
-	return responseObject.Height, err
+	go func() {
+		defer close(out)
+		for i := 0; i <= TxWaitCount; i++ {
+			req, err := http.NewRequest("GET", url.String()+"/:"+id, nil)
+			if err != nil {
+				out <- err
+				break
+			}
+			response := new(Response)
+			_, err = helpers.DoHttp(ctx, er.ergoClient.Options, req, response)
+			if err != nil {
+				out <- err
+				break
+			}
+
+			if response.Confirm == -1 {
+				_, err = helpers.DoHttp(ctx, er.ergoClient.Options, req, response)
+				if err != nil {
+					out <- err
+					break
+				}
+
+				if response.Confirm == -1 {
+					out <- errors.New("tx not found")
+					break
+				} else {
+					break
+				}
+			}
+
+			if TxWaitCount == i {
+				out <- errors.New("tx not found")
+				break
+			}
+			time.Sleep(time.Second)
+		}
+	}()
+	return <-out
 }
-func (adaptor *ErgoAdaptor) Sign(msg []byte) ([]byte, error) {
-	sig, err := crypto.Sign(adaptor.secret, msg)
+
+func (er *ErgoAdaptor) GetHeight(ctx context.Context) (uint64, error) {
+	type Response struct {
+		Status bool   `json:"success"`
+		Height uint64 `json:"height"`
+	}
+	url, err := helpers.JoinUrl(er.ergoClient.Options.BaseUrl, "/height")
+	if err != nil {
+		return 0, err
+	}
+
+	req, err := http.NewRequest("GET", url.String(), nil)
+	if err != nil {
+		return 0, err
+	}
+	out := new(Response)
+	_, err = helpers.DoHttp(ctx, er.ergoClient.Options, req, out)
+	if err != nil {
+		return 0, err
+	}
+
+	return out.Height, nil
+}
+
+func (er *ErgoAdaptor) Sign(msg []byte) ([]byte, error) {
+	type Sign struct {
+		A string
+		Z string
+	}
+	type Response struct {
+		Status bool `json:"success"`
+		Signed Sign `json:"signed"`
+	}
+	values := map[string]string{"msg": hex.EncodeToString(msg), "sk": hex.EncodeToString(er.secret)}
+	jsonValue, _ := json.Marshal(values)
+	res, err := http.Post(er.ergoClient.Options.BaseUrl+"/sign", "application/json", bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return nil, err
 	}
-	return sig.Bytes(), nil
+	response, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	var responseObject Response
+	json.Unmarshal(response, &responseObject)
+	if !responseObject.Status {
+		err = fmt.Errorf("proxy connection problem")
+		return nil, err
+	}
+	fmt.Println(responseObject.Signed)
+	return []byte(responseObject.Signed.A[:24] + responseObject.Signed.Z[:32]), nil
 }
-func (adaptor *ErgoAdaptor) PubKey() account.OraclesPubKey {
-	pubKey := crypto.GeneratePublicKey(adaptor.secret)
-	oraclePubKey := account.BytesToOraclePubKey(pubKey[:], account.Ergo)
+
+func (er *ErgoAdaptor) PubKey() account.OraclesPubKey {
+	pubKey := er.secret.Public()
+	pk, _ := pubKey.(crypto.PublicKey)
+	oraclePubKey := account.BytesToOraclePubKey(pk, account.Ergo)
 	return oraclePubKey
+}
+
+func (er *ErgoAdaptor) ValueType(nebulaId account.NebulaId, ctx context.Context) (abi.ExtractorType, error) {
+	panic("implement me")
+}
+
+func (er *ErgoAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
+	panic("implement me")
+}
+
+func (er *ErgoAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId uint64, value *extractor.Data, ctx context.Context) error {
+	panic("implement me")
+}
+
+func (er *ErgoAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
+	panic("implement me")
+}
+
+func (er *ErgoAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
+	panic("implement me")
+}
+
+func (er *ErgoAdaptor) SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64) ([]byte, error) {
+	panic("implement me")
+}
+
+func (er *ErgoAdaptor) SignOracles(nebulaId account.NebulaId, oracles []*account.OraclesPubKey) ([]byte, error) {
+	panic("implement me")
+}
+
+func (er *ErgoAdaptor) LastPulseId(nebulaId account.NebulaId, ctx context.Context) (uint64, error) {
+	panic("implement me")
+}
+
+func (er *ErgoAdaptor) LastRound(ctx context.Context) (uint64, error) {
+	panic("implement me")
+}
+
+func (er *ErgoAdaptor) RoundExist(roundId int64, ctx context.Context) (bool, error) {
+	panic("implement me")
 }
