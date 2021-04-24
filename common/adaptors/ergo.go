@@ -86,12 +86,17 @@ func ErgoAdapterWithGhClient(ghClient *gravity.Client) ErgoAdapterOption {
 	}
 }
 
-func NewErgoAdapterByOpts(seed []byte, nodeUrl string, opts AdapterOptions) (*ErgoAdaptor, error) {
+func NewErgoAdapterByOpts(seed []byte, nodeUrl string, ctx context.Context, opts AdapterOptions) (*ErgoAdaptor, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", nodeUrl, nil)
+	if err != nil {
+		return nil, err
+	}
 	client, err := helpers.NewClient(helpers.ErgOptions{ApiKey: "", BaseUrl: nodeUrl})
 	if err != nil {
 		return nil, err
 	}
 
+	client.Do(ctx, req, nil)
 	secret := crypto.NewKeyFromSeed(seed)
 	adapter := &ErgoAdaptor{
 		secret:     secret,
@@ -105,11 +110,18 @@ func NewErgoAdapterByOpts(seed []byte, nodeUrl string, opts AdapterOptions) (*Er
 	return adapter, nil
 }
 
-func NewErgoAdapter(seed []byte, nodeUrl string, opts ...ErgoAdapterOption) (*ErgoAdaptor, error) {
+func NewErgoAdapter(seed []byte, nodeUrl string, ctx context.Context, opts ...ErgoAdapterOption) (*ErgoAdaptor, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", nodeUrl, nil)
+	if err != nil {
+		return nil, err
+	}
 	client, err := helpers.NewClient(helpers.ErgOptions{ApiKey: "", BaseUrl: nodeUrl})
 	if err != nil {
 		return nil, err
 	}
+
+	client.Do(ctx, req, nil)
+
 	secret := crypto.NewKeyFromSeed(seed)
 	er := &ErgoAdaptor{
 		ergoClient: client,
@@ -144,14 +156,14 @@ func (er *ErgoAdaptor) WaitTx(id string, ctx context.Context) error {
 				break
 			}
 			response := new(Response)
-			_, err = helpers.DoHttp(ctx, er.ergoClient.Options, req, response)
+			_, err = er.ergoClient.Do(ctx, req, response)
 			if err != nil {
 				out <- err
 				break
 			}
 
 			if response.Confirm == -1 {
-				_, err = helpers.DoHttp(ctx, er.ergoClient.Options, req, response)
+				_, err = er.ergoClient.Do(ctx, req, response)
 				if err != nil {
 					out <- err
 					break
@@ -189,13 +201,13 @@ func (er *ErgoAdaptor) GetHeight(ctx context.Context) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	out := new(Response)
-	_, err = helpers.DoHttp(ctx, er.ergoClient.Options, req, out)
+	response := new(Response)
+	_, err = er.ergoClient.Do(ctx, req, response)
 	if err != nil {
 		return 0, err
 	}
 
-	return out.Height, nil
+	return response.Height, nil
 }
 
 func (er *ErgoAdaptor) Sign(msg []byte) ([]byte, error) {

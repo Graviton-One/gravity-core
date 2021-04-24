@@ -111,7 +111,7 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 			return nil, err
 		}
 	case account.Ergo:
-		adaptor, err = adaptors.NewErgoAdapter(oracleSecretKey, targetChainNodeUrl, adaptors.ErgoAdapterWithGhClient(ghClient))
+		adaptor, err = adaptors.NewErgoAdapter(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.ErgoAdapterWithGhClient(ghClient))
 		if err != nil {
 			return nil, err
 		}
