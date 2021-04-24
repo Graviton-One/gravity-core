@@ -88,7 +88,7 @@ func (f *Factory) CreateAdaptor(name string, oracleSecretKey []byte, targetChain
 	case "ethereum":
 		return NewEthereumsAdapterByOpts(oracleSecretKey, targetChainNodeUrl, ctx, opts)
 	case "ergo":
-		return NewErgoAdapterByOpts(oracleSecretKey, targetChainNodeUrl, opts)
+		return NewErgoAdapterByOpts(oracleSecretKey, targetChainNodeUrl, ctx, opts)
 	}
 	return nil, fmt.Errorf("Unknown adaptor name %s", name)
 }

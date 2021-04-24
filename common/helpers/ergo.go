@@ -102,10 +102,10 @@ func newResponse(response *http.Response) *Response {
 }
 
 func (a *ErgClient) Do(ctx context.Context, req *http.Request, v interface{}) (*Response, error) {
-	return DoHttp(ctx, a.Options, req, v)
+	return doHttp(ctx, a.Options, req, v)
 }
 
-func DoHttp(ctx context.Context, options ErgOptions, req *http.Request, v interface{}) (*Response, error) {
+func doHttp(ctx context.Context, options ErgOptions, req *http.Request, v interface{}) (*Response, error) {
 	req = withContext(ctx, req)
 	if req.Header.Get("Accept") == "" {
 		req.Header.Set("Accept", "application/json")
