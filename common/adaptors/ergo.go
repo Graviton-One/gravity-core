@@ -10,7 +10,7 @@ import (
 	"github.com/Gravity-Tech/gravity-core/abi"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 	"github.com/gookit/validate"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"reflect"
 	"time"
@@ -19,10 +19,6 @@ import (
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
 	"github.com/Gravity-Tech/gravity-core/common/helpers"
-)
-
-const (
-	Consuls = 5
 )
 
 type ErgoAdaptor struct {
@@ -96,7 +92,10 @@ func NewErgoAdapterByOpts(seed []byte, nodeUrl string, ctx context.Context, opts
 		return nil, err
 	}
 
-	client.Do(ctx, req, nil)
+	_ ,err = client.Do(ctx, req, nil)
+	if err != nil {
+		return nil, err
+	}
 	secret := crypto.NewKeyFromSeed(seed)
 	adapter := &ErgoAdaptor{
 		secret:     secret,
@@ -120,7 +119,10 @@ func NewErgoAdapter(seed []byte, nodeUrl string, ctx context.Context, opts ...Er
 		return nil, err
 	}
 
-	client.Do(ctx, req, nil)
+	_, err = client.Do(ctx, req, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	secret := crypto.NewKeyFromSeed(seed)
 	er := &ErgoAdaptor{
@@ -225,12 +227,16 @@ func (er *ErgoAdaptor) Sign(msg []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	response, err := ioutil.ReadAll(res.Body)
+	response, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
 	var responseObject Response
-	json.Unmarshal(response, &responseObject)
+	err = json.Unmarshal(response, &responseObject)
+	if err != nil {
+		return nil, err
+	}
+
 	if !responseObject.Status {
 		err = fmt.Errorf("proxy connection problem")
 		return nil, err
