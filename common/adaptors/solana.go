@@ -3,9 +3,13 @@ package adaptors
 import (
 	"context"
 	"crypto/ed25519"
+	"encoding/base64"
+	"encoding/binary"
+	"log"
 	"sort"
 
 	"github.com/Gravity-Tech/gravity-core/abi"
+	"github.com/Gravity-Tech/gravity-core/abi/solana/instructions"
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 	"go.uber.org/zap"
@@ -38,17 +42,29 @@ func (spk SortablePubkey) ToPubKeys() []solana_common.PublicKey {
 }
 
 type SolanaAdapter struct {
-	account types.Account
-	client  *solana.Client
+	account         types.Account
+	programID       solana_common.PublicKey
+	gravityContract solana_common.PublicKey
+	client          *solana.Client
 }
 
-func NewSolanaAdaptor(privKey []byte, nodeUrl string, ctx context.Context) (*SolanaAdapter, error) {
+func NewSolanaAdaptor(privKey []byte, nodeUrl string, custom map[string]interface{}) (*SolanaAdapter, error) {
 
 	account := types.AccountFromPrivateKeyBytes(privKey)
 	solClient := solana.NewClient(nodeUrl)
+	gravityContract, ok := custom["gravity_contract"].(string)
+	if !ok {
+		zap.L().Error("Cannot parse gravity contract")
+	}
+	programID, ok := custom["program_id"].(string)
+	if !ok {
+		zap.L().Error("Cannot parse gravity contract")
+	}
 	adapter := SolanaAdapter{
-		client:  solClient,
-		account: account,
+		client:          solClient,
+		account:         account,
+		gravityContract: solana_common.PublicKeyFromString(gravityContract),
+		programID:       solana_common.PublicKeyFromString(programID),
 	}
 
 	return &adapter, nil
@@ -93,50 +109,63 @@ func (s *SolanaAdapter) SetOraclesToNebula(nebulaId account.NebulaId, oracles []
 }
 
 func (s *SolanaAdapter) SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
-	panic("not implemented") // TODO: Implement
+	msg, err := s.createUpdateConsulsMessage(newConsulsAddresses, round)
+	if err != nil {
+		return "", err
+	}
+	serializedMessage, err := msg.Serialize()
+	if err != nil {
+		zap.L().Sugar().Error(err.Error())
+		return "", err
+	}
+	solsigs := make(map[solana_common.PublicKey]types.Signature)
+	selfSig, err := s.Sign(serializedMessage)
+	if err != nil {
+		zap.L().Sugar().Error(err.Error())
+		return "", err
+	}
+	solsigs[s.account.PublicKey] = selfSig
+	for key, sig := range signs {
+		nkey := solana_common.PublicKey{}
+		copy(nkey[:], key[1:33])
+		solsigs[nkey] = sig
+	}
+
+	tx, err := types.CreateTransaction(msg, solsigs)
+	if err != nil {
+		return "", err
+	}
+	rawTx, err := tx.Serialize()
+	if err != nil {
+		zap.L().Sugar().Error(err.Error())
+		return "", err
+	}
+
+	txSig, err := s.client.SendRawTransaction(rawTx)
+	if err != nil {
+		zap.L().Sugar().Error(err.Error())
+		return "", err
+	}
+
+	log.Println("txHash:", txSig)
+	return txSig, nil
 }
 
 func (s *SolanaAdapter) SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64) ([]byte, error) {
-
-	consuls := SortablePubkey{}
-	for _, v := range consulsAddresses {
-		if v == nil {
-			consuls = append(consuls, types.Account{}.PublicKey)
-			continue
-		}
-		pubKey := solana_common.PublicKeyFromBytes(v[1:33])
-		consuls = append(consuls, pubKey)
+	msg, err := s.createUpdateConsulsMessage(consulsAddresses, roundId)
+	if err != nil {
+		return nil, err
 	}
-	sort.Sort(&SortablePubkey{})
-	solanaConsuls := consuls.ToPubKeys()
-
-	res, err := s.client.GetRecentBlockhash()
+	serializedMessage, err := msg.Serialize()
 	if err != nil {
 		zap.L().Sugar().Error(err.Error())
 		return nil, err
 	}
-	message := types.NewMessage(
-		account.PublicKey,
-		[]types.Instruction{
-			NewInitGravityContractInstruction(
-				account.PublicKey, dataAcc, multisigAcc, program, 3, 1, [5][32]byte{},
-			),
-		},
-		res.Blockhash,
-	)
-	// hash, err := adaptor.gravityContract.HashNewConsuls(nil, oraclesAddresses, big.NewInt(roundId))
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// sign, err := adaptor.Sign(hash[:])
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// return sign, nil
-
-	panic("not implemented") // TODO: Implement
+	sign, err := s.Sign(serializedMessage)
+	if err != nil {
+		return nil, err
+	}
+	return sign, nil
 }
 
 func (s *SolanaAdapter) SignOracles(nebulaId account.NebulaId, oracles []*account.OraclesPubKey) ([]byte, error) {
@@ -148,9 +177,104 @@ func (s *SolanaAdapter) LastPulseId(nebulaId account.NebulaId, ctx context.Conte
 }
 
 func (s *SolanaAdapter) LastRound(ctx context.Context) (uint64, error) {
-	panic("not implemented") // TODO: Implement
+	r, err := s.client.GetAccountInfo(s.gravityContract.ToBase58(), solana.GetAccountInfoConfig{
+		Encoding: "base64",
+		DataSlice: solana.GetAccountInfoConfigDataSlice{
+			Length: 8,
+			Offset: 130,
+		},
+	})
+	if err != nil {
+		zap.L().Error(err.Error())
+		return 0, err
+	}
+	sval, ok := r.Data.(string)
+	if !ok {
+		zap.L().Error("Invalid account data")
+		return 0, err
+	}
+	val, err := base64.RawStdEncoding.DecodeString(sval)
+	if err != nil {
+		zap.L().Error(err.Error())
+		return 0, err
+	}
+	round := binary.BigEndian.Uint64(val)
+	return round, nil
 }
 
 func (s *SolanaAdapter) RoundExist(roundId int64, ctx context.Context) (bool, error) {
-	panic("not implemented") // TODO: Implement
+	return false, nil //default mock
+	//panic("not implemented") // TODO: Implement
+}
+
+//Custom solana methods
+
+func (s *SolanaAdapter) GetCurrentConsuls() ([]solana_common.PublicKey, error) {
+	r, err := s.client.GetAccountInfo(s.gravityContract.ToBase58(), solana.GetAccountInfoConfig{
+		Encoding: "base64",
+		DataSlice: solana.GetAccountInfoConfigDataSlice{
+			Length: 96,
+			Offset: 34,
+		},
+	})
+	if err != nil {
+		zap.L().Error(err.Error())
+		return []solana_common.PublicKey{}, err
+	}
+	sval, ok := r.Data.(string)
+	if !ok {
+		zap.L().Error("Invalid account data")
+		return []solana_common.PublicKey{}, err
+	}
+	val, err := base64.RawStdEncoding.DecodeString(sval)
+	if err != nil {
+		zap.L().Error(err.Error())
+		return []solana_common.PublicKey{}, err
+	}
+
+	sconsuls := SortablePubkey{}
+	for i := 0; i < 3*32; i += 32 { // BFT=3
+		pubk := solana_common.PublicKey{}
+		copy(pubk[:], val[i:i+32])
+		sconsuls = append(sconsuls, pubk)
+	}
+	sort.Sort(&sconsuls)
+	return sconsuls, nil
+}
+
+func (s *SolanaAdapter) createUpdateConsulsMessage(consulsAddresses []*account.OraclesPubKey, roundId int64) (types.Message, error) {
+	currentConsuls, err := s.GetCurrentConsuls()
+	if err != nil {
+		zap.L().Sugar().Error(err.Error())
+		return types.Message{}, err
+	}
+
+	consuls := SortablePubkey{}
+	for _, v := range consulsAddresses {
+		if v == nil {
+			consuls = append(consuls, types.Account{}.PublicKey)
+			continue
+		}
+		pubKey := solana_common.PublicKeyFromBytes(v[1:33])
+		consuls = append(consuls, pubKey)
+	}
+	sort.Sort(&consuls)
+	solanaConsuls := consuls.ToPubKeys()
+
+	res, err := s.client.GetRecentBlockhash()
+	if err != nil {
+		zap.L().Sugar().Error(err.Error())
+		return types.Message{}, err
+	}
+	message := types.NewMessage(
+		s.account.PublicKey,
+		[]types.Instruction{
+			instructions.UpdateConsulsInstruction(
+				s.account.PublicKey, s.gravityContract, s.programID, currentConsuls, 3, uint64(roundId), solanaConsuls,
+			),
+		},
+		res.Blockhash,
+	)
+
+	return message, nil
 }
