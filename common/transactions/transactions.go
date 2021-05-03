@@ -12,18 +12,19 @@ import (
 )
 
 const (
-	Commit            TxFunc = "commit"
-	Reveal            TxFunc = "reveal"
-	AddOracle         TxFunc = "addOracle"
-	AddOracleInNebula TxFunc = "addOracleInNebula"
-	Result            TxFunc = "result"
-	NewRound          TxFunc = "newRound" //TODO: Legacy / not used
-	Vote              TxFunc = "vote"
-	AddNebula         TxFunc = "setNebula"
-	DropNebula        TxFunc = "dropNebula"
-	SignNewConsuls    TxFunc = "signNewConsuls"
-	SignNewOracles    TxFunc = "signNewOracles"
-	ApproveLastRound  TxFunc = "approveLastRound"
+	Commit               TxFunc = "commit"
+	Reveal               TxFunc = "reveal"
+	AddOracle            TxFunc = "addOracle"
+	AddOracleInNebula    TxFunc = "addOracleInNebula"
+	Result               TxFunc = "result"
+	NewRound             TxFunc = "newRound" //TODO: Legacy / not used
+	Vote                 TxFunc = "vote"
+	AddNebula            TxFunc = "setNebula"
+	DropNebula           TxFunc = "dropNebula"
+	SignNewConsuls       TxFunc = "signNewConsuls"
+	SignNewOracles       TxFunc = "signNewOracles"
+	ApproveLastRound     TxFunc = "approveLastRound"
+	SetSolanaRecentBlock TxFunc = "setSolanaRecentBlock"
 
 	String Type = "string"
 	Int    Type = "int"

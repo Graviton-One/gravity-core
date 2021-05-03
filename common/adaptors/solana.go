@@ -11,7 +11,9 @@ import (
 	"github.com/Gravity-Tech/gravity-core/abi"
 	"github.com/Gravity-Tech/gravity-core/abi/solana/instructions"
 	"github.com/Gravity-Tech/gravity-core/common/account"
+	"github.com/Gravity-Tech/gravity-core/common/gravity"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
+	"github.com/mr-tron/base58/base58"
 	"go.uber.org/zap"
 
 	solana "github.com/portto/solana-go-sdk/client"
@@ -46,9 +48,10 @@ type SolanaAdapter struct {
 	programID       solana_common.PublicKey
 	gravityContract solana_common.PublicKey
 	client          *solana.Client
+	ghClient        *gravity.Client
 }
 
-func NewSolanaAdaptor(privKey []byte, nodeUrl string, custom map[string]interface{}) (*SolanaAdapter, error) {
+func NewSolanaAdaptor(privKey []byte, nodeUrl string, custom map[string]interface{}, ghClient *gravity.Client) (*SolanaAdapter, error) {
 
 	account := types.AccountFromPrivateKeyBytes(privKey)
 	solClient := solana.NewClient(nodeUrl)
@@ -109,6 +112,7 @@ func (s *SolanaAdapter) SetOraclesToNebula(nebulaId account.NebulaId, oracles []
 }
 
 func (s *SolanaAdapter) SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
+
 	msg, err := s.createUpdateConsulsMessage(newConsulsAddresses, round)
 	if err != nil {
 		return "", err
@@ -124,13 +128,15 @@ func (s *SolanaAdapter) SendConsulsToGravityContract(newConsulsAddresses []*acco
 		zap.L().Sugar().Error(err.Error())
 		return "", err
 	}
-	solsigs[s.account.PublicKey] = selfSig
+	zap.L().Sugar().Debug("Send msg: ", base58.Encode(serializedMessage))
 	for key, sig := range signs {
 		nkey := solana_common.PublicKey{}
 		copy(nkey[:], key[1:33])
 		solsigs[nkey] = sig
+		zap.L().Sugar().Debug("Lsig: ", nkey.ToBase58(), " -> ", base58.Encode(sig))
 	}
-
+	solsigs[s.account.PublicKey] = selfSig
+	zap.L().Sugar().Debug("Self sig: ", s.account.PublicKey.ToBase58(), " -> ", base58.Encode(selfSig))
 	tx, err := types.CreateTransaction(msg, solsigs)
 	if err != nil {
 		return "", err
@@ -165,6 +171,8 @@ func (s *SolanaAdapter) SignConsuls(consulsAddresses []*account.OraclesPubKey, r
 	if err != nil {
 		return nil, err
 	}
+	zap.L().Sugar().Debug("msg: ", base58.Encode(serializedMessage))
+	zap.L().Sugar().Debug("sig: ", base58.Encode(sign))
 	return sign, nil
 }
 
@@ -188,12 +196,14 @@ func (s *SolanaAdapter) LastRound(ctx context.Context) (uint64, error) {
 		zap.L().Error(err.Error())
 		return 0, err
 	}
-	sval, ok := r.Data.(string)
+
+	sval, ok := r.Data.([]interface{})[0].(string)
 	if !ok {
 		zap.L().Error("Invalid account data")
 		return 0, err
 	}
-	val, err := base64.RawStdEncoding.DecodeString(sval)
+
+	val, err := base64.StdEncoding.DecodeString(sval)
 	if err != nil {
 		zap.L().Error(err.Error())
 		return 0, err
@@ -221,12 +231,12 @@ func (s *SolanaAdapter) GetCurrentConsuls() ([]solana_common.PublicKey, error) {
 		zap.L().Error(err.Error())
 		return []solana_common.PublicKey{}, err
 	}
-	sval, ok := r.Data.(string)
+	sval, ok := r.Data.([]interface{})[0].(string)
 	if !ok {
 		zap.L().Error("Invalid account data")
 		return []solana_common.PublicKey{}, err
 	}
-	val, err := base64.RawStdEncoding.DecodeString(sval)
+	val, err := base64.StdEncoding.DecodeString(sval)
 	if err != nil {
 		zap.L().Error(err.Error())
 		return []solana_common.PublicKey{}, err

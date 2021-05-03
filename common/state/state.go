@@ -91,6 +91,8 @@ func SetState(tx *transactions.Transaction, store *storage.Storage, adaptors map
 		return signNewOracles(store, tx)
 	case transactions.ApproveLastRound:
 		return approveLastRound(store, adaptors, height, isSync, ctx)
+	case transactions.SetSolanaRecentBlock:
+		return setSolanaRecentBlock(store, tx)
 	default:
 		return ErrFuncNotFound
 	}
@@ -245,6 +247,12 @@ func vote(store *storage.Storage, tx *transactions.Transaction) error {
 func dropNebula(store *storage.Storage, tx *transactions.Transaction) error {
 	nebulaId := account.BytesToNebulaId(tx.Value(0).([]byte))
 	return store.DropNebula(nebulaId)
+}
+
+func setSolanaRecentBlock(store *storage.Storage, tx *transactions.Transaction) error {
+	round := tx.Value(0).(int)
+	blockHash := tx.Value(1).([]byte)
+	return store.SetSolanaRecentBlock(round, blockHash)
 }
 
 func setNebula(store *storage.Storage, tx *transactions.Transaction) error {

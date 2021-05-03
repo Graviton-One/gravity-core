@@ -17,7 +17,7 @@ func UpdateConsulsInstruction(fromAccount, programData, targetProgramID common.P
 		Consuls     []byte
 		Round       uint64
 	}{
-		Instruction: 0,
+		Instruction: 1,
 		Bft:         3,
 		Round:       Round,
 		Consuls:     consuls,
@@ -30,7 +30,7 @@ func UpdateConsulsInstruction(fromAccount, programData, targetProgramID common.P
 		{PubKey: programData, IsSigner: false, IsWritable: true},
 	}
 	for _, s := range signers {
-		accounts = append(accounts, types.AccountMeta{PubKey: s, IsSigner: true, IsWritable: false})
+		accounts = append(accounts, types.AccountMeta{PubKey: s, IsSigner: false, IsWritable: false})
 	}
 	return types.Instruction{
 		Accounts:  accounts,
