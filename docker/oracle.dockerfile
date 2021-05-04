@@ -14,8 +14,6 @@ RUN cd cmd/gravity/ && \
 
 FROM ubuntu:18.04
 
-RUN apk add bash
-
 ENV NEBULA_ADDRESS=''
 ENV CHAIN_TYPE=''
 
