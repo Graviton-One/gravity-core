@@ -12,7 +12,7 @@ RUN chmod 755 docker/entrypoint-oracle.sh
 RUN cd cmd/gravity/ && \
     go build -o gravity
 
-FROM alpine:3.11.3
+FROM ubuntu:18.04
 
 RUN apk add bash
 

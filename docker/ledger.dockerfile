@@ -11,7 +11,7 @@ RUN cd cmd/gravity/ && \
     go build -o gravity && \
     cp gravity /bin/
 
-FROM alpine:3.11.3
+FROM ubuntu:18.04
 
 COPY --from=ledger /node/docker/entrypoint-ledger.sh .
 COPY --from=ledger /node/cmd/gravity/gravity /bin/
