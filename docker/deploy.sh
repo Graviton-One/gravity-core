@@ -1,11 +1,10 @@
 #!/bin/bash
 
 start_mainnet() {
-	NETWORK=mainnet
-
 	docker run -itd \
-				 -e INIT_CONFIG=1 \
-	       -p 26657:26657 -p 2500:2500 -v "$GRAVITY_HOME":/etc/gravity gravityhuborg/gravity-ledger:master
+		-e INIT_CONFIG=1 \
+		-e GRAVITY_NETWORK=mainnet \
+		-p 26657:26657 -p 2500:2500 -v "$GRAVITY_HOME":/etc/gravity gravityhuborg/gravity-ledger:master
 }
 
 start_devnet() {
