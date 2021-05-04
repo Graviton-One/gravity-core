@@ -68,6 +68,7 @@ const (
 	MainnetPersistentPeers = "9e91414d53328d46d68415e1e31934ab09f69511@134.122.37.128:26656,3d8306a9e006687374f23905adc06f3517306cd7@212.111.41.159:26656,2c17ad4dcc9947342ff03be6827cfb285b6494bb@3.135.223.165:26666"
 )
 
+
 var (
 	MainnetConfig = config.LedgerConfig{
 		Moniker:    config.DefaultMoniker,
@@ -266,6 +267,12 @@ func initLedgerConfig(ctx *cli.Context) error {
 	var genesis config.Genesis
 	if network == Mainnet {
 		genesis = MainnetGenesis
+
+		dateString := "2021-03-01T15:39:41.222470458Z"
+		timeInst := time.Now()
+		_ = timeInst.UnmarshalText([]byte(dateString))
+
+		genesis.GenesisTime = timeInst
 	} else {
 		genesis = CustomNetGenesis
 	}
