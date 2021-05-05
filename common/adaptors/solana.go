@@ -5,7 +5,10 @@ import (
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
+	"fmt"
 	"log"
+	"net/url"
 	"sort"
 
 	"github.com/Gravity-Tech/gravity-core/abi"
@@ -13,6 +16,7 @@ import (
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
+	"github.com/gorilla/websocket"
 	"github.com/mr-tron/base58/base58"
 	"go.uber.org/zap"
 
@@ -47,8 +51,10 @@ type SolanaAdapter struct {
 	account         types.Account
 	programID       solana_common.PublicKey
 	gravityContract solana_common.PublicKey
+	multisigAccount solana_common.PublicKey
 	client          *solana.Client
 	ghClient        *gravity.Client
+	recentBlockHash string
 }
 
 func NewSolanaAdaptor(privKey []byte, nodeUrl string, custom map[string]interface{}, ghClient *gravity.Client) (*SolanaAdapter, error) {
@@ -56,6 +62,10 @@ func NewSolanaAdaptor(privKey []byte, nodeUrl string, custom map[string]interfac
 	account := types.AccountFromPrivateKeyBytes(privKey)
 	solClient := solana.NewClient(nodeUrl)
 	gravityContract, ok := custom["gravity_contract"].(string)
+	if !ok {
+		zap.L().Error("Cannot parse gravity contract")
+	}
+	multisigAccount, ok := custom["multisig_account"].(string)
 	if !ok {
 		zap.L().Error("Cannot parse gravity contract")
 	}
@@ -68,6 +78,7 @@ func NewSolanaAdaptor(privKey []byte, nodeUrl string, custom map[string]interfac
 		account:         account,
 		gravityContract: solana_common.PublicKeyFromString(gravityContract),
 		programID:       solana_common.PublicKeyFromString(programID),
+		multisigAccount: solana_common.PublicKeyFromString(multisigAccount),
 	}
 
 	return &adapter, nil
@@ -82,7 +93,63 @@ func (s *SolanaAdapter) GetHeight(ctx context.Context) (uint64, error) {
 }
 
 func (s *SolanaAdapter) WaitTx(id string, ctx context.Context) error {
-	panic("not implemented") // TODO: Implement
+
+	u := url.URL{Scheme: "ws", Host: "testnet.solana.com", Path: "/"}
+	log.Printf("connecting to %s", u.String())
+
+	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		log.Fatal("dial:", err)
+	}
+	defer c.Close()
+	req := `
+		{
+			"jsonrpc": "2.0",
+			"id": 1,
+			"method": "signatureSubscribe",
+			"params": [
+			  "%s",
+			  {
+				"commitment": "finalized"
+			  }
+			]
+		  }
+		`
+	unsubscribeRequest := "{\"jsonrpc\":\"2.0\", \"id\":1, \"method\":\"signatureUnsubscribe\", \"params\":[%d]}"
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+
+		subscription := 0
+		for {
+			_, message, err := c.ReadMessage()
+			if err != nil {
+				log.Println("read:", err)
+				return
+			}
+			log.Printf("recv: %s", message)
+			a := struct {
+				Method       string `json:"method"`
+				Result       int    `json:"result"`
+				Subscription int    `json:"subscription"`
+			}{}
+			json.Unmarshal(message, &a)
+			switch a.Method {
+			case "":
+				subscription = a.Subscription
+			case "signatureNotification":
+				c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(unsubscribeRequest, subscription)))
+				done <- struct{}{}
+				c.Close()
+				return
+			}
+
+		}
+	}()
+
+	err = c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(req, id)))
+	<-done
+	return nil
 }
 
 func (s *SolanaAdapter) Sign(msg []byte) ([]byte, error) {
@@ -158,6 +225,7 @@ func (s *SolanaAdapter) SendConsulsToGravityContract(newConsulsAddresses []*acco
 }
 
 func (s *SolanaAdapter) SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64) ([]byte, error) {
+	s.updateRecentBlockHash()
 	msg, err := s.createUpdateConsulsMessage(consulsAddresses, roundId)
 	if err != nil {
 		return nil, err
@@ -185,11 +253,13 @@ func (s *SolanaAdapter) LastPulseId(nebulaId account.NebulaId, ctx context.Conte
 }
 
 func (s *SolanaAdapter) LastRound(ctx context.Context) (uint64, error) {
+	bft, _ := s.GetCurrentBFT()
+
 	r, err := s.client.GetAccountInfo(s.gravityContract.ToBase58(), solana.GetAccountInfoConfig{
 		Encoding: "base64",
 		DataSlice: solana.GetAccountInfoConfigDataSlice{
 			Length: 8,
-			Offset: 130,
+			Offset: 2 + 32 + uint64(bft*32),
 		},
 	})
 	if err != nil {
@@ -208,7 +278,7 @@ func (s *SolanaAdapter) LastRound(ctx context.Context) (uint64, error) {
 		zap.L().Error(err.Error())
 		return 0, err
 	}
-	round := binary.BigEndian.Uint64(val)
+	round := binary.LittleEndian.Uint64(val)
 	return round, nil
 }
 
@@ -220,10 +290,12 @@ func (s *SolanaAdapter) RoundExist(roundId int64, ctx context.Context) (bool, er
 //Custom solana methods
 
 func (s *SolanaAdapter) GetCurrentConsuls() ([]solana_common.PublicKey, error) {
+	bft, _ := s.GetCurrentBFT()
+	length := uint64(bft * 32)
 	r, err := s.client.GetAccountInfo(s.gravityContract.ToBase58(), solana.GetAccountInfoConfig{
 		Encoding: "base64",
 		DataSlice: solana.GetAccountInfoConfigDataSlice{
-			Length: 96,
+			Length: length,
 			Offset: 34,
 		},
 	})
@@ -243,7 +315,7 @@ func (s *SolanaAdapter) GetCurrentConsuls() ([]solana_common.PublicKey, error) {
 	}
 
 	sconsuls := SortablePubkey{}
-	for i := 0; i < 3*32; i += 32 { // BFT=3
+	for i := 0; i < int(bft*32); i += 32 { // BFT=3
 		pubk := solana_common.PublicKey{}
 		copy(pubk[:], val[i:i+32])
 		sconsuls = append(sconsuls, pubk)
@@ -262,7 +334,7 @@ func (s *SolanaAdapter) createUpdateConsulsMessage(consulsAddresses []*account.O
 	consuls := SortablePubkey{}
 	for _, v := range consulsAddresses {
 		if v == nil {
-			consuls = append(consuls, types.Account{}.PublicKey)
+			//consuls = append(consuls, types.Account{}.PublicKey)
 			continue
 		}
 		pubKey := solana_common.PublicKeyFromBytes(v[1:33])
@@ -271,20 +343,56 @@ func (s *SolanaAdapter) createUpdateConsulsMessage(consulsAddresses []*account.O
 	sort.Sort(&consuls)
 	solanaConsuls := consuls.ToPubKeys()
 
-	res, err := s.client.GetRecentBlockhash()
-	if err != nil {
-		zap.L().Sugar().Error(err.Error())
-		return types.Message{}, err
-	}
+	// res, err := s.client.GetRecentBlockhash()
+	// if err != nil {
+	// 	zap.L().Sugar().Error(err.Error())
+	// 	return types.Message{}, err
+	// }
+
 	message := types.NewMessage(
 		s.account.PublicKey,
 		[]types.Instruction{
 			instructions.UpdateConsulsInstruction(
-				s.account.PublicKey, s.gravityContract, s.programID, currentConsuls, 3, uint64(roundId), solanaConsuls,
+				s.account.PublicKey, s.gravityContract, s.programID, s.multisigAccount, currentConsuls, uint8(len(currentConsuls)), uint64(roundId), solanaConsuls,
 			),
 		},
-		res.Blockhash,
+		s.recentBlockHash,
 	)
 
 	return message, nil
+}
+
+func (s *SolanaAdapter) updateRecentBlockHash() {
+	res, err := s.client.GetRecentBlockhash()
+	if err != nil {
+		zap.L().Sugar().Error(err.Error())
+		return
+	}
+	s.recentBlockHash = res.Blockhash
+}
+
+func (s *SolanaAdapter) GetCurrentBFT() (byte, error) {
+	r, err := s.client.GetAccountInfo(s.gravityContract.ToBase58(), solana.GetAccountInfoConfig{
+		Encoding: "base64",
+		DataSlice: solana.GetAccountInfoConfigDataSlice{
+			Length: 1,
+			Offset: 33,
+		},
+	})
+	if err != nil {
+		zap.L().Error(err.Error())
+		return 0, err
+	}
+	sval, ok := r.Data.([]interface{})[0].(string)
+	if !ok {
+		zap.L().Error("Invalid account data")
+		return 0, err
+	}
+	val, err := base64.StdEncoding.DecodeString(sval)
+	if err != nil {
+		zap.L().Error(err.Error())
+		return 0, err
+	}
+
+	return val[0], nil
 }

@@ -8,6 +8,7 @@ require (
 	github.com/dgraph-io/badger v1.6.1
 	github.com/ethereum/go-ethereum v1.9.23
 	github.com/gookit/validate v1.2.8
+	github.com/gorilla/websocket v1.4.2
 	github.com/mr-tron/base58 v1.1.3
 	github.com/portto/solana-go-sdk v1.1.1
 	github.com/tendermint/tendermint v0.33.4
