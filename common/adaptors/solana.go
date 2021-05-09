@@ -52,6 +52,7 @@ type SolanaAdapter struct {
 	programID       solana_common.PublicKey
 	gravityContract solana_common.PublicKey
 	multisigAccount solana_common.PublicKey
+	nebulaContract  solana_common.PublicKey
 	client          *solana.Client
 	ghClient        *gravity.Client
 	recentBlockHash string
@@ -73,12 +74,17 @@ func NewSolanaAdaptor(privKey []byte, nodeUrl string, custom map[string]interfac
 	if !ok {
 		zap.L().Error("Cannot parse gravity contract")
 	}
+	nebulaContract, ok := custom["nebula_contract"].(string)
+	if !ok {
+		zap.L().Error("Cannot parse gravity contract")
+	}
 	adapter := SolanaAdapter{
 		client:          solClient,
 		account:         account,
 		gravityContract: solana_common.PublicKeyFromString(gravityContract),
 		programID:       solana_common.PublicKeyFromString(programID),
 		multisigAccount: solana_common.PublicKeyFromString(multisigAccount),
+		nebulaContract:  solana_common.PublicKeyFromString(nebulaContract),
 	}
 
 	return &adapter, nil
@@ -163,7 +169,12 @@ func (s *SolanaAdapter) PubKey() account.OraclesPubKey {
 }
 
 func (s *SolanaAdapter) ValueType(nebulaId account.NebulaId, ctx context.Context) (abi.ExtractorType, error) {
-	panic("not implemented") // TODO: Implement
+	n, err := s.getNebulaContractState()
+	if err != nil {
+		zap.L().Error(err.Error())
+		return 0, err
+	}
+	return abi.ExtractorType(n.DataType.Value()), nil
 }
 
 func (s *SolanaAdapter) AddPulse(nebulaId account.NebulaId, pulseId uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
@@ -249,7 +260,12 @@ func (s *SolanaAdapter) SignOracles(nebulaId account.NebulaId, oracles []*accoun
 }
 
 func (s *SolanaAdapter) LastPulseId(nebulaId account.NebulaId, ctx context.Context) (uint64, error) {
-	panic("not implemented") // TODO: Implement
+	n, err := s.getNebulaContractState()
+	if err != nil {
+		zap.L().Error(err.Error())
+		return 0, err
+	}
+	return n.LastPulseId, nil
 }
 
 func (s *SolanaAdapter) LastRound(ctx context.Context) (uint64, error) {
@@ -395,4 +411,43 @@ func (s *SolanaAdapter) GetCurrentBFT() (byte, error) {
 	}
 
 	return val[0], nil
+}
+
+func (s *SolanaAdapter) getCurrentOracles() ([]solana_common.PublicKey, error) {
+	return []solana_common.PublicKey{}, nil
+}
+
+func (s *SolanaAdapter) getNebulaContractState() (*instructions.NebulaContract, error) {
+	r, err := s.client.GetAccountInfo(s.nebulaContract.ToBase58(), solana.GetAccountInfoConfig{
+		Encoding: "base64",
+		DataSlice: solana.GetAccountInfoConfigDataSlice{
+			Length: 2048,
+			Offset: 0,
+		},
+	})
+	if err != nil {
+		zap.L().Error(err.Error())
+		return nil, err
+	}
+
+	sval, ok := r.Data.([]interface{})[0].(string)
+	if !ok {
+		zap.L().Error("Invalid account data")
+		return nil, err
+	}
+
+	val, err := base64.StdEncoding.DecodeString(sval)
+	if err != nil {
+		zap.L().Error(err.Error())
+		return nil, err
+	}
+
+	mydeserializer := instructions.NewNebulaDeserializer(val, 6000)
+
+	n, err := instructions.DeserializeNebulaContract(mydeserializer)
+	if err != nil {
+		zap.L().Error(err.Error())
+		return nil, err
+	}
+	return &n, nil
 }
