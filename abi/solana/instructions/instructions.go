@@ -47,3 +47,120 @@ func UpdateConsulsInstruction(fromAccount, programData, targetProgramID, multisi
 		Data:      data,
 	}
 }
+
+func NebulaUpdateOraclesInstruction(fromAccount, targetProgramID, nebulaId common.PublicKey, signers []common.PublicKey, Round uint64, Oracles []common.PublicKey) types.Instruction {
+	/*
+			UpdateOracles {
+		        new_oracles: Vec<Pubkey>,
+		        new_round: PulseID,
+		    }
+	*/
+	oracles := []byte{}
+	for i := 0; i < len(Oracles); i++ {
+		oracles = append(oracles, Oracles[i][:]...)
+	}
+	data, err := common.SerializeData(struct {
+		Instruction uint8
+		NewOracles  []byte
+		Round       uint64
+	}{
+		Instruction: 1,
+		NewOracles:  oracles,
+		Round:       Round,
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("--------- RAW INSTRUCTION DATA -----------")
+	fmt.Printf("%s\n", hex.EncodeToString(data))
+	fmt.Println("------- END RAW INSTRUCTION DATA ---------")
+
+	accounts := []types.AccountMeta{
+		{PubKey: fromAccount, IsSigner: true, IsWritable: true},
+		{PubKey: nebulaId, IsSigner: false, IsWritable: true},
+	}
+	for _, s := range signers {
+		accounts = append(accounts, types.AccountMeta{PubKey: s, IsSigner: false, IsWritable: false})
+	}
+	return types.Instruction{
+		Accounts:  accounts,
+		ProgramID: targetProgramID,
+		Data:      data,
+	}
+}
+
+func NebulaAddPulseInstruction(fromAccount, targetProgramID, nebulaId common.PublicKey, signers []common.PublicKey, PulseId uint64, hash []byte) types.Instruction {
+	/*
+			SendHashValue {
+		        data_hash: Vec<u8>,
+		    }
+	*/
+	data, err := common.SerializeData(struct {
+		Instruction uint8
+		//PulseID     uint64
+		Hash []byte
+	}{
+		Instruction: 2,
+		//PulseID:     PulseId,
+		Hash: hash,
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("--------- RAW INSTRUCTION DATA -----------")
+	fmt.Printf("%s\n", hex.EncodeToString(data))
+	fmt.Println("------- END RAW INSTRUCTION DATA ---------")
+
+	accounts := []types.AccountMeta{
+		{PubKey: fromAccount, IsSigner: true, IsWritable: true},
+		{PubKey: nebulaId, IsSigner: false, IsWritable: true},
+	}
+	for _, s := range signers {
+		accounts = append(accounts, types.AccountMeta{PubKey: s, IsSigner: false, IsWritable: false})
+	}
+	return types.Instruction{
+		Accounts:  accounts,
+		ProgramID: targetProgramID,
+		Data:      data,
+	}
+}
+
+func NebulaSendValueToSubsInstruction(fromAccount, targetProgramID, nebulaId common.PublicKey, DataType uint8, value []byte, PulseId uint64, SubscriptionID [16]byte) types.Instruction {
+	/*
+			SendValueToSubs {
+		        data_type: DataType,
+		        pulse_id: PulseID,
+		        subscription_id: SubscriptionID,
+				value: Vec<u8>
+		    },
+	*/
+	data, err := common.SerializeData(struct {
+		Instruction    uint8
+		DataType       uint8
+		PulseID        uint64
+		SubscriptionID [16]byte
+		Value          []byte
+	}{
+		Instruction:    3,
+		DataType:       DataType,
+		PulseID:        PulseId,
+		SubscriptionID: SubscriptionID,
+		Value:          value,
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("--------- RAW INSTRUCTION DATA -----------")
+	fmt.Printf("%s\n", hex.EncodeToString(data))
+	fmt.Println("------- END RAW INSTRUCTION DATA ---------")
+
+	accounts := []types.AccountMeta{
+		{PubKey: fromAccount, IsSigner: true, IsWritable: true},
+		{PubKey: nebulaId, IsSigner: false, IsWritable: true},
+	}
+	return types.Instruction{
+		Accounts:  accounts,
+		ProgramID: targetProgramID,
+		Data:      data,
+	}
+}
