@@ -258,6 +258,7 @@ func (adaptor *ErgoAdaptor) PubKey() account.OraclesPubKey {
 	return oraclePubKey
 }
 
+// ValueType TODO: returns datatype from extractor (type of target)
 func (adaptor *ErgoAdaptor) ValueType(nebulaId account.NebulaId, ctx context.Context) (abi.ExtractorType, error) {
 	panic("implement me")
 }
@@ -278,11 +279,11 @@ func (adaptor *ErgoAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64, 
 	}
 	type Data struct {
 		Signs Sign   `json:"signs"`
-		Hash  []byte `json:"hash"`
+		Hash  []byte `json:"hashData"`
 	}
 	type Tx struct {
 		Success bool   `json:"success"`
-		TxId    string `json:"tx_id"`
+		TxId    string `json:"txId"`
 	}
 	var oracles []string
 	var signsA []string
@@ -339,9 +340,9 @@ func (adaptor *ErgoAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64, 
 		return "", nil
 	}
 
-	// Send oracleSigns to be verified by contract in proxy side and get tx_id
+	// Send oracleSigns to be verified by contract in proxy side and get txId
 	data, err := json.Marshal(Data{Signs: Sign{a: signsA, z: signsZ}, Hash: hash})
-	url, err = helpers.JoinUrl(adaptor.ergoClient.Options.BaseUrl, "addPulse")
+	url, err = helpers.JoinUrl(adaptor.ergoClient.Options.BaseUrl, "adaptor/addPulse")
 	if err != nil {
 		return "", err
 	}
@@ -363,15 +364,11 @@ func (adaptor *ErgoAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId u
 }
 
 func (adaptor *ErgoAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
-	panic("implement me")
-}
-
-func (adaptor *ErgoAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
 	var signsA [5]string
 	var signsZ [5]string
 	type Tx struct {
 		Success bool   `json:"success"`
-		TxId    string `json:"tx_id"`
+		TxId    string `json:"txId"`
 	}
 	type Consuls struct {
 		Success bool     `json:"success"`
@@ -382,14 +379,20 @@ func (adaptor *ErgoAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*
 		z [5]string
 	}
 	type Data struct {
-		newConsuls []string `json:"new_consuls"`
+		newOracles []string `json:"newOracles"`
 		Signs	Sign	`json:"signs"`
 	}
 
+	lastRound, err := adaptor.LastRound(ctx)
+	if err != nil {
+		return "", err
+	}
+	if uint64(round) <= lastRound{
+		return "", errors.New("this is not a new round")
+	}
 
-	// TODO: request to get consuls
 	var consuls []string
-	url, err := helpers.JoinUrl(adaptor.ergoClient.Options.BaseUrl, "getConsuls")
+	url, err := helpers.JoinUrl(adaptor.ergoClient.Options.BaseUrl, "adaptor/getConsuls")
 	if err != nil {
 		return "", err
 	}
@@ -405,7 +408,6 @@ func (adaptor *ErgoAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*
 		consuls = result.consuls
 	}
 
-	// TODO: change sign format to A, Z
 	for k, sign := range signs {
 		pubKey := k.ToString(account.Ergo)
 		index := -1
@@ -422,7 +424,103 @@ func (adaptor *ErgoAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*
 		}
 		signsA[index] = string(sign[:66])
 		signsZ[index] = string(sign[66:])
-		//stringSigns[index] = hex.EncodeToString(sign)
+	}
+
+	for i, v := range signsA {
+		if v != "" {
+			continue
+		}
+
+		signsA[i] = hex.EncodeToString([]byte{0})
+		signsZ[i] = hex.EncodeToString([]byte{0})
+	}
+
+	var newOracles []string
+
+	for _, v := range oracles {
+		if v == nil {
+			newOracles = append(newOracles, hex.EncodeToString([]byte{0}))
+			continue
+		}
+		newOracles = append(newOracles, hex.EncodeToString(v.ToBytes(account.Ergo)))
+	}
+
+	url, err = helpers.JoinUrl(adaptor.ergoClient.Options.BaseUrl, "adaptor/updateOracles")
+	if err != nil {
+		return "", err
+	}
+	data, err := json.Marshal(Data{newOracles: newOracles, Signs: Sign{a: signsA , z: signsZ} })
+	req, err = http.NewRequestWithContext(ctx, "POST", url.String(), bytes.NewBuffer(data))
+	tx := new(Tx)
+	_, err = adaptor.ergoClient.Do(ctx, req, tx)
+	if err != nil {
+		return "", err
+	}
+
+	return tx.TxId, nil
+}
+
+func (adaptor *ErgoAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
+	var signsA [5]string
+	var signsZ [5]string
+	type Tx struct {
+		Success bool   `json:"success"`
+		TxId    string `json:"txId"`
+	}
+	type Consuls struct {
+		Success bool     `json:"success"`
+		consuls []string `json:"consuls"`
+	}
+	type Sign struct {
+		a [5]string
+		z [5]string
+	}
+	type Data struct {
+		newConsuls []string `json:"newConsuls"`
+		Signs	Sign	`json:"signs"`
+	}
+
+	lastRound, err := adaptor.LastRound(ctx)
+	if err != nil {
+		return "", err
+	}
+	if uint64(round) <= lastRound{
+		return "", errors.New("this is not a new round")
+	}
+
+	var consuls []string
+	url, err := helpers.JoinUrl(adaptor.ergoClient.Options.BaseUrl, "adaptor/getConsuls")
+	if err != nil {
+		return "", err
+	}
+	req, err := http.NewRequestWithContext(ctx, "GET", url.String(), nil)
+	result := new(Consuls)
+	_, err = adaptor.ergoClient.Do(ctx, req, result)
+	if err != nil {
+		return "", err
+	}
+	if !result.Success {
+		return "", errors.New("can't get consuls")
+	} else {
+		consuls = result.consuls
+	}
+
+	for k, sign := range signs {
+		pubKey := k.ToString(account.Ergo)
+		index := -1
+
+		for i, v := range consuls {
+			if v == pubKey {
+				index = i
+				break
+			}
+		}
+
+		if index == -1 {
+			continue
+		}
+		signsA[index] = string(sign[:66])
+		signsZ[index] = string(sign[66:])
 	}
 
 	for i, v := range signsA {
@@ -449,8 +547,7 @@ func (adaptor *ErgoAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*
 		newConsulsString = append(newConsulsString, hex.EncodeToString([]byte{0}))
 	}
 
-	// TODO: request to get tx_id
-	url, err = helpers.JoinUrl(adaptor.ergoClient.Options.BaseUrl, "updateConsuls")
+	url, err = helpers.JoinUrl(adaptor.ergoClient.Options.BaseUrl, "adaptor/updateConsuls")
 	if err != nil {
 		return "", err
 	}
@@ -530,7 +627,7 @@ func (adaptor *ErgoAdaptor) LastPulseId(nebulaId account.NebulaId, ctx context.C
 func (adaptor *ErgoAdaptor) LastRound(ctx context.Context) (uint64, error) {
 	type Result struct {
 		Success   bool   `json:"success"`
-		LastRound string `json:"last_round"`
+		LastRound string `json:"lastRound"`
 	}
 	url, err := helpers.JoinUrl(adaptor.ergoClient.Options.BaseUrl, "adaptor/lastRound")
 	if err != nil {
@@ -555,7 +652,7 @@ func (adaptor *ErgoAdaptor) LastRound(ctx context.Context) (uint64, error) {
 func (adaptor *ErgoAdaptor) RoundExist(roundId int64, ctx context.Context) (bool, error) {
 	lastRound, err := adaptor.LastRound(ctx)
 	if err != nil {
-		return true, err
+		return false, err
 	}
 	if uint64(roundId) > lastRound{
 		return false, nil
