@@ -57,32 +57,47 @@ type SolanaAdapter struct {
 	ghClient        *gravity.Client
 	recentBlockHash string
 }
+type SolanaAdapterOption func(*SolanaAdapter) error
 
-func NewSolanaAdaptor(privKey []byte, nodeUrl string, custom map[string]interface{}, ghClient *gravity.Client) (*SolanaAdapter, error) {
+func SolanaAdapterWithGhClient(ghClient *gravity.Client) SolanaAdapterOption {
+	return func(s *SolanaAdapter) error {
+		s.ghClient = ghClient
+		return nil
+	}
+}
+
+func SolanaAdapterWithCustom(custom map[string]interface{}) SolanaAdapterOption {
+	return func(s *SolanaAdapter) error {
+		gravityContract, ok := custom["gravity_contract"].(string)
+		if ok {
+			s.gravityContract = solana_common.PublicKeyFromString(gravityContract)
+		}
+		multisigAccount, ok := custom["multisig_account"].(string)
+		if ok {
+			s.multisigAccount = solana_common.PublicKeyFromString(multisigAccount)
+		}
+		programID, ok := custom["program_id"].(string)
+		if ok {
+			s.programID = solana_common.PublicKeyFromString(programID)
+		}
+		return nil
+	}
+}
+func NewSolanaAdaptor(privKey []byte, nodeUrl string, opts ...SolanaAdapterOption) (*SolanaAdapter, error) {
 
 	account := types.AccountFromPrivateKeyBytes(privKey)
 	solClient := solana.NewClient(nodeUrl)
-	gravityContract, ok := custom["gravity_contract"].(string)
-	if !ok {
-		zap.L().Error("Cannot parse gravity contract")
-	}
-	multisigAccount, ok := custom["multisig_account"].(string)
-	if !ok {
-		zap.L().Error("Cannot parse gravity contract")
-	}
-	programID, ok := custom["program_id"].(string)
-	if !ok {
-		zap.L().Error("Cannot parse gravity contract")
-	}
 
 	adapter := SolanaAdapter{
-		client:          solClient,
-		account:         account,
-		gravityContract: solana_common.PublicKeyFromString(gravityContract),
-		programID:       solana_common.PublicKeyFromString(programID),
-		multisigAccount: solana_common.PublicKeyFromString(multisigAccount),
+		client:  solClient,
+		account: account,
 	}
-
+	for _, opt := range opts {
+		err := opt(&adapter)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &adapter, nil
 }
 

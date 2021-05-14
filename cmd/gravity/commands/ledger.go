@@ -536,8 +536,7 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 				return nil, err
 			}
 		case account.Solana:
-			ghClient, _ := gravity.New(cfg.RPC.GRPCListenAddress)
-			adaptor, err = adaptors.NewSolanaAdaptor(privKey, v.NodeUrl, v.Custom, ghClient)
+			adaptor, err = adaptors.NewSolanaAdaptor(privKey, v.NodeUrl, adaptors.SolanaAdapterWithCustom(v.Custom))
 			if err != nil {
 				zap.L().Error(err.Error())
 				return nil, err
