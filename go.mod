@@ -9,6 +9,7 @@ require (
 	github.com/ethereum/go-ethereum v1.9.23
 	github.com/gookit/validate v1.2.8
 	github.com/mr-tron/base58 v1.1.2
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/tendermint/tendermint v0.33.4
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
 	github.com/urfave/cli/v2 v2.2.0

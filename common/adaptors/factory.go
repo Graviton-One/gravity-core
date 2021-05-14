@@ -3,6 +3,7 @@ package adaptors
 import (
 	"context"
 	"fmt"
+	"github.com/Gravity-Tech/gravity-core/common/helpers"
 
 	"github.com/Gravity-Tech/gravity-core/abi/ethereum"
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
@@ -42,6 +43,14 @@ func isWvClientValidator(val interface{}) bool {
 		return false
 	}
 }
+func isErgClientValidator(val interface{}) bool {
+	switch val.(type) {
+	case *helpers.ErgClient:
+		return true
+	default:
+		return false
+	}
+}
 func isEthClientValidator(val interface{}) bool {
 	switch val.(type) {
 	case *ethclient.Client:
@@ -64,6 +73,7 @@ func NewFactory() *Factory {
 	validate.AddValidator("isGhClient", isGhClientValidator)
 	validate.AddValidator("isByte", isByteValidator)
 	validate.AddValidator("isWvClient", isWvClientValidator)
+	validate.AddValidator("isErgClient", isErgClientValidator)
 	validate.AddValidator("isEthClient", isEthClientValidator)
 	validate.AddValidator("isEthGravityContract", isEthGravityContractValidator)
 
@@ -77,6 +87,8 @@ func (f *Factory) CreateAdaptor(name string, oracleSecretKey []byte, targetChain
 		return NewWavesAdapterByOpts(oracleSecretKey, targetChainNodeUrl, opts)
 	case "ethereum":
 		return NewEthereumsAdapterByOpts(oracleSecretKey, targetChainNodeUrl, ctx, opts)
+	case "ergo":
+		return NewErgoAdapterByOpts(oracleSecretKey, targetChainNodeUrl, ctx, opts)
 	}
 	return nil, fmt.Errorf("Unknown adaptor name %s", name)
 }
