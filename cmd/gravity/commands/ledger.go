@@ -107,7 +107,7 @@ var (
 			"0xe09b444f5c5f2fbdca58bdb37a2dcc90d370ff72f28a6d4b6a6ef732c44afa24": 100,
 			"0xd70f6fcdac1a6f2292a330cc830db5e9041939ff79a87ff8536040b07378ca02": 100,
 		},
-		OraclesAddressByValidator: map[string]map[string]string{
+			OraclesAddressByValidator: map[string]map[string]string{
 			"0xd7f746727e21ecf461bb8e8926a6aeb0931eb09311ed13d25a182d4f17339d1d": {
 				"ethereum": "0x038bf7253f2b3b78c7f8fbe856252373b0867098c6b3f7a6cabc6e73552be75697",
 				"waves":    "CNVJbuJubqLyTZ99Y8wwuFgiKqoCUvpYCnHQsezE3Qgk",
@@ -525,6 +525,12 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 			}
 		case account.Waves:
 			adaptor, err = adaptors.NewWavesAdapter(privKey, v.NodeUrl, v.ChainId[0], adaptors.WithWavesGravityContract(v.GravityContractAddress))
+			if err != nil {
+				zap.L().Error(err.Error())
+				return nil, err
+			}
+		case account.Ergo:
+			adaptor, err = adaptors.NewErgoAdapter(privKey, v.NodeUrl, ctx, adaptors.WithErgoGravityContract(v.GravityContractAddress))
 			if err != nil {
 				zap.L().Error(err.Error())
 				return nil, err
