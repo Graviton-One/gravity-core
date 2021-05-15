@@ -287,8 +287,9 @@ func (adaptor *BinanceAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseI
 			}
 
 			_, err = nebula.SendValueToSubByte(transactOpt, v, big.NewInt(int64(pulseId)), id)
-			zap.L().Error(err.Error())
+
 			if err != nil {
+				zap.L().Error(err.Error())
 				continue
 			}
 		}
