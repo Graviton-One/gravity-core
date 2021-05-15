@@ -13,6 +13,7 @@ const (
 	Binance
 	Heco
 	Fantom
+	Avax
 	Ergo
 )
 
@@ -31,10 +32,10 @@ func ParseChainType(chainType string) (ChainType, error) {
 		return Ethereum, nil
 	case "ftm":
 		return Fantom, nil
+	case "avax":
+		return Avax, nil
 	case "waves":
 		return Waves, nil
-	case "ergo":
-		return Ergo, nil
 	default:
 		return 0, ErrParseChainType
 	}
@@ -51,6 +52,8 @@ func (ch ChainType) String() string {
 		return "heco"
 	case Fantom:
 		return "ftm"
+	case Avax:
+		return "avax"
 	case Ergo:
 		return "erg"
 	default:

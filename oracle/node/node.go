@@ -95,6 +95,11 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 		if err != nil {
 			return nil, err
 		}
+	case account.Avax:
+		adaptor, err = adaptors.NewAvaxAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.AvaxAdapterWithGhClient(ghClient))
+		if err != nil {
+			return nil, err
+		}
 	case account.Binance:
 		adaptor, err = adaptors.NewBinanceAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.BinanceAdapterWithGhClient(ghClient))
 		if err != nil {
@@ -414,6 +419,7 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 		if txId != "" {
 			err = node.adaptor.WaitTx(txId, ctx)
 			if err != nil {
+				zap.L().Sugar().Debugf("Error: %s", err)
 				return err
 			}
 
@@ -423,6 +429,7 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 			zap.L().Debug("Sending Value to subs")
 			err = node.adaptor.SendValueToSubs(node.nebulaId, pulseId, roundState.resultValue, ctx)
 			if err != nil {
+				zap.L().Sugar().Debugf("Error: %s", err)
 				return err
 			}
 		} else {
