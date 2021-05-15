@@ -13,6 +13,7 @@ const (
 type AdaptorsConfig struct {
 	NodeUrl                string
 	ChainId                string
+	ChainType              string
 	GravityContractAddress string
 }
 

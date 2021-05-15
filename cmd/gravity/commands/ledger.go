@@ -57,41 +57,51 @@ const (
 	BootstrapUrlFlag              = "bootstrap"
 
 	Custom  Network = "custom"
-	DevNet  Network = "devnet"
 	Mainnet Network = "mainnet"
 
-	DevNetId ChainId = "gravity-devnet"
 	CustomId ChainId = "gravity-custom"
+	MainnetId ChainId = "gravity-mainnet"
 
-	DefaultBootstrapUrl   = "http://104.248.255.124:26657"
 	DefaultPrivateRpcHost = "127.0.0.1:2500"
 
-	DefaultPersistentPeers = "2a0d75cc7833ad4780a1035b633c5bf4ef94ea4c@104.248.255.124:26656,32a091dfea2b4191d710d2609ca21a8abfe585ac@164.90.184.213:26656,34f38d98e78ed7965a56399998d9c1dccba24fe1@164.90.185.82:26656,c22e04514ce4ae0feb3480d03593d34e4713c86d@161.35.207.224:26656"
+	MainnetBootstrapHost = "http://134.122.37.128:26657"
+	MainnetPersistentPeers = "9e91414d53328d46d68415e1e31934ab09f69511@134.122.37.128:26656,3d8306a9e006687374f23905adc06f3517306cd7@212.111.41.159:26656,2c17ad4dcc9947342ff03be6827cfb285b6494bb@3.135.223.165:26666"
 )
 
+
 var (
-	DevNetConfig = config.LedgerConfig{
+	MainnetConfig = config.LedgerConfig{
 		Moniker:    config.DefaultMoniker,
 		RPC:        cfg.DefaultRPCConfig(),
 		IsFastSync: true,
 		Mempool:    cfg.DefaultMempoolConfig(),
 		Details:    (&config.ValidatorDetails{}).DefaultNew(),
 		Adapters: map[string]config.AdaptorsConfig{
-			account.Ethereum.String(): {
-				NodeUrl:                "https://ropsten.infura.io/v3/598efca7168947c6a186e2f85b600be1",
-				GravityContractAddress: "0x80C52beF8622cDF368Bf8AaD5ee4A78cB68E2a79",
+			account.Binance.String(): {
+				NodeUrl: "https://bsc-dataseed4.ninicoin.io/",
+				ChainType: account.Binance.String(),
+				GravityContractAddress: "0x5b875E3457ce737D42593aB5d6e5cfBF7896a27d",
 			},
 			account.Waves.String(): {
-				NodeUrl:                "https://nodes-stagenet.wavesnodes.com",
-				GravityContractAddress: "3MfrQBknYJSnifUxD86yMPTSHEhgcPe3NBq",
-				ChainId:                "S",
+				NodeUrl: "https://nodes.swop.fi",
+				ChainId: "W",
+				ChainType:"waves",
+				GravityContractAddress: "3PLpMu2cAg618e7xXYHtckFJjFZksPFHoLm",
+			},
+			account.Heco.String(): {
+				NodeUrl: "https://http-mainnet.hecochain.com",
+				GravityContractAddress: "0x8f56C70A8d473e58b47BAc0D0f24eF630064D7ed",
+			},
+			account.Fantom.String(): {
+				NodeUrl: "https://rpcapi.fantom.network",
+				GravityContractAddress: "0xB883418014e73228F1Ec470714802c59bB49f1eC",
 			},
 		},
 	}
-	DevNetGenesis = config.Genesis{
-		ConsulsCount: 5,
-		GenesisTime:  time.Unix(1599142244, 0),
-		ChainID:      string(DevNetId),
+	MainnetGenesis = config.Genesis{
+		ConsulsCount: 3,
+		GenesisTime:  time.Unix(1614613181, 0),
+		ChainID:      string(MainnetId),
 		Block: types.BlockParams{
 			MaxBytes:   1048576,
 			MaxGas:     -1,
@@ -102,27 +112,22 @@ var (
 			MaxAgeDuration:  1728 * time.Second,
 		},
 		InitScore: map[string]uint64{
-			"0xd7f746727e21ecf461bb8e8926a6aeb0931eb09311ed13d25a182d4f17339d1d": 100,
-			"0x0e7f182e6d2a11bd5d8a34531243435e2aeaa0eed7cad3c5361a81328051fa02": 100,
-			"0xe09b444f5c5f2fbdca58bdb37a2dcc90d370ff72f28a6d4b6a6ef732c44afa24": 100,
-			"0xd70f6fcdac1a6f2292a330cc830db5e9041939ff79a87ff8536040b07378ca02": 100,
+			"0xcacb7145b7b70211ed43acd648878336915d981abea6bd0b3bdd6a4ff5dad5cf": 100,
+			"0xc5597e2c40b78e4fecd862f54cc8e8c284f85006afcdc8253564e9f5c452ca9a": 100,
+			"0x50fd18a5c1969a2369f778dbbca8f7a7e99e1236d81be3780255d8a3da89f9c4": 100,
 		},
-			OraclesAddressByValidator: map[string]map[string]string{
-			"0xd7f746727e21ecf461bb8e8926a6aeb0931eb09311ed13d25a182d4f17339d1d": {
-				"ethereum": "0x038bf7253f2b3b78c7f8fbe856252373b0867098c6b3f7a6cabc6e73552be75697",
-				"waves":    "CNVJbuJubqLyTZ99Y8wwuFgiKqoCUvpYCnHQsezE3Qgk",
+		OraclesAddressByValidator: map[string]map[string]string {
+			"0xcacb7145b7b70211ed43acd648878336915d981abea6bd0b3bdd6a4ff5dad5cf": {
+				"waves": "4ArMUAxJZ3ETB1xSBqJkdhM19TXoEuWHsWzHZqKo3rvY",
+				"bsc": "0x032405b9ef3cc5ed099ee13f8084f972cfdd6cec85835628ead918712b6a0fab65",
 			},
-			"0x0e7f182e6d2a11bd5d8a34531243435e2aeaa0eed7cad3c5361a81328051fa02": {
-				"ethereum": "0x03808de8b08ec39c720c04e7699783f1abefff809afc2a8f7e60e9dd59f039ffa8",
-				"waves":    "4QWcFszF3shvhReiU26Sj8Te2QqgsfsreEgiTQNeTgB5",
+			"0xc5597e2c40b78e4fecd862f54cc8e8c284f85006afcdc8253564e9f5c452ca9a": {
+				"waves": "51yKUBQ7pxGJ1UNCgwdjKMQswYWHGq28thbdpo8gLoEK",
+				"bsc": "0x02826f06ab27fd6d1f0574c020e6c06010489c5eb07ba4c2aa0149f303f85db215",
 			},
-			"0xe09b444f5c5f2fbdca58bdb37a2dcc90d370ff72f28a6d4b6a6ef732c44afa24": {
-				"ethereum": "0x0298644b29e125b1293446b3d5f5b6feb12eaf2e3245df08fe74682fe0ddce5c60",
-				"waves":    "CcdpQmNU9qc1uKyr2mmkYNiyadvQ3VHrcYCtLqDfrR9a",
-			},
-			"0xd70f6fcdac1a6f2292a330cc830db5e9041939ff79a87ff8536040b07378ca02": {
-				"ethereum": "0x026a6444ca6ad63e3fda46481d125f8fee07b9a5b5131a12393a654800956856b8",
-				"waves":    "E5gz7aTwjjbCbFMYmstvcvb6NvoZyZcQSt1wp68qMpBg",
+			"0x50fd18a5c1969a2369f778dbbca8f7a7e99e1236d81be3780255d8a3da89f9c4": {
+				"waves": "FpsFLbAfmUqngqS54knGJe11Y68mgDYoLHT8QRY4fdYD",
+				"bsc": "0x023522b43a9820d64d6b61186efdace2d787931844c6512e3ca2253e38f5c3e522",
 			},
 		},
 	}
@@ -156,7 +161,7 @@ var (
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:  NetworkFlag,
-						Value: string(DevNet),
+						Value: string(Custom),
 					},
 				},
 			},
@@ -173,7 +178,7 @@ var (
 					},
 					&cli.StringFlag{
 						Name:  BootstrapUrlFlag,
-						Value: DefaultBootstrapUrl,
+						Value: MainnetBootstrapHost,
 					},
 				},
 			},
@@ -237,7 +242,7 @@ func initLedgerConfig(ctx *cli.Context) error {
 		var keysCfg *config.Keys
 		var err error
 
-		if network == DevNet {
+		if network == Custom {
 			keysCfg, err = config.GeneratePrivKeys('S')
 		} else if network == Mainnet {
 			keysCfg, err = config.GeneratePrivKeys('W')
@@ -260,8 +265,14 @@ func initLedgerConfig(ctx *cli.Context) error {
 	}
 
 	var genesis config.Genesis
-	if network == DevNet {
-		genesis = DevNetGenesis
+	if network == Mainnet {
+		genesis = MainnetGenesis
+
+		dateString := "2021-03-01T15:39:41.222470458Z"
+		timeInst := time.Now()
+		_ = timeInst.UnmarshalText([]byte(dateString))
+
+		genesis.GenesisTime = timeInst
 	} else {
 		genesis = CustomNetGenesis
 	}
@@ -275,10 +286,10 @@ func initLedgerConfig(ctx *cli.Context) error {
 	}
 
 	var ledgerConf config.LedgerConfig
-	if network == DevNet {
-		ledgerConf = DevNetConfig
+	if network == Mainnet {
+		ledgerConf = MainnetConfig
 		ledgerConf.P2P = cfg.DefaultP2PConfig()
-		ledgerConf.P2P.PersistentPeers = DefaultPersistentPeers
+		ledgerConf.P2P.PersistentPeers = MainnetPersistentPeers
 		ledgerConf.P2P.ListenAddress = "tcp://0.0.0.0:26656"
 	} else {
 		ledgerConf = config.DefaultLedgerConfig()
@@ -511,6 +522,12 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 				zap.L().Error(err.Error())
 				return nil, err
 			}
+		case account.Avax:
+			adaptor, err = adaptors.NewAvaxAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithAvaxGravityContract(v.GravityContractAddress))
+			if err != nil {
+				zap.L().Error(err.Error())
+				return nil, err
+			}
 		case account.Binance:
 			adaptor, err = adaptors.NewBinanceAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithBinanceGravityContract(v.GravityContractAddress))
 			if err != nil {
@@ -535,6 +552,7 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 				zap.L().Error(err.Error())
 				return nil, err
 			}
+
 		}
 
 		bAdaptors[chainType] = adaptor
