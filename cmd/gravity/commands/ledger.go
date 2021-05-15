@@ -120,6 +120,7 @@ var (
 			"0xcacb7145b7b70211ed43acd648878336915d981abea6bd0b3bdd6a4ff5dad5cf": {
 				"waves": "4ArMUAxJZ3ETB1xSBqJkdhM19TXoEuWHsWzHZqKo3rvY",
 				"bsc": "0x032405b9ef3cc5ed099ee13f8084f972cfdd6cec85835628ead918712b6a0fab65",
+
 			},
 			"0xc5597e2c40b78e4fecd862f54cc8e8c284f85006afcdc8253564e9f5c452ca9a": {
 				"waves": "51yKUBQ7pxGJ1UNCgwdjKMQswYWHGq28thbdpo8gLoEK",
