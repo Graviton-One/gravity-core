@@ -5,19 +5,17 @@ import (
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/url"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/Gravity-Tech/gravity-core/abi"
 	"github.com/Gravity-Tech/gravity-core/abi/solana/instructions"
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
-	"github.com/gorilla/websocket"
 	"github.com/mr-tron/base58/base58"
 	"go.uber.org/zap"
 
@@ -102,6 +100,11 @@ func NewSolanaAdaptor(privKey []byte, nodeUrl string, opts ...SolanaAdapterOptio
 }
 
 func (s *SolanaAdapter) GetHeight(ctx context.Context) (uint64, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in GetHeight", r)
+		}
+	}()
 	info, err := s.client.GetEpochInfo(solana.CommitmentFinalized)
 	if err != nil {
 		return 0, err
@@ -110,62 +113,62 @@ func (s *SolanaAdapter) GetHeight(ctx context.Context) (uint64, error) {
 }
 
 func (s *SolanaAdapter) WaitTx(id string, ctx context.Context) error {
+	time.Sleep(time.Second * 20)
+	// u := url.URL{Scheme: "ws", Host: "testnet.solana.com", Path: "/"}
+	// log.Printf("connecting to %s", u.String())
 
-	u := url.URL{Scheme: "ws", Host: "testnet.solana.com", Path: "/"}
-	log.Printf("connecting to %s", u.String())
+	// c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	// if err != nil {
+	// 	log.Fatal("dial:", err)
+	// }
+	// defer c.Close()
+	// req := `
+	// 	{
+	// 		"jsonrpc": "2.0",
+	// 		"id": 1,
+	// 		"method": "signatureSubscribe",
+	// 		"params": [
+	// 		  "%s",
+	// 		  {
+	// 			"commitment": "finalized"
+	// 		  }
+	// 		]
+	// 	  }
+	// 	`
+	// unsubscribeRequest := "{\"jsonrpc\":\"2.0\", \"id\":1, \"method\":\"signatureUnsubscribe\", \"params\":[%d]}"
+	// done := make(chan struct{})
+	// defer close(done)
+	// go func() {
 
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
-	if err != nil {
-		log.Fatal("dial:", err)
-	}
-	defer c.Close()
-	req := `
-		{
-			"jsonrpc": "2.0",
-			"id": 1,
-			"method": "signatureSubscribe",
-			"params": [
-			  "%s",
-			  {
-				"commitment": "finalized"
-			  }
-			]
-		  }
-		`
-	unsubscribeRequest := "{\"jsonrpc\":\"2.0\", \"id\":1, \"method\":\"signatureUnsubscribe\", \"params\":[%d]}"
-	done := make(chan struct{})
-	defer close(done)
-	go func() {
+	// 	subscription := 0
+	// 	for {
+	// 		_, message, err := c.ReadMessage()
+	// 		if err != nil {
+	// 			log.Println("read:", err)
+	// 			return
+	// 		}
+	// 		log.Printf("recv: %s", message)
+	// 		a := struct {
+	// 			Method       string `json:"method"`
+	// 			Result       int    `json:"result"`
+	// 			Subscription int    `json:"subscription"`
+	// 		}{}
+	// 		json.Unmarshal(message, &a)
+	// 		switch a.Method {
+	// 		case "":
+	// 			subscription = a.Subscription
+	// 		case "signatureNotification":
+	// 			c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(unsubscribeRequest, subscription)))
+	// 			done <- struct{}{}
+	// 			c.Close()
+	// 			return
+	// 		}
 
-		subscription := 0
-		for {
-			_, message, err := c.ReadMessage()
-			if err != nil {
-				log.Println("read:", err)
-				return
-			}
-			log.Printf("recv: %s", message)
-			a := struct {
-				Method       string `json:"method"`
-				Result       int    `json:"result"`
-				Subscription int    `json:"subscription"`
-			}{}
-			json.Unmarshal(message, &a)
-			switch a.Method {
-			case "":
-				subscription = a.Subscription
-			case "signatureNotification":
-				c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(unsubscribeRequest, subscription)))
-				done <- struct{}{}
-				c.Close()
-				return
-			}
+	// 	}
+	// }()
 
-		}
-	}()
-
-	err = c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(req, id)))
-	<-done
+	// err = c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(req, id)))
+	// <-done
 	return nil
 }
 
@@ -180,6 +183,11 @@ func (s *SolanaAdapter) PubKey() account.OraclesPubKey {
 }
 
 func (s *SolanaAdapter) ValueType(nebulaId account.NebulaId, ctx context.Context) (abi.ExtractorType, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in ValueType", r)
+		}
+	}()
 	n, err := s.getNebulaContractState(nebulaId)
 	if err != nil {
 		zap.L().Error(err.Error())
@@ -189,7 +197,11 @@ func (s *SolanaAdapter) ValueType(nebulaId account.NebulaId, ctx context.Context
 }
 
 func (s *SolanaAdapter) AddPulse(nebulaId account.NebulaId, pulseId uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
-
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in AddPulse", r)
+		}
+	}()
 	msg, err := s.createAddPulseMessage(nebulaId, validators, pulseId, hash)
 	if err != nil {
 		return "", err
@@ -229,7 +241,11 @@ func (s *SolanaAdapter) AddPulse(nebulaId account.NebulaId, pulseId uint64, vali
 }
 
 func (s *SolanaAdapter) SendValueToSubs(nebulaId account.NebulaId, pulseId uint64, value *extractor.Data, ctx context.Context) error {
-
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in SendValueToSubs", r)
+		}
+	}()
 	nst, err := s.getNebulaContractState(nebulaId)
 	if err != nil {
 		zap.L().Sugar().Error(err.Error())
@@ -306,7 +322,11 @@ func (s *SolanaAdapter) SendValueToSubs(nebulaId account.NebulaId, pulseId uint6
 }
 
 func (s *SolanaAdapter) SetOraclesToNebula(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
-
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in SetOraclesToNebula", r)
+		}
+	}()
 	msg, err := s.createUpdateOraclesMessage(nebulaId, oracles, round)
 	if err != nil {
 		return "", err
@@ -352,7 +372,11 @@ func (s *SolanaAdapter) SetOraclesToNebula(nebulaId account.NebulaId, oracles []
 }
 
 func (s *SolanaAdapter) SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
-
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in SendConsulsToGravityCOntract", r)
+		}
+	}()
 	msg, err := s.createUpdateConsulsMessage(newConsulsAddresses, round)
 	if err != nil {
 		return "", err
@@ -398,6 +422,11 @@ func (s *SolanaAdapter) SendConsulsToGravityContract(newConsulsAddresses []*acco
 }
 
 func (s *SolanaAdapter) SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64) ([]byte, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in SignConsuls", r)
+		}
+	}()
 	s.updateRecentBlockHash()
 	msg, err := s.createUpdateConsulsMessage(consulsAddresses, roundId)
 	if err != nil {
@@ -418,6 +447,11 @@ func (s *SolanaAdapter) SignConsuls(consulsAddresses []*account.OraclesPubKey, r
 }
 
 func (s *SolanaAdapter) SignOracles(nebulaId account.NebulaId, oracles []*account.OraclesPubKey) ([]byte, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in SignOracles", r)
+		}
+	}()
 	s.updateRecentBlockHash()
 	rid, err := s.LastPulseId(nebulaId, context.Background())
 
@@ -440,6 +474,11 @@ func (s *SolanaAdapter) SignOracles(nebulaId account.NebulaId, oracles []*accoun
 }
 
 func (s *SolanaAdapter) LastPulseId(nebulaId account.NebulaId, ctx context.Context) (uint64, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in LatPulseId", r)
+		}
+	}()
 	n, err := s.getNebulaContractState(nebulaId)
 	if err != nil {
 		zap.L().Error(err.Error())
@@ -449,6 +488,11 @@ func (s *SolanaAdapter) LastPulseId(nebulaId account.NebulaId, ctx context.Conte
 }
 
 func (s *SolanaAdapter) LastRound(ctx context.Context) (uint64, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in LastRound", r)
+		}
+	}()
 	bft, _ := s.GetCurrentBFT()
 
 	r, err := s.client.GetAccountInfo(s.gravityContract.ToBase58(), solana.GetAccountInfoConfig{
@@ -462,7 +506,10 @@ func (s *SolanaAdapter) LastRound(ctx context.Context) (uint64, error) {
 		zap.L().Error(err.Error())
 		return 0, err
 	}
-
+	if r.Data == nil {
+		zap.L().Error("Invalid account data")
+		return 0, fmt.Errorf("empty account data")
+	}
 	sval, ok := r.Data.([]interface{})[0].(string)
 	if !ok {
 		zap.L().Error("Invalid account data")
@@ -485,6 +532,11 @@ func (s *SolanaAdapter) RoundExist(roundId int64, ctx context.Context) (bool, er
 //Custom solana methods
 
 func (s *SolanaAdapter) GetCurrentConsuls() ([]solana_common.PublicKey, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in GetCurrentConsuls", r)
+		}
+	}()
 	bft, _ := s.GetCurrentBFT()
 	length := uint64(bft * 32)
 	r, err := s.client.GetAccountInfo(s.gravityContract.ToBase58(), solana.GetAccountInfoConfig{
@@ -497,6 +549,10 @@ func (s *SolanaAdapter) GetCurrentConsuls() ([]solana_common.PublicKey, error) {
 	if err != nil {
 		zap.L().Error(err.Error())
 		return []solana_common.PublicKey{}, err
+	}
+	if r.Data == nil {
+		zap.L().Error("Invalid account data")
+		return []solana_common.PublicKey{}, fmt.Errorf("empty account data")
 	}
 	sval, ok := r.Data.([]interface{})[0].(string)
 	if !ok {
@@ -520,6 +576,11 @@ func (s *SolanaAdapter) GetCurrentConsuls() ([]solana_common.PublicKey, error) {
 }
 
 func (s *SolanaAdapter) createUpdateConsulsMessage(consulsAddresses []*account.OraclesPubKey, roundId int64) (types.Message, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in createUpdateConsulsMesssage", r)
+		}
+	}()
 	currentConsuls, err := s.GetCurrentConsuls()
 	if err != nil {
 		zap.L().Sugar().Error(err.Error())
@@ -552,6 +613,11 @@ func (s *SolanaAdapter) createUpdateConsulsMessage(consulsAddresses []*account.O
 }
 
 func (s *SolanaAdapter) createUpdateOraclesMessage(nebulaId account.NebulaId, oraclesAddresses []*account.OraclesPubKey, roundId int64) (types.Message, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in createUpdateOraclesMessage", r)
+		}
+	}()
 	currentConsuls, err := s.GetCurrentConsuls()
 	if err != nil {
 		zap.L().Sugar().Error(err.Error())
@@ -590,7 +656,11 @@ func (s *SolanaAdapter) createUpdateOraclesMessage(nebulaId account.NebulaId, or
 }
 
 func (s *SolanaAdapter) createAddPulseMessage(nebulaId account.NebulaId, validators []account.OraclesPubKey, pulseId uint64, hash []byte) (types.Message, error) {
-
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in createAddPulseMessage", r)
+		}
+	}()
 	vals := SortablePubkey{}
 	for _, v := range validators {
 		pubKey := solana_common.PublicKeyFromBytes(v[1:33])
@@ -612,7 +682,11 @@ func (s *SolanaAdapter) createAddPulseMessage(nebulaId account.NebulaId, validat
 }
 
 func (s *SolanaAdapter) createSendValueToSubsMessage(nebulaId account.NebulaId, pulseId uint64, DataType uint8, value []byte, id [16]byte) (types.Message, error) {
-
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in createSendValueToSubsMessage", r)
+		}
+	}()
 	nid := solana_common.PublicKeyFromBytes(nebulaId[:])
 	message := types.NewMessage(
 		s.account.PublicKey,
@@ -636,6 +710,11 @@ func (s *SolanaAdapter) updateRecentBlockHash() {
 }
 
 func (s *SolanaAdapter) GetCurrentBFT() (byte, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in GetCurrentBFT", r)
+		}
+	}()
 	r, err := s.client.GetAccountInfo(s.gravityContract.ToBase58(), solana.GetAccountInfoConfig{
 		Encoding: "base64",
 		DataSlice: solana.GetAccountInfoConfigDataSlice{
@@ -646,6 +725,10 @@ func (s *SolanaAdapter) GetCurrentBFT() (byte, error) {
 	if err != nil {
 		zap.L().Error(err.Error())
 		return 0, err
+	}
+	if r.Data == nil {
+		zap.L().Error("Invalid account data")
+		return 0, fmt.Errorf("empty account data")
 	}
 	sval, ok := r.Data.([]interface{})[0].(string)
 	if !ok {
@@ -666,6 +749,11 @@ func (s *SolanaAdapter) getCurrentOracles() ([]solana_common.PublicKey, error) {
 }
 
 func (s *SolanaAdapter) getNebulaContractState(nebulaId account.NebulaId) (*instructions.NebulaContract, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in getNebulaContractState", r)
+		}
+	}()
 	nid := base58.Encode(nebulaId[:])
 	r, err := s.client.GetAccountInfo(nid, solana.GetAccountInfoConfig{
 		Encoding: "base64",
@@ -678,7 +766,10 @@ func (s *SolanaAdapter) getNebulaContractState(nebulaId account.NebulaId) (*inst
 		zap.L().Error(err.Error())
 		return nil, err
 	}
-
+	if r.Data == nil {
+		zap.L().Error("Invalid account data")
+		return nil, fmt.Errorf("empty account data")
+	}
 	sval, ok := r.Data.([]interface{})[0].(string)
 	if !ok {
 		zap.L().Error("Invalid account data")
