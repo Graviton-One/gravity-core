@@ -37,7 +37,13 @@ func (spk SortablePubkey) Less(i, j int) bool {
 	}
 	return false
 }
-
+func sumBytes(b []byte) int {
+	sum := 0
+	for i := 0; i < len(b); i++ {
+		sum += int(b[i])
+	}
+	return sum
+}
 func (spk SortablePubkey) Swap(i, j int) { spk[i], spk[j] = spk[j], spk[i] }
 func (spk SortablePubkey) ToPubKeys() []solana_common.PublicKey {
 	res := []solana_common.PublicKey{}
@@ -55,6 +61,7 @@ type SolanaAdapter struct {
 	client          *solana.Client
 	ghClient        *gravity.Client
 	recentBlockHash string
+	Bft             uint8
 }
 type SolanaAdapterOption func(*SolanaAdapter) error
 
@@ -96,6 +103,20 @@ func NewSolanaAdaptor(privKey []byte, nodeUrl string, opts ...SolanaAdapterOptio
 		if err != nil {
 			return nil, err
 		}
+	}
+	if sumBytes(adapter.gravityContract[:]) != 0 {
+		bft, err := adapter.GetCurrentBFT()
+		if err != nil {
+			return nil, err
+		}
+		adapter.Bft = bft
+	}
+	if sumBytes(adapter.gravityContract[:]) != 0 {
+		bft, err := adapter.GetCurrentBFT()
+		if err != nil {
+			return nil, err
+		}
+		adapter.Bft = bft
 	}
 	return &adapter, nil
 }
@@ -328,7 +349,11 @@ func (s *SolanaAdapter) SetOraclesToNebula(nebulaId account.NebulaId, oracles []
 			fmt.Println("Recovered in SetOraclesToNebula", r)
 		}
 	}()
-	msg, err := s.createUpdateOraclesMessage(nebulaId, oracles, round)
+	n, err := s.getNebulaContractState(nebulaId)
+	if err != nil {
+		return "", err
+	}
+	msg, err := s.createUpdateOraclesMessage(nebulaId, oracles, round, n.Bft)
 	if err != nil {
 		return "", err
 	}
@@ -454,9 +479,14 @@ func (s *SolanaAdapter) SignOracles(nebulaId account.NebulaId, oracles []*accoun
 		}
 	}()
 	s.updateRecentBlockHash()
+	n, err := s.getNebulaContractState(nebulaId)
+	if err != nil {
+		return nil, err
+	}
+
 	rid, err := s.LastPulseId(nebulaId, context.Background())
 
-	msg, err := s.createUpdateOraclesMessage(nebulaId, oracles, int64(rid+1))
+	msg, err := s.createUpdateOraclesMessage(nebulaId, oracles, int64(rid+1), n.Bft)
 	if err != nil {
 		return nil, err
 	}
@@ -613,7 +643,7 @@ func (s *SolanaAdapter) createUpdateConsulsMessage(consulsAddresses []*account.O
 	return message, nil
 }
 
-func (s *SolanaAdapter) createUpdateOraclesMessage(nebulaId account.NebulaId, oraclesAddresses []*account.OraclesPubKey, roundId int64) (types.Message, error) {
+func (s *SolanaAdapter) createUpdateOraclesMessage(nebulaId account.NebulaId, oraclesAddresses []*account.OraclesPubKey, roundId int64, Bft uint8) (types.Message, error) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in createUpdateOraclesMessage", r)
@@ -647,7 +677,7 @@ func (s *SolanaAdapter) createUpdateOraclesMessage(nebulaId account.NebulaId, or
 		s.account.PublicKey,
 		[]types.Instruction{
 			instructions.NebulaUpdateOraclesInstruction(
-				s.account.PublicKey, s.programID, nid, solanaConsuls, uint64(roundId), solanaOracles,
+				s.account.PublicKey, s.programID, nid, solanaConsuls, uint64(roundId), solanaOracles, Bft,
 			),
 		},
 		s.recentBlockHash,

@@ -48,7 +48,7 @@ func UpdateConsulsInstruction(fromAccount, programData, targetProgramID, multisi
 	}
 }
 
-func NebulaUpdateOraclesInstruction(fromAccount, targetProgramID, nebulaId common.PublicKey, signers []common.PublicKey, Round uint64, Oracles []common.PublicKey) types.Instruction {
+func NebulaUpdateOraclesInstruction(fromAccount, targetProgramID, nebulaId common.PublicKey, signers []common.PublicKey, Round uint64, Oracles []common.PublicKey, Bft uint8) types.Instruction {
 	/*
 			UpdateOracles {
 		        new_oracles: Vec<Pubkey>,
@@ -61,10 +61,12 @@ func NebulaUpdateOraclesInstruction(fromAccount, targetProgramID, nebulaId commo
 	}
 	data, err := common.SerializeData(struct {
 		Instruction uint8
+		Bft         uint8
 		NewOracles  []byte
 		Round       uint64
 	}{
 		Instruction: 1,
+		Bft:         Bft,
 		NewOracles:  oracles,
 		Round:       Round,
 	})
