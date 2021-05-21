@@ -546,6 +546,12 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 				zap.L().Error(err.Error())
 				return nil, err
 			}
+		case account.Solana:
+			adaptor, err = adaptors.NewSolanaAdaptor(privKey, v.NodeUrl, adaptors.SolanaAdapterWithCustom(v.Custom))
+			if err != nil {
+				zap.L().Error(err.Error())
+				return nil, err
+			}
 		}
 
 		bAdaptors[chainType] = adaptor

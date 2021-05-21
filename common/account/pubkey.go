@@ -3,6 +3,7 @@ package account
 import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	solana_common "github.com/portto/solana-go-sdk/common"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	wavesplatform "github.com/wavesplatform/go-lib-crypto"
 	"github.com/wavesplatform/gowaves/pkg/crypto"
@@ -20,6 +21,8 @@ func StringToPrivKey(value string, chainType ChainType) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
+	case Solana:
+		privKey = base58.Decode(value)
 	case Waves:
 		wCrypto := wavesplatform.NewWavesCrypto()
 		seed := wavesplatform.Seed(value)
@@ -40,6 +43,8 @@ func BytesToOraclePubKey(value []byte, chainType ChainType) OraclesPubKey {
 		copy(pubKey[:], value[0:33])
 	case Waves:
 		copy(pubKey[:], append([]byte{0}, value[0:32]...))
+	case Solana:
+		copy(pubKey[:], append([]byte{0}, value[0:32]...))
 	}
 	return pubKey
 }
@@ -51,6 +56,8 @@ func (pubKey *OraclesPubKey) ToBytes(chainType ChainType) []byte {
 		v = pubKey[:33]
 	case Waves:
 		v = pubKey[1:33]
+	case Solana:
+		v = pubKey[1:33]
 	}
 	return v
 }
@@ -60,6 +67,8 @@ func (pubKey *OraclesPubKey) ToString(chainType ChainType) string {
 	case Ethereum, Binance, Heco, Fantom, Avax:
 		return hexutil.Encode(b)
 	case Waves:
+		return base58.Encode(b)
+	case Solana:
 		return base58.Encode(b)
 	}
 
@@ -78,6 +87,12 @@ func StringToOraclePubKey(value string, chainType ChainType) (OraclesPubKey, err
 	case Waves:
 		wPubKey, err := crypto.NewPublicKeyFromBase58(value)
 		pubKey = wPubKey[:]
+		if err != nil {
+			return [33]byte{}, err
+		}
+	case Solana:
+		sPubKey := solana_common.PublicKeyFromString(value)
+		pubKey = sPubKey[:]
 		if err != nil {
 			return [33]byte{}, err
 		}

@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	cfg "github.com/tendermint/tendermint/config"
 )
@@ -15,6 +16,7 @@ type AdaptorsConfig struct {
 	ChainId                string
 	ChainType              string
 	GravityContractAddress string
+	Custom                 map[string]interface{} `json:"custom,optional"`
 }
 
 type ValidatorDetails struct {
@@ -47,8 +49,8 @@ type LedgerConfig struct {
 	RPC        *cfg.RPCConfig
 	P2P        *cfg.P2PConfig
 
-	Details    *ValidatorDetails
-	PublicIP   string
+	Details  *ValidatorDetails
+	PublicIP string
 
 	Adapters map[string]AdaptorsConfig
 }
