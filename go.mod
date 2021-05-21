@@ -12,6 +12,7 @@ require (
 	github.com/gookit/validate v1.2.8
 	github.com/gorilla/websocket v1.4.2
 	github.com/mr-tron/base58 v1.1.3
+	github.com/near/borsh-go v0.3.0
 	github.com/novifinancial/serde-reflection/serde-generate/runtime/golang v0.0.0-20210311194640-4c3416aad7d0
 	github.com/portto/solana-go-sdk v1.1.1
 	github.com/tendermint/tendermint v0.33.4

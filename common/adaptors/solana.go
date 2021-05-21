@@ -17,6 +17,7 @@ import (
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 	"github.com/mr-tron/base58/base58"
+	"github.com/near/borsh-go"
 	"go.uber.org/zap"
 
 	solana "github.com/portto/solana-go-sdk/client"
@@ -193,7 +194,7 @@ func (s *SolanaAdapter) ValueType(nebulaId account.NebulaId, ctx context.Context
 		zap.L().Error(err.Error())
 		return 0, err
 	}
-	return abi.ExtractorType(n.DataType.Value()), nil
+	return abi.ExtractorType(n.DataType), nil
 }
 
 func (s *SolanaAdapter) AddPulse(nebulaId account.NebulaId, pulseId uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
@@ -782,9 +783,9 @@ func (s *SolanaAdapter) getNebulaContractState(nebulaId account.NebulaId) (*inst
 		return nil, err
 	}
 
-	mydeserializer := instructions.NewNebulaDeserializer(val, 6000)
+	n := instructions.NewNebulaContract()
+	err = borsh.Deserialize(&n, val)
 
-	n, err := instructions.DeserializeNebulaContract(mydeserializer)
 	if err != nil {
 		zap.L().Error(err.Error())
 		return nil, err
