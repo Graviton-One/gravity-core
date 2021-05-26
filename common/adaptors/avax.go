@@ -433,7 +433,7 @@ func (adaptor *AvaxAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*
 
 	return tx.Hash().Hex(), nil
 }
-func (adaptor *AvaxAdaptor) SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64) ([]byte, error) {
+func (adaptor *AvaxAdaptor) SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64, sender account.OraclesPubKey) ([]byte, error) {
 	var oraclesAddresses []common.Address
 	for _, v := range consulsAddresses {
 		if v == nil {

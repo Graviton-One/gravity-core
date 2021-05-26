@@ -321,14 +321,14 @@ func signNewConsuls(store *storage.Storage, tx *transactions.Transaction) error 
 	roundId := tx.Value(1).(int64)
 	sign := tx.Value(2).([]byte)
 
-	_, err := store.SignConsulsByConsul(tx.SenderPubKey, chainType, roundId)
-	if err != nil && err != storage.ErrKeyNotFound {
-		return err
-	} else if err == nil {
-		return ErrSignIsExist
-	}
+	// _, err := store.SignConsulsByConsul(tx.SenderPubKey, chainType, roundId)
+	// if err != nil && err != storage.ErrKeyNotFound {
+	// 	return err
+	// } else if err == nil {
+	// 	return ErrSignIsExist
+	// }
 
-	err = store.SetSignConsuls(tx.SenderPubKey, chainType, roundId, sign)
+	err := store.SetSignConsuls(tx.SenderPubKey, chainType, roundId, sign)
 	if err != nil {
 		return err
 	}

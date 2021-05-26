@@ -403,7 +403,7 @@ func (s *SolanaAdapter) SendConsulsToGravityContract(newConsulsAddresses []*acco
 			fmt.Println("Recovered in SendConsulsToGravityCOntract", r)
 		}
 	}()
-	msg, err := s.createUpdateConsulsMessage(ctx, newConsulsAddresses, round)
+	msg, err := s.createUpdateConsulsMessage(ctx, newConsulsAddresses, round, s.account.PublicKey)
 	if err != nil {
 		return "", err
 	}
@@ -425,7 +425,7 @@ func (s *SolanaAdapter) SendConsulsToGravityContract(newConsulsAddresses []*acco
 		solsigs[nkey] = sig
 		zap.L().Sugar().Debug("Lsig: ", nkey.ToBase58(), " -> ", base58.Encode(sig))
 	}
-	solsigs[s.account.PublicKey] = selfSig
+	//solsigs[s.account.PublicKey] = selfSig
 	zap.L().Sugar().Debug("Self sig: ", s.account.PublicKey.ToBase58(), " -> ", base58.Encode(selfSig))
 	tx, err := types.CreateTransaction(msg, solsigs)
 	if err != nil {
@@ -447,14 +447,16 @@ func (s *SolanaAdapter) SendConsulsToGravityContract(newConsulsAddresses []*acco
 	return txSig, nil
 }
 
-func (s *SolanaAdapter) SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64) ([]byte, error) {
+func (s *SolanaAdapter) SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64, sender account.OraclesPubKey) ([]byte, error) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in SignConsuls", r)
 		}
 	}()
 	s.updateRecentBlockHash(context.Background())
-	msg, err := s.createUpdateConsulsMessage(context.Background(), consulsAddresses, roundId)
+	senderPubKey := solana_common.PublicKeyFromBytes(sender[1:33])
+	zap.L().Sugar().Debugf("Sender pubkey: %s", senderPubKey.ToBase58())
+	msg, err := s.createUpdateConsulsMessage(context.Background(), consulsAddresses, roundId, senderPubKey)
 	if err != nil {
 		return nil, err
 	}
@@ -524,36 +526,14 @@ func (s *SolanaAdapter) LastRound(ctx context.Context) (uint64, error) {
 			fmt.Println("Recovered in LastRound", r)
 		}
 	}()
-	bft, _ := s.GetCurrentBFT(ctx)
+	gs, err := s.getGravityContractState(ctx)
 
-	r, err := s.client.GetAccountInfo(ctx, s.gravityContract.ToBase58(), solana.GetAccountInfoConfig{
-		Encoding: "base64",
-		DataSlice: solana.GetAccountInfoConfigDataSlice{
-			Length: 8,
-			Offset: 2 + 32 + uint64(bft*32),
-		},
-	})
 	if err != nil {
 		zap.L().Error(err.Error())
 		return 0, err
 	}
-	if r.Data == nil {
-		zap.L().Error("Invalid account data")
-		return 0, fmt.Errorf("empty account data")
-	}
-	sval, ok := r.Data.([]interface{})[0].(string)
-	if !ok {
-		zap.L().Error("Invalid account data")
-		return 0, err
-	}
 
-	val, err := base64.StdEncoding.DecodeString(sval)
-	if err != nil {
-		zap.L().Error(err.Error())
-		return 0, err
-	}
-	round := binary.LittleEndian.Uint64(val)
-	return round, nil
+	return gs.LastRound, nil
 }
 
 func (s *SolanaAdapter) RoundExist(roundId int64, ctx context.Context) (bool, error) {
@@ -568,45 +548,22 @@ func (s *SolanaAdapter) GetCurrentConsuls(ctx context.Context) ([]solana_common.
 			fmt.Println("Recovered in GetCurrentConsuls", r)
 		}
 	}()
-	bft, _ := s.GetCurrentBFT(ctx)
-	length := uint64(bft * 32)
-	r, err := s.client.GetAccountInfo(ctx, s.gravityContract.ToBase58(), solana.GetAccountInfoConfig{
-		Encoding: "base64",
-		DataSlice: solana.GetAccountInfoConfigDataSlice{
-			Length: length,
-			Offset: 34,
-		},
-	})
-	if err != nil {
-		zap.L().Error(err.Error())
-		return []solana_common.PublicKey{}, err
-	}
-	if r.Data == nil {
-		zap.L().Error("Invalid account data")
-		return []solana_common.PublicKey{}, fmt.Errorf("empty account data")
-	}
-	sval, ok := r.Data.([]interface{})[0].(string)
-	if !ok {
-		zap.L().Error("Invalid account data")
-		return []solana_common.PublicKey{}, err
-	}
-	val, err := base64.StdEncoding.DecodeString(sval)
+	gs, err := s.getGravityContractState(ctx)
+
 	if err != nil {
 		zap.L().Error(err.Error())
 		return []solana_common.PublicKey{}, err
 	}
 
 	sconsuls := SortablePubkey{}
-	for i := 0; i < int(bft*32); i += 32 { // BFT=3
-		pubk := solana_common.PublicKey{}
-		copy(pubk[:], val[i:i+32])
-		sconsuls = append(sconsuls, pubk)
+	for _, c := range gs.Consuls {
+		sconsuls = append(sconsuls, c)
 	}
 	sort.Sort(&sconsuls)
 	return sconsuls, nil
 }
 
-func (s *SolanaAdapter) createUpdateConsulsMessage(ctx context.Context, consulsAddresses []*account.OraclesPubKey, roundId int64) (types.Message, error) {
+func (s *SolanaAdapter) createUpdateConsulsMessage(ctx context.Context, consulsAddresses []*account.OraclesPubKey, roundId int64, sender solana_common.PublicKey) (types.Message, error) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in createUpdateConsulsMesssage", r)
@@ -631,10 +588,10 @@ func (s *SolanaAdapter) createUpdateConsulsMessage(ctx context.Context, consulsA
 	solanaConsuls := consuls.ToPubKeys()
 
 	message := types.NewMessage(
-		s.account.PublicKey,
+		sender,
 		[]types.Instruction{
 			instructions.UpdateConsulsInstruction(
-				s.account.PublicKey, s.gravityContract, s.programID, s.multisigAccount, currentConsuls, uint8(len(currentConsuls)), uint64(roundId), solanaConsuls,
+				sender, s.gravityContract, s.programID, s.multisigAccount, currentConsuls, uint8(len(currentConsuls)), uint64(roundId), solanaConsuls,
 			),
 		},
 		s.recentBlockHash,
@@ -746,33 +703,14 @@ func (s *SolanaAdapter) GetCurrentBFT(ctx context.Context) (byte, error) {
 			fmt.Println("Recovered in GetCurrentBFT", r)
 		}
 	}()
-	r, err := s.client.GetAccountInfo(ctx, s.gravityContract.ToBase58(), solana.GetAccountInfoConfig{
-		Encoding: "base64",
-		DataSlice: solana.GetAccountInfoConfigDataSlice{
-			Length: 1,
-			Offset: 33,
-		},
-	})
-	if err != nil {
-		zap.L().Error(err.Error())
-		return 0, err
-	}
-	if r.Data == nil {
-		zap.L().Error("Invalid account data")
-		return 0, fmt.Errorf("empty account data")
-	}
-	sval, ok := r.Data.([]interface{})[0].(string)
-	if !ok {
-		zap.L().Error("Invalid account data")
-		return 0, err
-	}
-	val, err := base64.StdEncoding.DecodeString(sval)
+	gs, err := s.getGravityContractState(ctx)
+
 	if err != nil {
 		zap.L().Error(err.Error())
 		return 0, err
 	}
 
-	return val[0], nil
+	return gs.Bft, nil
 }
 
 func (s *SolanaAdapter) getCurrentOracles() ([]solana_common.PublicKey, error) {
@@ -814,6 +752,50 @@ func (s *SolanaAdapter) getNebulaContractState(ctx context.Context, nebulaId acc
 	}
 
 	n := instructions.NewNebulaContract()
+	err = borsh.Deserialize(&n, val)
+
+	if err != nil {
+		zap.L().Error(err.Error())
+		return nil, err
+	}
+	return &n, nil
+}
+
+func (s *SolanaAdapter) getGravityContractState(ctx context.Context) (*instructions.GravityContract, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in getNebulaContractState", r)
+		}
+	}()
+	gid := s.gravityContract.ToBase58()
+	r, err := s.client.GetAccountInfo(ctx, gid, solana.GetAccountInfoConfig{
+		Encoding: "base64",
+		DataSlice: solana.GetAccountInfoConfigDataSlice{
+			Length: 299,
+			Offset: 0,
+		},
+	})
+	if err != nil {
+		zap.L().Error(err.Error())
+		return nil, err
+	}
+	if r.Data == nil {
+		zap.L().Error("Invalid account data")
+		return nil, fmt.Errorf("empty account data")
+	}
+	sval, ok := r.Data.([]interface{})[0].(string)
+	if !ok {
+		zap.L().Error("Invalid account data")
+		return nil, err
+	}
+
+	val, err := base64.StdEncoding.DecodeString(sval)
+	if err != nil {
+		zap.L().Error(err.Error())
+		return nil, err
+	}
+
+	n := instructions.NewGravityContract()
 	err = borsh.Deserialize(&n, val)
 
 	if err != nil {

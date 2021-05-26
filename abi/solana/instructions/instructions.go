@@ -18,13 +18,13 @@ func UpdateConsulsInstruction(fromAccount, programData, targetProgramID, multisi
 	data, err := common.SerializeData(struct {
 		Instruction uint8
 		Bft         uint8
-		Consuls     []byte
 		Round       uint64
+		Consuls     []byte
 	}{
 		Instruction: 1,
 		Bft:         Bft,
-		Consuls:     consuls,
 		Round:       Round,
+		Consuls:     consuls,
 	})
 	if err != nil {
 		panic(err)
@@ -39,7 +39,7 @@ func UpdateConsulsInstruction(fromAccount, programData, targetProgramID, multisi
 		{PubKey: multisigId, IsSigner: false, IsWritable: true},
 	}
 	for _, s := range signers {
-		accounts = append(accounts, types.AccountMeta{PubKey: s, IsSigner: false, IsWritable: false})
+		accounts = append(accounts, types.AccountMeta{PubKey: s, IsSigner: true, IsWritable: false})
 	}
 	return types.Instruction{
 		Accounts:  accounts,
