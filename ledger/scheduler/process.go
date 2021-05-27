@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
 	"go.uber.org/zap"
@@ -49,41 +50,55 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 	}
 
 	isExist := true
-
+	var wg sync.WaitGroup
 	for k, v := range scheduler.Adaptors {
-		lastRound, err := v.LastRound(scheduler.ctx)
-		if err != nil {
-			return err
-		}
-		isExist = uint64(roundId) == lastRound
-		if uint64(roundId) <= lastRound {
-			continue
-		}
 
-		err = scheduler.signConsulsResult(roundId, k, oraclesBySenderConsul[k])
-		if err != nil {
-			return err
-		}
-
-		nebulae, err := scheduler.client.Nebulae()
-		if err != nil {
-			return err
-		}
-
-		for k, v := range nebulae {
-			nebulaId, err := account.StringToNebulaId(k, v.ChainType)
+		wg.Add(1)
+		go func(wg *sync.WaitGroup) {
+			lastRound, err := v.LastRound(scheduler.ctx)
 			if err != nil {
-				fmt.Printf("Error:%s\n", err.Error())
-				continue
+				zap.L().Error(err.Error())
+				wg.Done()
+				return
 			}
-			err = scheduler.signOraclesByNebula(roundId, nebulaId, v.ChainType)
-			if err != nil {
-				continue
+			zap.L().Sugar().Debug("RoundId ", roundId)
+			isExist = uint64(roundId) == lastRound
+			if uint64(roundId) <= lastRound {
+				zap.L().Debug("roundId < lastRound")
+				wg.Done()
+				return
 			}
 
-		}
+			err = scheduler.signConsulsResult(roundId, k, oraclesBySenderConsul[k])
+			if err != nil {
+				zap.L().Error(err.Error())
+				wg.Done()
+				return
+			}
+
+			nebulae, err := scheduler.client.Nebulae()
+			if err != nil {
+				zap.L().Error(err.Error())
+				wg.Done()
+				return
+			}
+
+			for k, v := range nebulae {
+				nebulaId, err := account.StringToNebulaId(k, v.ChainType)
+				if err != nil {
+					fmt.Printf("Error:%s\n", err.Error())
+					continue
+				}
+				err = scheduler.signOraclesByNebula(roundId, nebulaId, v.ChainType)
+				if err != nil {
+					continue
+				}
+
+			}
+			wg.Done()
+		}(&wg)
 	}
-
+	wg.Wait()
 	if isExist && uint64(roundId) > lastRound && senderIndex == int64(consulInfo.ConsulIndex) {
 		tx, err := transactions.New(scheduler.Ledger.PubKey, transactions.ApproveLastRound, scheduler.Ledger.PrivKey)
 		if err != nil {
