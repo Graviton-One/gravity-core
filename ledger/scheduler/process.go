@@ -32,11 +32,6 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 		scheduler.updateTargetChainsPubKeys()
 	}
 
-	lastRound, err := scheduler.client.LastRoundApproved()
-	if err != nil && err != gravity.ErrValueNotFound {
-		return err
-	}
-
 	senderIndex := int64(CalculateRound(height)) % int64(consulInfo.TotalCount)
 
 	zap.L().Sugar().Debugf("Sender index: %d", senderIndex)
@@ -64,7 +59,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 				zap.L().Error(err.Error())
 				return
 			}
-			zap.L().Sugar().Debug("RoundId ", roundId)
+			zap.L().Sugar().Debugf("RoundId %d, lastRound [%s] - %d", roundId, k, lastRound)
 			isExist = uint64(roundId) == lastRound
 			if uint64(roundId) <= lastRound {
 				zap.L().Debug("roundId < lastRound")
@@ -114,6 +109,11 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 		}(&wg, k, v)
 	}
 	wg.Wait()
+
+	lastRound, err := scheduler.client.LastRoundApproved()
+	if err != nil && err != gravity.ErrValueNotFound {
+		return err
+	}
 	if isExist && uint64(roundId) > lastRound && senderIndex == int64(consulInfo.ConsulIndex) {
 		tx, err := transactions.New(scheduler.Ledger.PubKey, transactions.ApproveLastRound, scheduler.Ledger.PrivKey)
 		if err != nil {
