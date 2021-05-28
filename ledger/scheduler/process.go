@@ -57,6 +57,8 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup, k account.ChainType, v adaptors.IBlockchainAdaptor) {
 			defer wg.Done()
+			index := roundId % int64(consulInfo.TotalCount)
+
 			lastRound, err := v.LastRound(scheduler.ctx)
 			if err != nil {
 				zap.L().Error(err.Error())
@@ -73,6 +75,14 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 			if err != nil {
 				zap.L().Error(err.Error())
 				return
+			}
+
+			if index == int64(consulInfo.ConsulIndex) {
+				err = scheduler.sendConsulsToGravityContract(roundId, k)
+				if err != nil {
+					zap.L().Error(err.Error())
+					return
+				}
 			}
 
 			nebulae, err := scheduler.client.Nebulae()
@@ -92,7 +102,15 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 					continue
 				}
 
+				if index == int64(consulInfo.ConsulIndex) {
+					err = scheduler.sendOraclesToNebula(nebulaId, v.ChainType, roundId)
+					if err != nil {
+						fmt.Printf("SendOraclesToNebula Error: %s\n", err.Error())
+						continue
+					}
+				}
 			}
+
 		}(&wg, k, v)
 	}
 	wg.Wait()
@@ -107,48 +125,48 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 		}
 	}
 
-	if IsRoundStart(height) {
-		zap.L().Debug("Round started!!!!!")
-		roundId := int64(CalculateRound(height))
+	// if IsRoundStart(height) {
+	// 	zap.L().Debug("Round started!!!!!")
+	// 	roundId := int64(CalculateRound(height))
 
-		index := roundId % int64(consulInfo.TotalCount)
+	// 	index := roundId % int64(consulInfo.TotalCount)
 
-		if index == int64(consulInfo.ConsulIndex) {
-			for k, v := range scheduler.Adaptors {
-				lastRound, err := v.LastRound(scheduler.ctx)
-				if err != nil {
-					return err
-				}
-				if uint64(roundId) <= lastRound {
-					continue
-				}
+	// 	if index == int64(consulInfo.ConsulIndex) {
+	// 		for k, v := range scheduler.Adaptors {
+	// 			lastRound, err := v.LastRound(scheduler.ctx)
+	// 			if err != nil {
+	// 				return err
+	// 			}
+	// 			if uint64(roundId) <= lastRound {
+	// 				continue
+	// 			}
 
-				err = scheduler.sendConsulsToGravityContract(roundId, k)
-				if err != nil {
-					return err
-				}
-			}
+	// 			err = scheduler.sendConsulsToGravityContract(roundId, k)
+	// 			if err != nil {
+	// 				return err
+	// 			}
+	// 		}
 
-			nebulae, err := scheduler.client.Nebulae()
-			if err != nil {
-				return err
-			}
+	// 		nebulae, err := scheduler.client.Nebulae()
+	// 		if err != nil {
+	// 			return err
+	// 		}
 
-			for k, v := range nebulae {
-				nebulaId, err := account.StringToNebulaId(k, v.ChainType)
-				if err != nil {
-					fmt.Printf("Error:%s\n", err.Error())
-					continue
-				}
+	// 		for k, v := range nebulae {
+	// 			nebulaId, err := account.StringToNebulaId(k, v.ChainType)
+	// 			if err != nil {
+	// 				fmt.Printf("Error:%s\n", err.Error())
+	// 				continue
+	// 			}
 
-				err = scheduler.sendOraclesToNebula(nebulaId, v.ChainType, roundId)
-				if err != nil {
-					fmt.Printf("SendOraclesToNebula Error: %s\n", err.Error())
-					continue
-				}
-			}
-		}
-	}
+	// 			err = scheduler.sendOraclesToNebula(nebulaId, v.ChainType, roundId)
+	// 			if err != nil {
+	// 				fmt.Printf("SendOraclesToNebula Error: %s\n", err.Error())
+	// 				continue
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 	return nil
 }
