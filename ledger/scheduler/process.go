@@ -3,6 +3,7 @@ package scheduler
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
@@ -71,7 +72,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 				zap.L().Error(err.Error())
 				return
 			}
-
+			time.Sleep(time.Second * 4)
 			if index == int64(consulInfo.ConsulIndex) {
 				err = scheduler.sendConsulsToGravityContract(roundId, k)
 				if err != nil {
