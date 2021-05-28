@@ -48,7 +48,7 @@ func UpdateConsulsInstruction(fromAccount, programData, targetProgramID, multisi
 	}
 }
 
-func NebulaUpdateOraclesInstruction(fromAccount, targetProgramID, nebulaId common.PublicKey, signers []common.PublicKey, Round uint64, Oracles []common.PublicKey, Bft uint8) types.Instruction {
+func NebulaUpdateOraclesInstruction(fromAccount, targetProgramID, nebulaDataAccount, multisigAccount common.PublicKey, signers []common.PublicKey, Round uint64, Oracles []common.PublicKey, Bft uint8) types.Instruction {
 	/*
 			UpdateOracles {
 		        new_oracles: Vec<Pubkey>,
@@ -79,7 +79,8 @@ func NebulaUpdateOraclesInstruction(fromAccount, targetProgramID, nebulaId commo
 
 	accounts := []types.AccountMeta{
 		{PubKey: fromAccount, IsSigner: true, IsWritable: true},
-		{PubKey: nebulaId, IsSigner: false, IsWritable: true},
+		{PubKey: nebulaDataAccount, IsSigner: false, IsWritable: true},
+		{PubKey: multisigAccount, IsSigner: false, IsWritable: true},
 	}
 	for _, s := range signers {
 		accounts = append(accounts, types.AccountMeta{PubKey: s, IsSigner: false, IsWritable: false})

@@ -54,14 +54,16 @@ func (spk SortablePubkey) ToPubKeys() []solana_common.PublicKey {
 }
 
 type SolanaAdapter struct {
-	account         types.Account
-	programID       solana_common.PublicKey
-	gravityContract solana_common.PublicKey
-	multisigAccount solana_common.PublicKey
-	client          *solana.Client
-	ghClient        *gravity.Client
-	recentBlockHash string
-	Bft             uint8
+	account                types.Account
+	programID              solana_common.PublicKey
+	gravityContract        solana_common.PublicKey
+	nebulaContract         solana_common.PublicKey
+	multisigAccount        solana_common.PublicKey
+	client                 *solana.Client
+	ghClient               *gravity.Client
+	recentBlockHash        string
+	oraclesRecentBlockHash string
+	Bft                    uint8
 }
 type SolanaAdapterOption func(*SolanaAdapter) error
 
@@ -82,6 +84,11 @@ func SolanaAdapterWithCustom(custom map[string]interface{}) SolanaAdapterOption 
 		if ok {
 			s.multisigAccount = solana_common.PublicKeyFromString(multisigAccount)
 		}
+		nebulaContract, ok := custom["nebula_contract"].(string)
+		if ok {
+			s.nebulaContract = solana_common.PublicKeyFromString(nebulaContract)
+		}
+
 		programID, ok := custom["program_id"].(string)
 		if ok {
 			s.programID = solana_common.PublicKeyFromString(programID)
@@ -375,7 +382,7 @@ func (s *SolanaAdapter) SetOraclesToNebula(nebulaId account.NebulaId, oracles []
 		solsigs[nkey] = sig
 		zap.L().Sugar().Debug("Lsig: ", nkey.ToBase58(), " -> ", base58.Encode(sig))
 	}
-	solsigs[s.account.PublicKey] = selfSig
+	//solsigs[s.account.PublicKey] = selfSig
 	zap.L().Sugar().Debug("Self sig: ", s.account.PublicKey.ToBase58(), " -> ", base58.Encode(selfSig))
 	tx, err := types.CreateTransaction(msg, solsigs)
 	if err != nil {
@@ -480,7 +487,7 @@ func (s *SolanaAdapter) SignOracles(nebulaId account.NebulaId, oracles []*accoun
 			fmt.Println("Recovered in SignOracles", r)
 		}
 	}()
-	s.updateRecentBlockHash(context.Background())
+	s.updateOraclesRecentBlockHash(context.Background())
 	n, err := s.getNebulaContractState(context.Background(), nebulaId)
 	if err != nil {
 		return nil, err
@@ -634,10 +641,10 @@ func (s *SolanaAdapter) createUpdateOraclesMessage(ctx context.Context, nebulaId
 		s.account.PublicKey,
 		[]types.Instruction{
 			instructions.NebulaUpdateOraclesInstruction(
-				s.account.PublicKey, s.programID, nid, solanaConsuls, uint64(roundId), solanaOracles, Bft,
+				s.account.PublicKey, nid, s.nebulaContract, s.multisigAccount, solanaConsuls, uint64(roundId), solanaOracles, Bft,
 			),
 		},
-		s.recentBlockHash,
+		s.oraclesRecentBlockHash,
 	)
 
 	return message, nil
@@ -695,6 +702,14 @@ func (s *SolanaAdapter) updateRecentBlockHash(ctx context.Context) {
 		return
 	}
 	s.recentBlockHash = res.Blockhash
+}
+func (s *SolanaAdapter) updateOraclesRecentBlockHash(ctx context.Context) {
+	res, err := s.client.GetRecentBlockhash(ctx)
+	if err != nil {
+		zap.L().Sugar().Error(err.Error())
+		return
+	}
+	s.oraclesRecentBlockHash = res.Blockhash
 }
 
 func (s *SolanaAdapter) GetCurrentBFT(ctx context.Context) (byte, error) {
