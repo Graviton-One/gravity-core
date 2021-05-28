@@ -198,6 +198,7 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 	if err != nil && err != gravity.ErrValueNotFound {
 		return err
 	} else if err == nil {
+		zap.L().Error(err.Error())
 		return nil
 	}
 
