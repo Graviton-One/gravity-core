@@ -197,10 +197,11 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 	_, err := scheduler.client.SignNewConsulsByConsul(scheduler.Ledger.PubKey, chainType, roundId)
 	if err != nil && err != gravity.ErrValueNotFound {
 		return err
-	} else if err == nil {
-		zap.L().Error(err.Error())
-		return nil
 	}
+	// } else if err == nil {
+	// 	zap.L().
+	// 	return nil
+	// }
 
 	consuls, err := scheduler.client.ConsulsCandidate()
 	if err != nil {
