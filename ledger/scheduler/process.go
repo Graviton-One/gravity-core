@@ -126,49 +126,6 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 		}
 	}
 
-	// if IsRoundStart(height) {
-	// 	zap.L().Debug("Round started!!!!!")
-	// 	roundId := int64(CalculateRound(height))
-
-	// 	index := roundId % int64(consulInfo.TotalCount)
-
-	// 	if index == int64(consulInfo.ConsulIndex) {
-	// 		for k, v := range scheduler.Adaptors {
-	// 			lastRound, err := v.LastRound(scheduler.ctx)
-	// 			if err != nil {
-	// 				return err
-	// 			}
-	// 			if uint64(roundId) <= lastRound {
-	// 				continue
-	// 			}
-
-	// 			err = scheduler.sendConsulsToGravityContract(roundId, k)
-	// 			if err != nil {
-	// 				return err
-	// 			}
-	// 		}
-
-	// 		nebulae, err := scheduler.client.Nebulae()
-	// 		if err != nil {
-	// 			return err
-	// 		}
-
-	// 		for k, v := range nebulae {
-	// 			nebulaId, err := account.StringToNebulaId(k, v.ChainType)
-	// 			if err != nil {
-	// 				fmt.Printf("Error:%s\n", err.Error())
-	// 				continue
-	// 			}
-
-	// 			err = scheduler.sendOraclesToNebula(nebulaId, v.ChainType, roundId)
-	// 			if err != nil {
-	// 				fmt.Printf("SendOraclesToNebula Error: %s\n", err.Error())
-	// 				continue
-	// 			}
-	// 		}
-	// 	}
-	// }
-
 	return nil
 }
 func (scheduler *Scheduler) consulInfo() (*ConsulInfo, error) {
