@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/Gravity-Tech/gravity-core/common/adaptors"
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
 	"go.uber.org/zap"
 
@@ -54,32 +55,29 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 	for k, v := range scheduler.Adaptors {
 
 		wg.Add(1)
-		go func(wg *sync.WaitGroup) {
+		go func(wg *sync.WaitGroup, k account.ChainType, v adaptors.IBlockchainAdaptor) {
+			defer wg.Done()
 			lastRound, err := v.LastRound(scheduler.ctx)
 			if err != nil {
 				zap.L().Error(err.Error())
-				wg.Done()
 				return
 			}
 			zap.L().Sugar().Debug("RoundId ", roundId)
 			isExist = uint64(roundId) == lastRound
 			if uint64(roundId) <= lastRound {
 				zap.L().Debug("roundId < lastRound")
-				wg.Done()
 				return
 			}
 
 			err = scheduler.signConsulsResult(roundId, k, oraclesBySenderConsul[k])
 			if err != nil {
 				zap.L().Error(err.Error())
-				wg.Done()
 				return
 			}
 
 			nebulae, err := scheduler.client.Nebulae()
 			if err != nil {
 				zap.L().Error(err.Error())
-				wg.Done()
 				return
 			}
 
@@ -95,8 +93,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 				}
 
 			}
-			wg.Done()
-		}(&wg)
+		}(&wg, k, v)
 	}
 	wg.Wait()
 	if isExist && uint64(roundId) > lastRound && senderIndex == int64(consulInfo.ConsulIndex) {
@@ -111,6 +108,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 	}
 
 	if IsRoundStart(height) {
+		zap.L().Debug("Round started!!!!!")
 		roundId := int64(CalculateRound(height))
 
 		index := roundId % int64(consulInfo.TotalCount)
