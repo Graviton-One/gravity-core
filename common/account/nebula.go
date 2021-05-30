@@ -11,6 +11,7 @@ const (
 	EthereumAddressLength = 20
 	BSCAddressLength      = 20
 	WavesAddressLength    = 26
+	ErgoAddressLength     = 20
 )
 
 type NebulaId [NebulaIdLength]byte
@@ -19,7 +20,7 @@ func StringToNebulaId(address string, chainType ChainType) (NebulaId, error) {
 	var nebula NebulaId
 
 	switch chainType {
-	case Ethereum, Binance, Heco, Fantom, Avax:
+	case Ethereum, Binance, Heco, Fantom, Avax, Ergo:
 		nebulaBytes, err := hexutil.Decode(address)
 		if err != nil {
 			return NebulaId{}, err
@@ -47,7 +48,7 @@ func BytesToNebulaId(value []byte) NebulaId {
 func (id NebulaId) ToString(chainType ChainType) string {
 	nebula := id.ToBytes(chainType)
 	switch chainType {
-	case Ethereum, Binance, Heco, Fantom, Avax:
+	case Ethereum, Binance, Heco, Fantom, Avax, Ergo:
 		return hexutil.Encode(nebula[:])
 	case Waves:
 		return base58.Encode(nebula[:])
@@ -63,6 +64,8 @@ func (id NebulaId) ToBytes(chainType ChainType) []byte {
 		return id[NebulaIdLength-EthereumAddressLength:]
 	case Waves:
 		return id[NebulaIdLength-WavesAddressLength:]
+	case Ergo:
+		return id[NebulaIdLength-ErgoAddressLength:]
 	}
 
 	return nil

@@ -22,7 +22,7 @@ type ErgOptions struct {
 	ApiKey  string
 }
 
-var defaultOptions = ErgOptions{
+var DefaultOptions = ErgOptions{
 	BaseUrl: "http://10.10.10.4:9016",
 	Doer:    &http.Client{Timeout: 3 * time.Second},
 }
@@ -62,7 +62,7 @@ func NewClient(options ...ErgOptions) (*ErgClient, error) {
 		return nil, errors.New("too many options provided. Expects no or just one item")
 	}
 
-	opts := defaultOptions
+	opts := DefaultOptions
 
 	if len(options) == 1 {
 		option := options[0]

@@ -36,6 +36,8 @@ func ParseChainType(chainType string) (ChainType, error) {
 		return Avax, nil
 	case "waves":
 		return Waves, nil
+	case "erg":
+		return Ergo, nil
 	default:
 		return 0, ErrParseChainType
 	}
