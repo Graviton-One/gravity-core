@@ -10,7 +10,7 @@ import (
 	"github.com/Gravity-Tech/gravity-core/abi"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 	"github.com/gookit/validate"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -227,13 +227,13 @@ func (adaptor *ErgoAdaptor) Sign(msg []byte) ([]byte, error) {
 		Status bool `json:"success"`
 		Signed Sign `json:"signed"`
 	}
-	values := map[string]string{"msg": hex.EncodeToString(msg), "sk": hex.EncodeToString(adaptor.secret)}
+	values := map[string]string{"msg": hex.EncodeToString(msg), "sk": string(adaptor.secret)}
 	jsonValue, _ := json.Marshal(values)
 	res, err := http.Post(adaptor.ergoClient.Options.BaseUrl+"/sign", "application/json", bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return nil, err
 	}
-	response, err := io.ReadAll(res.Body)
+	response, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -247,14 +247,36 @@ func (adaptor *ErgoAdaptor) Sign(msg []byte) ([]byte, error) {
 		err = fmt.Errorf("proxy connection problem")
 		return nil, err
 	}
-	fmt.Println(responseObject.Signed)
 	return []byte(responseObject.Signed.A + responseObject.Signed.Z), nil
 }
 
 func (adaptor *ErgoAdaptor) PubKey() account.OraclesPubKey {
-	pubKey := adaptor.secret.Public()
-	pk, _ := pubKey.(crypto.PublicKey)
-	oraclePubKey := account.BytesToOraclePubKey(pk, account.Ergo)
+	type Response struct {
+		Status  bool   `json:"success"`
+		Address string `json:"address"`
+		Pk      string `json:"pk"`
+	}
+	values := map[string]string{"sk": string(adaptor.secret)}
+	jsonValue, _ := json.Marshal(values)
+	res, err := http.Post(adaptor.ergoClient.Options.BaseUrl+"/getAddressDetail", "application/json", bytes.NewBuffer(jsonValue))
+	if err != nil {
+		panic(err)
+	}
+	response, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	var responseObject Response
+	err = json.Unmarshal(response, &responseObject)
+	if err != nil {
+		panic(err)
+	}
+
+	if !responseObject.Status {
+		err = fmt.Errorf("proxy connection problem")
+		panic(err)
+	}
+	oraclePubKey := account.BytesToOraclePubKey([]byte(responseObject.Pk), account.Ergo)
 	return oraclePubKey
 }
 
@@ -380,14 +402,14 @@ func (adaptor *ErgoAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracle
 	}
 	type Data struct {
 		newOracles []string `json:"newOracles"`
-		Signs	Sign	`json:"signs"`
+		Signs      Sign     `json:"signs"`
 	}
 
 	lastRound, err := adaptor.LastRound(ctx)
 	if err != nil {
 		return "", err
 	}
-	if uint64(round) <= lastRound{
+	if uint64(round) <= lastRound {
 		return "", errors.New("this is not a new round")
 	}
 
@@ -449,7 +471,7 @@ func (adaptor *ErgoAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracle
 	if err != nil {
 		return "", err
 	}
-	data, err := json.Marshal(Data{newOracles: newOracles, Signs: Sign{a: signsA , z: signsZ} })
+	data, err := json.Marshal(Data{newOracles: newOracles, Signs: Sign{a: signsA, z: signsZ}})
 	req, err = http.NewRequestWithContext(ctx, "POST", url.String(), bytes.NewBuffer(data))
 	tx := new(Tx)
 	_, err = adaptor.ergoClient.Do(ctx, req, tx)
@@ -477,14 +499,14 @@ func (adaptor *ErgoAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*
 	}
 	type Data struct {
 		newConsuls []string `json:"newConsuls"`
-		Signs	Sign	`json:"signs"`
+		Signs      Sign     `json:"signs"`
 	}
 
 	lastRound, err := adaptor.LastRound(ctx)
 	if err != nil {
 		return "", err
 	}
-	if uint64(round) <= lastRound{
+	if uint64(round) <= lastRound {
 		return "", errors.New("this is not a new round")
 	}
 
@@ -551,7 +573,7 @@ func (adaptor *ErgoAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*
 	if err != nil {
 		return "", err
 	}
-	data, err := json.Marshal(Data{newConsuls: newConsulsString, Signs: Sign{a: signsA , z: signsZ} })
+	data, err := json.Marshal(Data{newConsuls: newConsulsString, Signs: Sign{a: signsA, z: signsZ}})
 	req, err = http.NewRequestWithContext(ctx, "POST", url.String(), bytes.NewBuffer(data))
 	tx := new(Tx)
 	_, err = adaptor.ergoClient.Do(ctx, req, tx)
@@ -654,7 +676,7 @@ func (adaptor *ErgoAdaptor) RoundExist(roundId int64, ctx context.Context) (bool
 	if err != nil {
 		return false, err
 	}
-	if uint64(roundId) > lastRound{
+	if uint64(roundId) > lastRound {
 		return false, nil
 	}
 	return true, nil
