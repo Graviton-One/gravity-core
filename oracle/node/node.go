@@ -76,7 +76,7 @@ type Node struct {
 func New(nebulaId account.NebulaId, chainType account.ChainType,
 	chainId byte, oracleSecretKey []byte, validator *Validator,
 	extractorUrl string, gravityNodeUrl string, blocksInterval uint64,
-	targetChainNodeUrl string, ctx context.Context) (*Node, error) {
+	targetChainNodeUrl string, ctx context.Context, customParams map[string]interface{}) (*Node, error) {
 
 	ghClient, err := gravity.New(gravityNodeUrl)
 	if err != nil {
@@ -112,6 +112,11 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 		}
 	case account.Waves:
 		adaptor, err = adaptors.NewWavesAdapter(oracleSecretKey, targetChainNodeUrl, chainId, adaptors.WavesAdapterWithGhClient(ghClient))
+		if err != nil {
+			return nil, err
+		}
+	case account.Solana:
+		adaptor, err = adaptors.NewSolanaAdaptor(oracleSecretKey, targetChainNodeUrl, adaptors.SolanaAdapterWithGhClient(ghClient), adaptors.SolanaAdapterWithCustom(customParams))
 		if err != nil {
 			return nil, err
 		}

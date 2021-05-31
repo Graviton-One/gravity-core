@@ -157,7 +157,9 @@ func startOracle(ctx *cli.Context) error {
 		cfg.GravityNodeUrl,
 		cfg.BlocksInterval,
 		cfg.TargetChainNodeUrl,
-		sysCtx)
+		sysCtx,
+		cfg.Custom,
+	)
 
 	if err != nil {
 		return err
