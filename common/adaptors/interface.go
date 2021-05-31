@@ -20,7 +20,7 @@ type IBlockchainAdaptor interface {
 
 	SetOraclesToNebula(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error)
 	SendConsulsToGravityContract(newConsulsAddresses []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error)
-	SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64) ([]byte, error)
+	SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64, sender account.OraclesPubKey) ([]byte, error)
 	SignOracles(nebulaId account.NebulaId, oracles []*account.OraclesPubKey) ([]byte, error)
 
 	LastPulseId(nebulaId account.NebulaId, ctx context.Context) (uint64, error)

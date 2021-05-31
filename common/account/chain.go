@@ -14,6 +14,7 @@ const (
 	Heco
 	Fantom
 	Avax
+	Solana
 	Ergo
 )
 
@@ -36,6 +37,8 @@ func ParseChainType(chainType string) (ChainType, error) {
 		return Avax, nil
 	case "waves":
 		return Waves, nil
+	case "solana":
+		return Solana, nil
 	case "erg":
 		return Ergo, nil
 	default:
@@ -56,6 +59,8 @@ func (ch ChainType) String() string {
 		return "ftm"
 	case Avax:
 		return "avax"
+	case Solana:
+		return "solana"
 	case Ergo:
 		return "erg"
 	default:

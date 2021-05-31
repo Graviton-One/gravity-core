@@ -59,15 +59,14 @@ const (
 	Custom  Network = "custom"
 	Mainnet Network = "mainnet"
 
-	CustomId ChainId = "gravity-custom"
+	CustomId  ChainId = "gravity-custom"
 	MainnetId ChainId = "gravity-mainnet"
 
 	DefaultPrivateRpcHost = "127.0.0.1:2500"
 
-	MainnetBootstrapHost = "http://134.122.37.128:26657"
+	MainnetBootstrapHost   = "http://134.122.37.128:26657"
 	MainnetPersistentPeers = "9e91414d53328d46d68415e1e31934ab09f69511@134.122.37.128:26656,3d8306a9e006687374f23905adc06f3517306cd7@212.111.41.159:26656,2c17ad4dcc9947342ff03be6827cfb285b6494bb@3.135.223.165:26666"
 )
-
 
 var (
 	MainnetConfig = config.LedgerConfig{
@@ -78,14 +77,14 @@ var (
 		Details:    (&config.ValidatorDetails{}).DefaultNew(),
 		Adapters: map[string]config.AdaptorsConfig{
 			account.Binance.String(): {
-				NodeUrl: "https://bsc-dataseed4.ninicoin.io/",
-				ChainType: account.Binance.String(),
+				NodeUrl:                "https://bsc-dataseed4.ninicoin.io/",
+				ChainType:              account.Binance.String(),
 				GravityContractAddress: "0x5b875E3457ce737D42593aB5d6e5cfBF7896a27d",
 			},
 			account.Waves.String(): {
-				NodeUrl: "https://nodes.swop.fi",
-				ChainId: "W",
-				ChainType:"waves",
+				NodeUrl:                "https://nodes.swop.fi",
+				ChainId:                "W",
+				ChainType:              "waves",
 				GravityContractAddress: "3PLpMu2cAg618e7xXYHtckFJjFZksPFHoLm",
 			},
 			account.Ergo.String(): {
@@ -94,11 +93,11 @@ var (
 				GravityContractAddress: "",
 			},
 			account.Heco.String(): {
-				NodeUrl: "https://http-mainnet.hecochain.com",
+				NodeUrl:                "https://http-mainnet.hecochain.com",
 				GravityContractAddress: "0x8f56C70A8d473e58b47BAc0D0f24eF630064D7ed",
 			},
 			account.Fantom.String(): {
-				NodeUrl: "https://rpcapi.fantom.network",
+				NodeUrl:                "https://rpcapi.fantom.network",
 				GravityContractAddress: "0xB883418014e73228F1Ec470714802c59bB49f1eC",
 			},
 		},
@@ -121,19 +120,18 @@ var (
 			"0xc5597e2c40b78e4fecd862f54cc8e8c284f85006afcdc8253564e9f5c452ca9a": 100,
 			"0x50fd18a5c1969a2369f778dbbca8f7a7e99e1236d81be3780255d8a3da89f9c4": 100,
 		},
-		OraclesAddressByValidator: map[string]map[string]string {
+		OraclesAddressByValidator: map[string]map[string]string{
 			"0xcacb7145b7b70211ed43acd648878336915d981abea6bd0b3bdd6a4ff5dad5cf": {
 				"waves": "4ArMUAxJZ3ETB1xSBqJkdhM19TXoEuWHsWzHZqKo3rvY",
-				"bsc": "0x032405b9ef3cc5ed099ee13f8084f972cfdd6cec85835628ead918712b6a0fab65",
-
+				"bsc":   "0x032405b9ef3cc5ed099ee13f8084f972cfdd6cec85835628ead918712b6a0fab65",
 			},
 			"0xc5597e2c40b78e4fecd862f54cc8e8c284f85006afcdc8253564e9f5c452ca9a": {
 				"waves": "51yKUBQ7pxGJ1UNCgwdjKMQswYWHGq28thbdpo8gLoEK",
-				"bsc": "0x02826f06ab27fd6d1f0574c020e6c06010489c5eb07ba4c2aa0149f303f85db215",
+				"bsc":   "0x02826f06ab27fd6d1f0574c020e6c06010489c5eb07ba4c2aa0149f303f85db215",
 			},
 			"0x50fd18a5c1969a2369f778dbbca8f7a7e99e1236d81be3780255d8a3da89f9c4": {
 				"waves": "FpsFLbAfmUqngqS54knGJe11Y68mgDYoLHT8QRY4fdYD",
-				"bsc": "0x023522b43a9820d64d6b61186efdace2d787931844c6512e3ca2253e38f5c3e522",
+				"bsc":   "0x023522b43a9820d64d6b61186efdace2d787931844c6512e3ca2253e38f5c3e522",
 			},
 		},
 	}
@@ -552,6 +550,12 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 				zap.L().Error(err.Error())
 				return nil, err
 			}
+		case account.Solana:
+			adaptor, err = adaptors.NewSolanaAdaptor(privKey, v.NodeUrl, adaptors.SolanaAdapterWithCustom(v.Custom))
+			if err != nil {
+				zap.L().Error(err.Error())
+				return nil, err
+			}
 		case account.Ergo:
 			adaptor, err = adaptors.NewErgoAdapter(privKey, v.NodeUrl, ctx, adaptors.WithErgoGravityContract(v.GravityContractAddress))
 			if err != nil {
@@ -563,13 +567,13 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 
 		bAdaptors[chainType] = adaptor
 
-		if bootstrap != "" {
-			err = setOraclePubKey(bootstrap, ledgerValidator.PubKey, ledgerValidator.PrivKey, adaptor.PubKey(), chainType)
-			if err != nil {
-				zap.L().Error(err.Error())
-				return nil, err
-			}
-		}
+		// if bootstrap != "" {
+		// 	err = setOraclePubKey(bootstrap, ledgerValidator.PubKey, ledgerValidator.PrivKey, adaptor.PubKey(), chainType)
+		// 	if err != nil {
+		// 		zap.L().Error(err.Error())
+		// 		return nil, err
+		// 	}
+		// }
 
 	}
 	blockScheduler, err := scheduler.New(bAdaptors, ledgerValidator, localHost, ctx)

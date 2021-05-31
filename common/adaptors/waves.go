@@ -575,7 +575,7 @@ func (adaptor *WavesAdaptor) SendConsulsToGravityContract(newConsulsAddresses []
 
 	return tx.ID.String(), nil
 }
-func (adaptor *WavesAdaptor) SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64) ([]byte, error) {
+func (adaptor *WavesAdaptor) SignConsuls(consulsAddresses []*account.OraclesPubKey, roundId int64, sender account.OraclesPubKey) ([]byte, error) {
 	var msg []string
 	for _, v := range consulsAddresses {
 		if v == nil {
