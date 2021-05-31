@@ -88,6 +88,11 @@ var (
 				ChainType:"waves",
 				GravityContractAddress: "3PLpMu2cAg618e7xXYHtckFJjFZksPFHoLm",
 			},
+			account.Ergo.String(): {
+				NodeUrl: "http://10.10.10.4:9016",
+				ChainType: account.Ergo.String(),
+				GravityContractAddress: "",
+			},
 			account.Heco.String(): {
 				NodeUrl: "https://http-mainnet.hecochain.com",
 				GravityContractAddress: "0x8f56C70A8d473e58b47BAc0D0f24eF630064D7ed",

@@ -70,6 +70,10 @@ func DefaultLedgerConfig() LedgerConfig {
 				NodeUrl:                "",
 				GravityContractAddress: "",
 			},
+			account.Ergo.String(): {
+				NodeUrl:                "",
+				GravityContractAddress: "",
+			},
 		},
 	}
 }
