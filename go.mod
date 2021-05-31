@@ -11,6 +11,7 @@ require (
 	github.com/mr-tron/base58 v1.2.0
 	github.com/near/borsh-go v0.3.0
 	github.com/novifinancial/serde-reflection/serde-generate/runtime/golang v0.0.0-20210311194640-4c3416aad7d0
+	github.com/pkg/errors v0.9.1
 	github.com/portto/solana-go-sdk v0.0.0-20210521084441-878620557359
 	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/tendermint/tendermint v0.33.4
