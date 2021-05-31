@@ -91,6 +91,8 @@ func SetState(tx *transactions.Transaction, store *storage.Storage, adaptors map
 		return signNewOracles(store, tx)
 	case transactions.ApproveLastRound:
 		return approveLastRound(store, adaptors, height, isSync, ctx)
+	case transactions.SetSolanaRecentBlock:
+		return setSolanaRecentBlock(store, tx)
 	default:
 		return ErrFuncNotFound
 	}
@@ -247,6 +249,12 @@ func dropNebula(store *storage.Storage, tx *transactions.Transaction) error {
 	return store.DropNebula(nebulaId)
 }
 
+func setSolanaRecentBlock(store *storage.Storage, tx *transactions.Transaction) error {
+	round := tx.Value(0).(int)
+	blockHash := tx.Value(1).([]byte)
+	return store.SetSolanaRecentBlock(round, blockHash)
+}
+
 func setNebula(store *storage.Storage, tx *transactions.Transaction) error {
 	nebulaId := account.BytesToNebulaId(tx.Value(0).([]byte))
 	nebulaInfoBytes := tx.Value(1).([]byte)
@@ -313,14 +321,14 @@ func signNewConsuls(store *storage.Storage, tx *transactions.Transaction) error 
 	roundId := tx.Value(1).(int64)
 	sign := tx.Value(2).([]byte)
 
-	_, err := store.SignConsulsByConsul(tx.SenderPubKey, chainType, roundId)
-	if err != nil && err != storage.ErrKeyNotFound {
-		return err
-	} else if err == nil {
-		return ErrSignIsExist
-	}
+	// _, err := store.SignConsulsByConsul(tx.SenderPubKey, chainType, roundId)
+	// if err != nil && err != storage.ErrKeyNotFound {
+	// 	return err
+	// } else if err == nil {
+	// 	return ErrSignIsExist
+	// }
 
-	err = store.SetSignConsuls(tx.SenderPubKey, chainType, roundId, sign)
+	err := store.SetSignConsuls(tx.SenderPubKey, chainType, roundId, sign)
 	if err != nil {
 		return err
 	}
