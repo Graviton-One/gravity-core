@@ -64,20 +64,20 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 			}
 			zap.L().Sugar().Debugf("RoundId %d, lastRound [%s] - %d", roundId, k, lastRound)
 			isExist = uint64(roundId) == lastRound
-			if uint64(roundId) > lastRound {
-				err = scheduler.signConsulsResult(roundId, k, oraclesBySenderConsul[k])
+			if uint64(roundId) <= lastRound {
+				zap.L().Debug("roundId <= lastRound")
+				return
+			}
+			err = scheduler.signConsulsResult(roundId, k, oraclesBySenderConsul[k])
+			if err != nil {
+				zap.L().Error(err.Error())
+			}
+			time.Sleep(time.Second * 4)
+			if index == int64(consulInfo.ConsulIndex) {
+				err = scheduler.sendConsulsToGravityContract(roundId, k)
 				if err != nil {
 					zap.L().Error(err.Error())
 				}
-				time.Sleep(time.Second * 4)
-				if index == int64(consulInfo.ConsulIndex) {
-					err = scheduler.sendConsulsToGravityContract(roundId, k)
-					if err != nil {
-						zap.L().Error(err.Error())
-					}
-				}
-			} else {
-				zap.L().Debug("roundId <= lastRound")
 			}
 
 			nebulae, err := scheduler.client.Nebulae()
