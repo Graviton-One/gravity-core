@@ -217,7 +217,7 @@ func (s *SolanaAdapter) ValueType(nebulaId account.NebulaId, ctx context.Context
 			fmt.Println("Recovered in ValueType", r)
 		}
 	}()
-	n, err := s.getNebulaContractState(ctx, nebulaId)
+	n, err := s.getNebulaContractState(ctx, s.nebulaContract.ToBase58())
 	if err != nil {
 		zap.L().Error(err.Error())
 		return 0, err
@@ -275,7 +275,7 @@ func (s *SolanaAdapter) SendValueToSubs(nebulaId account.NebulaId, pulseId uint6
 			fmt.Println("Recovered in SendValueToSubs", r)
 		}
 	}()
-	nst, err := s.getNebulaContractState(ctx, nebulaId)
+	nst, err := s.getNebulaContractState(ctx, s.nebulaContract.ToBase58())
 	if err != nil {
 		zap.L().Sugar().Error(err.Error())
 		return err
@@ -356,7 +356,17 @@ func (s *SolanaAdapter) SetOraclesToNebula(nebulaId account.NebulaId, oracles []
 			fmt.Println("Recovered in SetOraclesToNebula", r)
 		}
 	}()
-	n, err := s.getNebulaContractState(ctx, nebulaId)
+
+	customParams, err := s.ghClient.NebulaCustomParams(nebulaId, account.Solana)
+	if err != nil {
+		return "", err
+	}
+
+	nebulaContract, ok := customParams["nebula_contract"].(string)
+	if !ok {
+		return "", fmt.Errorf("Data account for nebula not declared")
+	}
+	n, err := s.getNebulaContractState(ctx, nebulaContract)
 	if err != nil {
 		return "", err
 	}
@@ -432,7 +442,7 @@ func (s *SolanaAdapter) SendConsulsToGravityContract(newConsulsAddresses []*acco
 		solsigs[nkey] = sig
 		zap.L().Sugar().Debug("Lsig: ", nkey.ToBase58(), " -> ", base58.Encode(sig))
 	}
-	//solsigs[s.account.PublicKey] = selfSig
+	solsigs[s.account.PublicKey] = selfSig
 	zap.L().Sugar().Debug("Self sig: ", s.account.PublicKey.ToBase58(), " -> ", base58.Encode(selfSig))
 	tx, err := types.CreateTransaction(msg, solsigs)
 	if err != nil {
@@ -488,7 +498,18 @@ func (s *SolanaAdapter) SignOracles(nebulaId account.NebulaId, oracles []*accoun
 		}
 	}()
 	s.updateOraclesRecentBlockHash(context.Background())
-	n, err := s.getNebulaContractState(context.Background(), nebulaId)
+
+	customParams, err := s.ghClient.NebulaCustomParams(nebulaId, account.Solana)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	nebulaContract, ok := customParams["nebula_contract"].(string)
+	if !ok {
+		return []byte{}, fmt.Errorf("Data account for nebula not declared")
+	}
+
+	n, err := s.getNebulaContractState(context.Background(), nebulaContract)
 	if err != nil {
 		return nil, err
 	}
@@ -519,7 +540,7 @@ func (s *SolanaAdapter) LastPulseId(nebulaId account.NebulaId, ctx context.Conte
 			fmt.Println("Recovered in LatPulseId", r)
 		}
 	}()
-	n, err := s.getNebulaContractState(ctx, nebulaId)
+	n, err := s.getNebulaContractState(ctx, s.nebulaContract.ToBase58())
 	if err != nil {
 		zap.L().Error(err.Error())
 		return 0, err
@@ -723,6 +744,7 @@ func (s *SolanaAdapter) updateRecentBlockHash(ctx context.Context) {
 		return
 	}
 	s.recentBlockHash = res.Blockhash
+	zap.L().Sugar().Debugf("New ReccentBlockHash: %s", s.recentBlockHash)
 }
 func (s *SolanaAdapter) updateOraclesRecentBlockHash(ctx context.Context) {
 	res, err := s.client.GetRecentBlockhash(ctx)
@@ -753,14 +775,14 @@ func (s *SolanaAdapter) getCurrentOracles() ([]solana_common.PublicKey, error) {
 	return []solana_common.PublicKey{}, nil
 }
 
-func (s *SolanaAdapter) getNebulaContractState(ctx context.Context, nebulaId account.NebulaId) (*instructions.NebulaContract, error) {
+func (s *SolanaAdapter) getNebulaContractState(ctx context.Context, stateAccount string) (*instructions.NebulaContract, error) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in getNebulaContractState", r)
 		}
 	}()
-	nid := base58.Encode(nebulaId[:])
-	r, err := s.client.GetAccountInfo(ctx, nid, solana.GetAccountInfoConfig{
+	//nid := base58.Encode(nebulaId[:])
+	r, err := s.client.GetAccountInfo(ctx, stateAccount, solana.GetAccountInfoConfig{
 		Encoding: "base64",
 		DataSlice: solana.GetAccountInfoConfigDataSlice{
 			Length: 2048,
