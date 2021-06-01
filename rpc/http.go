@@ -58,6 +58,9 @@ func ListenRpcServer(config *Config) {
 	http.HandleFunc("/dropNebulaCustomParams", func(rp http.ResponseWriter, rq *http.Request) {
 		nebulaHandler(rp, rq, dropNebulaCustomParams)
 	})
+	http.HandleFunc("/listNebulas", func(rp http.ResponseWriter, rq *http.Request) {
+		listNebulasHandler(rp, rq)
+	})
 	err := http.ListenAndServe(cfg.Host, nil)
 	if err != nil {
 		fmt.Printf("Error Private RPC: %s", err.Error())
@@ -264,4 +267,15 @@ func dropNebulaCustomParams(r *http.Request) error {
 	}
 
 	return nil
+}
+
+func listNebulasHandler(w http.ResponseWriter, r *http.Request) {
+	list, err := cfg.client.Nebulae()
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(list)
 }
