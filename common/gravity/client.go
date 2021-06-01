@@ -364,6 +364,22 @@ func (client *Client) NebulaOraclesIndex(chainId account.ChainType, nebulaId acc
 	return binary.BigEndian.Uint64(rs), nil
 }
 
+func (client *Client) NebulaCustomParams(id account.NebulaId, chainType account.ChainType) (storage.NebulaCustomParams, error) {
+	rs, err := client.do(query.NebulaCustomParams, nil)
+	if err != nil && err != ErrValueNotFound {
+		return nil, err
+	}
+
+	nebulaCustomParams := storage.NebulaCustomParams{}
+
+	err = json.Unmarshal(rs, &nebulaCustomParams)
+	if err != nil {
+		return nil, err
+	}
+
+	return nebulaCustomParams, nil
+}
+
 func (client *Client) do(path query.Path, rq interface{}) ([]byte, error) {
 	var err error
 	b, ok := rq.([]byte)

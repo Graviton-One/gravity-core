@@ -23,13 +23,14 @@ const (
 	BftOraclesByNebulaKey        Key = "bft_oracles_nebula"
 	OraclesByValidatorKey        Key = "oracles"
 
-	BlockKey      Key = "block"
-	VoteKey       Key = "vote"
-	ScoreKey      Key = "score"
-	CommitKey     Key = "commit"
-	RevealKey     Key = "reveal"
-	SignResultKey Key = "signResult"
-	NebulaInfoKey Key = "nebula_info"
+	BlockKey              Key = "block"
+	VoteKey               Key = "vote"
+	ScoreKey              Key = "score"
+	CommitKey             Key = "commit"
+	RevealKey             Key = "reveal"
+	SignResultKey         Key = "signResult"
+	NebulaInfoKey         Key = "nebula_info"
+	NebulaCustomParamsKey Key = "nebula_custom_params"
 )
 
 var (

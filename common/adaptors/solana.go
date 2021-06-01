@@ -637,11 +637,32 @@ func (s *SolanaAdapter) createUpdateOraclesMessage(ctx context.Context, nebulaId
 	sort.Sort(&newOracles)
 	solanaOracles := newOracles.ToPubKeys()
 	nid := solana_common.PublicKeyFromBytes(nebulaId[:])
+	customParams, err := s.ghClient.NebulaCustomParams(nebulaId, account.Solana)
+	if err != nil {
+		return types.Message{}, err
+	}
+
+	multisigAccount, ok := customParams["multisig_account"].(string)
+	if !ok {
+		return types.Message{}, fmt.Errorf("Multisig account for nebula [%s] not declared", nid.ToBase58())
+	}
+	nebulaContract, ok := customParams["nebula_contract"].(string)
+	if !ok {
+		return types.Message{}, fmt.Errorf("Data account for nebula [%s] not declared", nid.ToBase58())
+	}
+
 	message := types.NewMessage(
 		s.account.PublicKey,
 		[]types.Instruction{
 			instructions.NebulaUpdateOraclesInstruction(
-				s.account.PublicKey, nid, s.nebulaContract, s.multisigAccount, solanaConsuls, uint64(roundId), solanaOracles, Bft,
+				s.account.PublicKey,
+				nid,
+				solana_common.PublicKeyFromString(nebulaContract),
+				solana_common.PublicKeyFromString(multisigAccount),
+				solanaConsuls,
+				uint64(roundId),
+				solanaOracles,
+				Bft,
 			),
 		},
 		s.oraclesRecentBlockHash,
