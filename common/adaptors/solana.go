@@ -357,15 +357,18 @@ func (s *SolanaAdapter) SetOraclesToNebula(nebulaId account.NebulaId, oracles []
 		}
 	}()
 
+	zap.L().Sugar().Debugf("SetOraclesToNebula [%s]", solana_common.PublicKeyFromBytes(nebulaId[:]).ToBase58())
 	customParams, err := s.ghClient.NebulaCustomParams(nebulaId, account.Solana)
 	if err != nil {
 		return "", err
 	}
 
-	nebulaContract, ok := customParams["nebula_contract"].(string)
+	nebulaContract_interface, ok := customParams["nebula_contract"]
 	if !ok {
 		return "", fmt.Errorf("Data account for nebula not declared")
 	}
+	nebulaContract := nebulaContract_interface.(string)
+
 	n, err := s.getNebulaContractState(ctx, nebulaContract)
 	if err != nil {
 		return "", err
@@ -491,7 +494,7 @@ func (s *SolanaAdapter) SignConsuls(consulsAddresses []*account.OraclesPubKey, r
 	return sign, nil
 }
 
-func (s *SolanaAdapter) SignOracles(nebulaId account.NebulaId, oracles []*account.OraclesPubKey) ([]byte, error) {
+func (s *SolanaAdapter) SignOracles(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, round int64, sender account.OraclesPubKey) ([]byte, error) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in SignOracles", r)
@@ -513,10 +516,16 @@ func (s *SolanaAdapter) SignOracles(nebulaId account.NebulaId, oracles []*accoun
 	if err != nil {
 		return nil, err
 	}
-
-	rid, err := s.LastPulseId(nebulaId, context.Background())
-
-	msg, err := s.createUpdateOraclesMessage(context.Background(), nebulaId, oracles, int64(rid+1), n.Bft)
+	new_oracles := oracles
+	if len(new_oracles) == 0 {
+		old_oracles := n.Oracles
+		for _, or := range old_oracles {
+			new_or := account.OraclesPubKey{}
+			copy(new_or[:], append([]byte{0}, or[0:32]...))
+			new_oracles = append(new_oracles, &new_or)
+		}
+	}
+	msg, err := s.createUpdateOraclesMessage(context.Background(), nebulaId, new_oracles, round, n.Bft)
 	if err != nil {
 		return nil, err
 	}
@@ -663,14 +672,17 @@ func (s *SolanaAdapter) createUpdateOraclesMessage(ctx context.Context, nebulaId
 		return types.Message{}, err
 	}
 
-	multisigAccount, ok := customParams["multisig_account"].(string)
+	multisigAccount_interface, ok := customParams["multisig_account"]
 	if !ok {
 		return types.Message{}, fmt.Errorf("Multisig account for nebula [%s] not declared", nid.ToBase58())
 	}
-	nebulaContract, ok := customParams["nebula_contract"].(string)
+	multisigAccount := multisigAccount_interface.(string)
+
+	nebulaContract_interface, ok := customParams["nebula_contract"]
 	if !ok {
 		return types.Message{}, fmt.Errorf("Data account for nebula [%s] not declared", nid.ToBase58())
 	}
+	nebulaContract := nebulaContract_interface.(string)
 
 	message := types.NewMessage(
 		s.account.PublicKey,
