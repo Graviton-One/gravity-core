@@ -4,8 +4,9 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"github.com/Gravity-Tech/gravity-core/config"
+
 	"github.com/Gravity-Tech/gravity-core/common/storage"
+	"github.com/Gravity-Tech/gravity-core/config"
 )
 
 type Path string
@@ -30,6 +31,7 @@ const (
 	NebulaOraclesIndexPath     Path = "nebulaOraclesIndex"
 	AllValidatorsPath          Path = "allValidators"
 	ValidatorDetailsPath       Path = "validatorDetails"
+	NebulaCustomParams         Path = "nebulaCustomParams"
 )
 
 var (
@@ -79,6 +81,8 @@ func Query(store *storage.Storage, path string, rq []byte, validatorDetails *con
 		value, err = allValidators(store, rq)
 	case ValidatorDetailsPath:
 		value, err = validatorDetails.Bytes()
+	case NebulaCustomParams:
+		value, err = nebulaCustomParams(store, rq)
 	default:
 		return nil, ErrInvalidPath
 	}
