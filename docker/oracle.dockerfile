@@ -3,7 +3,7 @@ FROM golang:1.16-alpine as oracle
 WORKDIR /node
 
 RUN apk update \
-	&& apk --no-cache --update add build-base linux-headers
+    && apk --no-cache --update add build-base linux-headers
 
 COPY . /node
 
@@ -12,7 +12,7 @@ RUN chmod 755 docker/entrypoint-oracle.sh
 RUN cd cmd/gravity/ && \
     go build -o gravity
 
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 ENV NEBULA_ADDRESS=''
 ENV CHAIN_TYPE=''
