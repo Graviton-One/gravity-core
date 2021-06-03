@@ -178,6 +178,8 @@ func addOracleInNebula(store *storage.Storage, tx *transactions.Transaction) err
 		return err
 	}
 
+	zap.L().Sugar().Debug("ORACLES BY NEBULA", oraclesByNebula)
+
 	if _, ok := oraclesByNebula[pubKey.ToString(nebula.ChainType)]; ok {
 		return ErrAddOracleInNebula
 	}
