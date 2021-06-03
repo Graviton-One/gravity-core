@@ -798,7 +798,7 @@ func (s *SolanaAdapter) getNebulaContractState(ctx context.Context, stateAccount
 	r, err := s.client.GetAccountInfo(ctx, stateAccount, solana.GetAccountInfoConfig{
 		Encoding: "base64",
 		DataSlice: solana.GetAccountInfoConfigDataSlice{
-			Length: 2048,
+			Length: 2000,
 			Offset: 0,
 		},
 	})
