@@ -21,4 +21,8 @@ func TestNewNebulaContract(t *testing.T) {
 		t.Log(err)
 		t.FailNow()
 	}
+	if n.Bft != 3 {
+		t.Log("invalid bft")
+		t.Fail()
+	}
 }

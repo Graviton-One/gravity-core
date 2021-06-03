@@ -14,9 +14,9 @@ import (
 func TestSerdeSerializer(t *testing.T) {
 	a := types.NewAccount()
 	c := NewNebulaContract()
-	c.RoundsDict[123] = 1
-	c.RoundsDict[12] = 0
-	c.RoundsDict[14] = 1
+	// c.RoundsDict[123] = 1
+	// c.RoundsDict[12] = 0
+	// c.RoundsDict[14] = 1
 	c.LastRound = 13
 	c.MultisigAccount = a.PublicKey
 	data, err := borsh.Serialize(c)
