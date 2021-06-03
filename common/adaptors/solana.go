@@ -360,6 +360,7 @@ func (s *SolanaAdapter) SetOraclesToNebula(nebulaId account.NebulaId, oracles []
 	zap.L().Sugar().Debugf("SetOraclesToNebula [%s]", solana_common.PublicKeyFromBytes(nebulaId[:]).ToBase58())
 	customParams, err := s.ghClient.NebulaCustomParams(nebulaId, account.Solana)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return "", err
 	}
 
@@ -371,10 +372,12 @@ func (s *SolanaAdapter) SetOraclesToNebula(nebulaId account.NebulaId, oracles []
 
 	n, err := s.getNebulaContractState(ctx, nebulaContract)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return "", err
 	}
 	msg, err := s.createUpdateOraclesMessage(ctx, nebulaId, oracles, round, n.Bft)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return "", err
 	}
 	serializedMessage, err := msg.Serialize()
@@ -399,6 +402,7 @@ func (s *SolanaAdapter) SetOraclesToNebula(nebulaId account.NebulaId, oracles []
 	zap.L().Sugar().Debug("Self sig: ", s.account.PublicKey.ToBase58(), " -> ", base58.Encode(selfSig))
 	tx, err := types.CreateTransaction(msg, solsigs)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return "", err
 	}
 	rawTx, err := tx.Serialize()
@@ -765,6 +769,7 @@ func (s *SolanaAdapter) updateOraclesRecentBlockHash(ctx context.Context) {
 		return
 	}
 	s.oraclesRecentBlockHash = res.Blockhash
+	zap.L().Sugar().Debugf("New Oracles ReccentBlockHash: %s", s.recentBlockHash)
 }
 
 func (s *SolanaAdapter) GetCurrentBFT(ctx context.Context) (byte, error) {

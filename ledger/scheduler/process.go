@@ -68,45 +68,68 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 				zap.L().Debug("roundId <= lastRound")
 				return
 			}
-			err = scheduler.signConsulsResult(roundId, k, oraclesBySenderConsul[k])
-			if err != nil {
-				zap.L().Error(err.Error())
-			}
-			time.Sleep(time.Second * 4)
-			if index == int64(consulInfo.ConsulIndex) {
-				err = scheduler.sendConsulsToGravityContract(roundId, k)
+
+			var consulsWG sync.WaitGroup
+			consulsWG.Add(1)
+			go func() {
+				defer consulsWG.Done()
+				err = scheduler.signConsulsResult(roundId, k, oraclesBySenderConsul[k])
 				if err != nil {
 					zap.L().Error(err.Error())
 				}
-			}
+				time.Sleep(time.Second * 4)
+				if index == int64(consulInfo.ConsulIndex) {
+					err = scheduler.sendConsulsToGravityContract(roundId, k)
+					if err != nil {
+						zap.L().Error(err.Error())
+					}
+				}
+			}()
 
 			nebulae, err := scheduler.client.Nebulae()
 			if err != nil {
 				zap.L().Error(err.Error())
 				return
 			}
+			var nebulaWG sync.WaitGroup
 
 			for nk, val := range nebulae {
-				nebulaId, err := account.StringToNebulaId(nk, val.ChainType)
-				if err != nil {
-					fmt.Printf("Error:%s\n", err.Error())
-					continue
-				}
-				err = scheduler.signOraclesByNebula(roundId, nebulaId, val.ChainType, oraclesBySenderConsul[k])
-				if err != nil {
-					zap.L().Error(err.Error())
-					continue
-				}
-
-				if index == int64(consulInfo.ConsulIndex) {
-					err = scheduler.sendOraclesToNebula(nebulaId, val.ChainType, roundId)
+				nebulaWG.Add(1)
+				go func() {
+					defer nebulaWG.Done()
+					nebulaId, err := account.StringToNebulaId(nk, val.ChainType)
 					if err != nil {
-						fmt.Printf("SendOraclesToNebula Error: %s\n", err.Error())
-						continue
+						fmt.Printf("Error:%s\n", err.Error())
+						return
 					}
-				}
+
+					success := false
+					attempts := 4
+					for {
+						if success || attempts == 0 {
+							break
+						}
+						err = scheduler.signOraclesByNebula(roundId, nebulaId, val.ChainType, oraclesBySenderConsul[k])
+						if err != nil {
+							zap.L().Error(err.Error())
+							attempts -= 1
+							continue
+						}
+
+						if index == int64(consulInfo.ConsulIndex) {
+							err = scheduler.sendOraclesToNebula(nebulaId, val.ChainType, roundId)
+							if err != nil {
+								attempts -= 1
+								continue
+							}
+						}
+						success = true
+					}
+
+				}()
 			}
 
+			consulsWG.Wait()
 		}(&wg, k, v)
 	}
 	wg.Wait()
