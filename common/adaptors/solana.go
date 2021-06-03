@@ -794,6 +794,7 @@ func (s *SolanaAdapter) getNebulaContractState(ctx context.Context, stateAccount
 		}
 	}()
 	//nid := base58.Encode(nebulaId[:])
+	zap.L().Sugar().Debugf("gettingNebulaState: %s", stateAccount)
 	r, err := s.client.GetAccountInfo(ctx, stateAccount, solana.GetAccountInfoConfig{
 		Encoding: "base64",
 		DataSlice: solana.GetAccountInfoConfigDataSlice{
