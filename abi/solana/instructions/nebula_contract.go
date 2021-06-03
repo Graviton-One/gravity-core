@@ -37,6 +37,7 @@ type Pulse struct {
 */
 type NebulaContract struct {
 	RoundsDict         map[uint64]byte
+	State1             uint32
 	SubscriptionsQueue [][16]uint8
 	Oracles            []common.PublicKey
 	Bft                uint8
@@ -44,10 +45,14 @@ type NebulaContract struct {
 	GravityContract    common.PublicKey
 	DataType           DataType
 	LastRound          uint64
+	SubscriptionIds    [][16]uint8
 	LastPulseId        uint64
 	SubscriptionsMap   map[[16]uint8]Subscription
+	State2             uint32
 	PulsesMap          map[uint64]Pulse
+	State3             uint32
 	IsPulseSent        map[uint64]byte
+	State4             uint32
 	IsInitialized      byte
 	InitializerPubkey  common.PublicKey
 }
