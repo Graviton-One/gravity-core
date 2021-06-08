@@ -458,7 +458,7 @@ func (adaptor *AvaxAdaptor) SignConsuls(consulsAddresses []*account.OraclesPubKe
 
 	return sign, nil
 }
-func (adaptor *AvaxAdaptor) SignOracles(nebulaId account.NebulaId, oracles []*account.OraclesPubKey) ([]byte, error) {
+func (adaptor *AvaxAdaptor) SignOracles(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, round int64, sender account.OraclesPubKey) ([]byte, error) {
 	nebula, err := ethereum.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {
 		return nil, err

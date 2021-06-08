@@ -93,6 +93,10 @@ func SetState(tx *transactions.Transaction, store *storage.Storage, adaptors map
 		return approveLastRound(store, adaptors, height, isSync, ctx)
 	case transactions.SetSolanaRecentBlock:
 		return setSolanaRecentBlock(store, tx)
+	case transactions.SetNebulaCustomParams:
+		return setNebulaCustomParams(store, tx)
+	case transactions.DropNebulaCustomParams:
+		return dropNebulaCustomParams(store, tx)
 	default:
 		return ErrFuncNotFound
 	}
@@ -389,4 +393,31 @@ func approveLastRound(store *storage.Storage, adaptors map[account.ChainType]ada
 		return err
 	}
 	return nil
+}
+
+func setNebulaCustomParams(store *storage.Storage, tx *transactions.Transaction) error {
+	nebulaId := account.BytesToNebulaId(tx.Value(0).([]byte))
+	nebulaCustomParamsBytes := tx.Value(1).([]byte)
+
+	nebula, err := store.NebulaInfo(nebulaId)
+	if err != nil && err != storage.ErrKeyNotFound {
+		return err
+	}
+
+	if err == nil && nebula.Owner != tx.SenderPubKey {
+		return ErrInvalidNebulaOwner
+	}
+
+	var nebulaCustomParams storage.NebulaCustomParams
+	err = json.Unmarshal(nebulaCustomParamsBytes, &nebulaCustomParams)
+	if err != nil {
+		return err
+	}
+
+	return store.SetNebulaCustomParams(nebulaId, nebulaCustomParams)
+}
+
+func dropNebulaCustomParams(store *storage.Storage, tx *transactions.Transaction) error {
+	nebulaId := account.BytesToNebulaId(tx.Value(0).([]byte))
+	return store.DropNebulaCustomParams(nebulaId)
 }

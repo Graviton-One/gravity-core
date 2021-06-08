@@ -172,3 +172,22 @@ func nebulaInfo(store *storage.Storage, value []byte) (*storage.NebulaInfo, erro
 
 	return v, nil
 }
+func nebulaCustomParams(store *storage.Storage, value []byte) (*storage.NebulaCustomParams, error) {
+	var rq ByNebulaRq
+	err := json.Unmarshal(value, &rq)
+	if err != nil {
+		return nil, err
+	}
+
+	nebulaAddress, err := account.StringToNebulaId(rq.NebulaAddress, rq.ChainType)
+	if err != nil {
+		return nil, err
+	}
+
+	v, err := store.NebulaCustomParams(nebulaAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	return v, nil
+}

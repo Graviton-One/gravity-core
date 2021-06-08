@@ -593,7 +593,7 @@ func (adaptor *WavesAdaptor) SignConsuls(consulsAddresses []*account.OraclesPubK
 
 	return sign, err
 }
-func (adaptor *WavesAdaptor) SignOracles(nebulaId account.NebulaId, oracles []*account.OraclesPubKey) ([]byte, error) {
+func (adaptor *WavesAdaptor) SignOracles(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, round int64, sender account.OraclesPubKey) ([]byte, error) {
 	var stringOracles []string
 	for _, v := range oracles {
 		if v == nil {
