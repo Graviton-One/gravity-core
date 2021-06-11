@@ -77,7 +77,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 				if err != nil {
 					zap.L().Error(err.Error())
 				}
-				time.Sleep(time.Second * 4)
+				time.Sleep(time.Second * 5)
 				if index == int64(consulInfo.ConsulIndex) {
 					err = scheduler.sendConsulsToGravityContract(roundId, k)
 					if err != nil {
@@ -115,6 +115,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 							attempts -= 1
 							continue
 						}
+						time.Sleep(time.Second * 5)
 
 						if index == int64(consulInfo.ConsulIndex) {
 							err = scheduler.sendOraclesToNebula(nebulaId, val.ChainType, roundId)
