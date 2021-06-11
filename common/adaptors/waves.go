@@ -372,6 +372,11 @@ func (adaptor *WavesAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId 
 }
 
 func (adaptor *WavesAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			zap.L().Sugar().Error("Recovered in SignOracles", r)
+		}
+	}()
 	nebulaAddress := base58.Encode(nebulaId.ToBytes(account.Waves))
 	lastRoundState, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, "last_round_"+fmt.Sprintf("%d", round), ctx)
 	if err != nil {
