@@ -7,6 +7,7 @@ import (
 
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
+	"github.com/Gravity-Tech/gravity-core/common/storage"
 	"go.uber.org/zap"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
@@ -95,9 +96,9 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 
 			for nk, val := range nebulae {
 				nebulaWG.Add(1)
-				go func() {
+				go func(nKey string, nInfo storage.NebulaInfo) {
 					defer nebulaWG.Done()
-					nebulaId, err := account.StringToNebulaId(nk, val.ChainType)
+					nebulaId, err := account.StringToNebulaId(nKey, nInfo.ChainType)
 					if err != nil {
 						fmt.Printf("Error:%s\n", err.Error())
 						return
@@ -109,7 +110,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 						if success || attempts == 0 {
 							break
 						}
-						err = scheduler.signOraclesByNebula(roundId, nebulaId, val.ChainType, oraclesBySenderConsul[k])
+						err = scheduler.signOraclesByNebula(roundId, nebulaId, nInfo.ChainType, oraclesBySenderConsul[k])
 						if err != nil {
 							zap.L().Error(err.Error())
 							attempts -= 1
@@ -118,7 +119,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 						time.Sleep(time.Second * 5)
 
 						if index == int64(consulInfo.ConsulIndex) {
-							err = scheduler.sendOraclesToNebula(nebulaId, val.ChainType, roundId)
+							err = scheduler.sendOraclesToNebula(nebulaId, nInfo.ChainType, roundId)
 							if err != nil {
 								attempts -= 1
 								continue
@@ -127,7 +128,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 						success = true
 					}
 
-				}()
+				}(nk, val)
 			}
 
 			consulsWG.Wait()
@@ -237,6 +238,7 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 func (scheduler *Scheduler) signOraclesByNebula(roundId int64, nebulaId account.NebulaId, chainType account.ChainType, sender account.OraclesPubKey) error {
 	_, err := scheduler.client.SignNewOraclesByConsul(scheduler.Ledger.PubKey, chainType, nebulaId, roundId)
 	if err != nil && err != gravity.ErrValueNotFound {
+		zap.L().Error(err.Error())
 		return err
 	} else if err == nil {
 		return nil
@@ -244,12 +246,14 @@ func (scheduler *Scheduler) signOraclesByNebula(roundId int64, nebulaId account.
 
 	bftOraclesByNebula, err := scheduler.client.BftOraclesByNebula(chainType, nebulaId)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 	var newOracles []*account.OraclesPubKey
 	for k, v := range bftOraclesByNebula {
 		oracleAddress, err := account.StringToOraclePubKey(k, v)
 		if err != nil {
+			zap.L().Error(err.Error())
 			return err
 		}
 		newOracles = append(newOracles, &oracleAddress)
@@ -257,14 +261,16 @@ func (scheduler *Scheduler) signOraclesByNebula(roundId int64, nebulaId account.
 	for i := len(newOracles); i < OracleCount; i++ {
 		newOracles = append(newOracles, nil)
 	}
-
+	zap.L().Sugar().Debug("[%s] Signing oracles", chainType)
 	sign, err := scheduler.Adaptors[chainType].SignOracles(nebulaId, newOracles, roundId, sender)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
-
+	zap.L().Sugar().Debug("[%s] Oracles signed - %s", chainType, sign)
 	tx, err := transactions.New(scheduler.Ledger.PubKey, transactions.SignNewOracles, scheduler.Ledger.PrivKey)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
@@ -281,6 +287,7 @@ func (scheduler *Scheduler) signOraclesByNebula(roundId int64, nebulaId account.
 	})
 	err = scheduler.client.SendTx(tx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
