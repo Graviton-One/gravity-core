@@ -510,7 +510,7 @@ func (s *SolanaAdapter) SignOracles(nebulaId account.NebulaId, oracles []*accoun
 	if err != nil {
 		return []byte{}, err
 	}
-
+	zap.L().Sugar().Debug("Custom params ", customParams)
 	nebulaContract, ok := customParams["nebula_contract"].(string)
 	if !ok {
 		return []byte{}, fmt.Errorf("Data account for nebula not declared")
