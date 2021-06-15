@@ -42,7 +42,7 @@ func TestClient_do(t *testing.T) {
 		t.FailNow()
 	}
 
-	rs, err := client.ABCIQuery(string("nebulaCustomParams"), b)
+	rs, err := client.ABCIQuery(string("nebula_info"), b)
 	if err != nil {
 		log.Print("KARAMBA 3")
 		log.Print(err)
