@@ -365,7 +365,11 @@ func (client *Client) NebulaOraclesIndex(chainId account.ChainType, nebulaId acc
 }
 
 func (client *Client) NebulaCustomParams(id account.NebulaId, chainType account.ChainType) (storage.NebulaCustomParams, error) {
-	rs, err := client.do(query.NebulaCustomParams, nil)
+	rq := query.ByNebulaRq{
+		ChainType:     chainType,
+		NebulaAddress: id.ToString(chainType),
+	}
+	rs, err := client.do(query.NebulaCustomParams, rq)
 	if err != nil && err != ErrValueNotFound {
 		return nil, err
 	}
