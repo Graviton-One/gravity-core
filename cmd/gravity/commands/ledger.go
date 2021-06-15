@@ -476,6 +476,12 @@ func startLedger(ctx *cli.Context) error {
 		}
 	}()
 
+	err = rpc.NewGlobalClient(tConfig.RPC.ListenAddress)
+	if err != nil {
+		zap.L().Error(err.Error())
+		return err
+	}
+
 	rpcConfig, err := rpc.NewConfig(rpcHost, tConfig.RPC.ListenAddress, ledgerValidator.PrivKey)
 	if err != nil {
 		zap.L().Error(err.Error())

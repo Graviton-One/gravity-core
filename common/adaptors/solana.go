@@ -16,6 +16,7 @@ import (
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
+	"github.com/Gravity-Tech/gravity-core/rpc"
 	"github.com/mr-tron/base58/base58"
 	"github.com/near/borsh-go"
 	"go.uber.org/zap"
@@ -358,7 +359,7 @@ func (s *SolanaAdapter) SetOraclesToNebula(nebulaId account.NebulaId, oracles []
 	}()
 
 	zap.L().Sugar().Debugf("SetOraclesToNebula [%s]", solana_common.PublicKeyFromBytes(nebulaId[:]).ToBase58())
-	customParams, err := s.ghClient.NebulaCustomParams(nebulaId, account.Solana)
+	customParams, err := rpc.GlobalClient.NebulaCustomParams(nebulaId, account.Solana)
 	if err != nil {
 		zap.L().Error(err.Error())
 		return "", err
@@ -506,7 +507,7 @@ func (s *SolanaAdapter) SignOracles(nebulaId account.NebulaId, oracles []*accoun
 	}()
 	s.updateOraclesRecentBlockHash(context.Background())
 
-	customParams, err := s.ghClient.NebulaCustomParams(nebulaId, account.Solana)
+	customParams, err := rpc.GlobalClient.NebulaCustomParams(nebulaId, account.Solana)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -671,7 +672,7 @@ func (s *SolanaAdapter) createUpdateOraclesMessage(ctx context.Context, nebulaId
 	sort.Sort(&newOracles)
 	solanaOracles := newOracles.ToPubKeys()
 	nid := solana_common.PublicKeyFromBytes(nebulaId[:])
-	customParams, err := s.ghClient.NebulaCustomParams(nebulaId, account.Solana)
+	customParams, err := rpc.GlobalClient.NebulaCustomParams(nebulaId, account.Solana)
 	if err != nil {
 		return types.Message{}, err
 	}
