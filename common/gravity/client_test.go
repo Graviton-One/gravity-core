@@ -50,7 +50,8 @@ func TestClient_do(t *testing.T) {
 	}
 
 	nebulaCustomParams := storage.NebulaCustomParams{}
-
+	log.Print("RESULT")
+	log.Print(rs.Response.Value)
 	err = json.Unmarshal(rs.Response.Value, &nebulaCustomParams)
 	if err != nil {
 		log.Print("KARAMBA 4")
