@@ -30,27 +30,35 @@ func TestClient_do(t *testing.T) {
 	if !ok {
 		b, err = json.Marshal(rq)
 		if err != nil {
+			log.Print("KARAMBA 1")
 			log.Print(err)
 			t.FailNow()
 		}
 	}
 	client, err := rpchttp.New("http://localhost:26657", "/websocket")
 	if err != nil {
+		log.Print("KARAMBA 2")
 		log.Print(err)
 		t.FailNow()
 	}
 
 	rs, err := client.ABCIQuery(string("nebulaCustomParams"), b)
+	if err != nil {
+		log.Print("KARAMBA 3")
+		log.Print(err)
+		t.FailNow()
+	}
 
 	nebulaCustomParams := storage.NebulaCustomParams{}
 
 	err = json.Unmarshal(rs.Response.Value, &nebulaCustomParams)
 	if err != nil {
+		log.Print("KARAMBA 4")
 		log.Print(err)
 		t.FailNow()
 	}
 
-	log.Print("KARAMBA")
+	log.Print("KARAMBA 5")
 	log.Print(nebulaCustomParams)
 	t.FailNow()
 }
