@@ -261,13 +261,14 @@ func (scheduler *Scheduler) signOraclesByNebula(roundId int64, nebulaId account.
 	for i := len(newOracles); i < OracleCount; i++ {
 		newOracles = append(newOracles, nil)
 	}
-	zap.L().Sugar().Debug("[%s] Signing oracles", chainType)
+	zap.L().Sugar().Debugf("[%s] Signing oracles", chainType)
+	zap.L().Sugar().Debug("NebulaId: ", nebulaId, "Oracles: ", newOracles, "Round: ", roundId, "Sender: ", sender)
 	sign, err := scheduler.Adaptors[chainType].SignOracles(nebulaId, newOracles, roundId, sender)
 	if err != nil {
 		zap.L().Error(err.Error())
 		return err
 	}
-	zap.L().Sugar().Debug("[%s] Oracles signed - %s", chainType, sign)
+	zap.L().Sugar().Debugf("[%s] Oracles signed - %s", chainType, sign)
 	tx, err := transactions.New(scheduler.Ledger.PubKey, transactions.SignNewOracles, scheduler.Ledger.PrivKey)
 	if err != nil {
 		zap.L().Error(err.Error())
