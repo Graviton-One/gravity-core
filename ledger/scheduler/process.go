@@ -111,12 +111,12 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 							break
 						}
 						err = scheduler.signOraclesByNebula(roundId, nebulaId, nInfo.ChainType, oraclesBySenderConsul[k])
+						time.Sleep(time.Second * 5)
 						if err != nil {
 							zap.L().Error(err.Error())
 							attempts -= 1
 							continue
 						}
-						time.Sleep(time.Second * 5)
 
 						if index == int64(consulInfo.ConsulIndex) {
 							err = scheduler.sendOraclesToNebula(nebulaId, nInfo.ChainType, roundId)
