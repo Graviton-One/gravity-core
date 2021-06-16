@@ -15,6 +15,7 @@ import (
 	"github.com/Gravity-Tech/gravity-core/abi/solana/instructions"
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
+	"github.com/Gravity-Tech/gravity-core/common/storage"
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 	"github.com/Gravity-Tech/gravity-core/rpc"
 	"github.com/mr-tron/base58/base58"
@@ -376,7 +377,7 @@ func (s *SolanaAdapter) SetOraclesToNebula(nebulaId account.NebulaId, oracles []
 		zap.L().Error(err.Error())
 		return "", err
 	}
-	msg, err := s.createUpdateOraclesMessage(ctx, nebulaId, oracles, round, n.Bft)
+	msg, err := s.createUpdateOraclesMessage(ctx, nebulaId, oracles, round, n.Bft, customParams)
 	if err != nil {
 		zap.L().Error(err.Error())
 		return "", err
@@ -530,7 +531,7 @@ func (s *SolanaAdapter) SignOracles(nebulaId account.NebulaId, oracles []*accoun
 			new_oracles = append(new_oracles, &new_or)
 		}
 	}
-	msg, err := s.createUpdateOraclesMessage(context.Background(), nebulaId, new_oracles, round, n.Bft)
+	msg, err := s.createUpdateOraclesMessage(context.Background(), nebulaId, new_oracles, round, n.Bft, customParams)
 	if err != nil {
 		return nil, err
 	}
@@ -642,7 +643,7 @@ func (s *SolanaAdapter) createUpdateConsulsMessage(ctx context.Context, consulsA
 	return message, nil
 }
 
-func (s *SolanaAdapter) createUpdateOraclesMessage(ctx context.Context, nebulaId account.NebulaId, oraclesAddresses []*account.OraclesPubKey, roundId int64, Bft uint8) (types.Message, error) {
+func (s *SolanaAdapter) createUpdateOraclesMessage(ctx context.Context, nebulaId account.NebulaId, oraclesAddresses []*account.OraclesPubKey, roundId int64, Bft uint8, customParams storage.NebulaCustomParams) (types.Message, error) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in createUpdateOraclesMessage", r)
@@ -672,10 +673,10 @@ func (s *SolanaAdapter) createUpdateOraclesMessage(ctx context.Context, nebulaId
 	sort.Sort(&newOracles)
 	solanaOracles := newOracles.ToPubKeys()
 	nid := solana_common.PublicKeyFromBytes(nebulaId[:])
-	customParams, err := rpc.GlobalClient.NebulaCustomParams(nebulaId, account.Solana)
-	if err != nil {
-		return types.Message{}, err
-	}
+	// customParams, err := rpc.GlobalClient.NebulaCustomParams(nebulaId, account.Solana)
+	// if err != nil {
+	// 	return types.Message{}, err
+	// }
 
 	multisigAccount_interface, ok := customParams["multisig_account"]
 	if !ok {
