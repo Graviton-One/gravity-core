@@ -52,7 +52,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 	isExist := true
 	var wg sync.WaitGroup
 	for k, v := range scheduler.Adaptors {
-
+		_ck, _cv := k, v
 		wg.Add(1)
 		go func(wg *sync.WaitGroup, k account.ChainType, v adaptors.IBlockchainAdaptor) {
 			defer wg.Done()
@@ -74,13 +74,13 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 			consulsWG.Add(1)
 			go func() {
 				defer consulsWG.Done()
-				err = scheduler.signConsulsResult(roundId, k, oraclesBySenderConsul[k])
+				err = scheduler.signConsulsResult(roundId, _ck, oraclesBySenderConsul[_ck])
 				if err != nil {
 					zap.L().Error(err.Error())
 				}
 				time.Sleep(time.Second * 5)
 				if index == int64(consulInfo.ConsulIndex) {
-					err = scheduler.sendConsulsToGravityContract(roundId, k)
+					err = scheduler.sendConsulsToGravityContract(roundId, _ck)
 					if err != nil {
 						zap.L().Error(err.Error())
 					}
@@ -133,7 +133,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 			}
 
 			consulsWG.Wait()
-		}(&wg, k, v)
+		}(&wg, _ck, _cv)
 	}
 	wg.Wait()
 
