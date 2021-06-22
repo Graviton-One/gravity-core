@@ -115,6 +115,9 @@ func (adaptor *AvaxAdaptor) Sign(msg []byte) ([]byte, error) {
 
 	return sig, nil
 }
+func (adaptor *AvaxAdaptor) SignHash(nebulaId account.NebulaId, intervalId uint64, pulseId uint64, hash []byte) ([]byte, error) {
+	return adaptor.Sign(hash)
+}
 func (adaptor *AvaxAdaptor) WaitTx(id string, ctx context.Context) error {
 	nCtx, _ := context.WithTimeout(ctx, waitTimeout*time.Second)
 	queryTicker := time.NewTicker(time.Second * 3)

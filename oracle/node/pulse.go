@@ -87,11 +87,11 @@ func (node *Node) reveal(tcHeight uint64, pulseId uint64, reveal *extractor.Data
 
 	return nil
 }
-func (node *Node) signResult(tcHeight uint64, pulseId uint64, ctx context.Context) (*extractor.Data, []byte, error) {
-	zap.L().Sugar().Debugf("signResults: height: %d, pulseId: %d", tcHeight, pulseId)
+func (node *Node) signResult(intervalId uint64, pulseId uint64, ctx context.Context) (*extractor.Data, []byte, error) {
+	zap.L().Sugar().Debugf("signResults: interval: %d, pulseId: %d", intervalId, pulseId)
 	var values []extractor.Data
 	zap.L().Sugar().Debugf("gravity Reveals: chaintype: %d, pulseId: %d NebulaId: %s", node.chainType, pulseId, node.nebulaId.ToString(node.chainType))
-	bytesValues, err := node.gravityClient.Reveals(node.chainType, node.nebulaId, int64(tcHeight), int64(pulseId))
+	bytesValues, err := node.gravityClient.Reveals(node.chainType, node.nebulaId, int64(intervalId), int64(pulseId))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -116,7 +116,7 @@ func (node *Node) signResult(tcHeight uint64, pulseId uint64, ctx context.Contex
 	}
 
 	hash := crypto.Keccak256(toBytes(result, node.extractor.ExtractorType))
-	sign, err := node.adaptor.Sign(hash)
+	sign, err := node.adaptor.SignHash(node.nebulaId, intervalId, pulseId, hash)
 	if err != nil {
 		zap.L().Error(err.Error())
 		return nil, nil, err

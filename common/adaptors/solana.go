@@ -56,16 +56,19 @@ func (spk SortablePubkey) ToPubKeys() []solana_common.PublicKey {
 }
 
 type SolanaAdapter struct {
-	account                types.Account
-	programID              solana_common.PublicKey
-	gravityContract        solana_common.PublicKey
-	nebulaContract         solana_common.PublicKey
-	multisigAccount        solana_common.PublicKey
-	client                 *solana.Client
-	ghClient               *gravity.Client
-	recentBlockHash        string
-	oraclesRecentBlockHash string
-	Bft                    uint8
+	account         types.Account
+	programID       solana_common.PublicKey
+	gravityContract solana_common.PublicKey
+	nebulaContract  solana_common.PublicKey
+	multisigAccount solana_common.PublicKey
+	client          *solana.Client
+	ghClient        *gravity.Client
+	//recentBlockHash        string
+	recentBlockHashes map[string]string
+	//oraclesRecentBlockHash string
+	//hashRecentBlockHash    string
+	Bft            uint8
+	oracleInterval uint64
 }
 type SolanaAdapterOption func(*SolanaAdapter) error
 
@@ -107,6 +110,8 @@ func NewSolanaAdaptor(privKey []byte, nodeUrl string, opts ...SolanaAdapterOptio
 		client:  solClient,
 		account: account,
 	}
+	adapter.recentBlockHashes = make(map[string]string)
+
 	for _, opt := range opts {
 		err := opt(&adapter)
 		if err != nil {
@@ -206,6 +211,46 @@ func (s *SolanaAdapter) WaitTx(id string, ctx context.Context) error {
 func (s *SolanaAdapter) Sign(msg []byte) ([]byte, error) {
 	return ed25519.Sign(s.account.PrivateKey, msg), nil
 }
+func (s *SolanaAdapter) SignHash(nebulaId account.NebulaId, intervalId uint64, pulseId uint64, hash []byte) ([]byte, error) {
+	var oracles []account.OraclesPubKey
+	s.oracleInterval = intervalId
+	oraclesMap, err := s.ghClient.BftOraclesByNebula(account.Solana, nebulaId)
+	if err != nil {
+		zap.L().Sugar().Debugf("BFT error: %s , \n %s", err, zap.Stack("trace").String)
+		return []byte{}, nil
+	}
+	myPubKey := s.PubKey()
+	if _, ok := oraclesMap[(&myPubKey).ToString(account.Solana)]; !ok {
+		zap.L().Debug("Oracle not found")
+		return []byte{}, fmt.Errorf("Oracles not found")
+	}
+
+	for k, v := range oraclesMap {
+		oracle, err := account.StringToOraclePubKey(k, v)
+		if err != nil {
+			return []byte{}, err
+		}
+		oracles = append(oracles, oracle)
+	}
+
+	if len(oracles) == 0 {
+		zap.L().Debug("Oracles map is empty")
+		return []byte{}, fmt.Errorf("Oracles map is empty")
+	}
+
+	sender := intervalId % uint64(len(oracles))
+	senderPubKey := solana_common.PublicKeyFromBytes(oracles[sender][1:33])
+	msg, err := s.createAddPulseMessage(nebulaId, oracles, pulseId, hash, senderPubKey)
+	if err != nil {
+		return []byte{}, err
+	}
+	serializedMessage, err := msg.Serialize()
+	if err != nil {
+		zap.L().Sugar().Error(err.Error())
+		return []byte{}, err
+	}
+	return s.Sign(serializedMessage)
+}
 
 func (s *SolanaAdapter) PubKey() account.OraclesPubKey {
 	var pubKey account.OraclesPubKey
@@ -233,7 +278,9 @@ func (s *SolanaAdapter) AddPulse(nebulaId account.NebulaId, pulseId uint64, vali
 			fmt.Println("Recovered in AddPulse", r)
 		}
 	}()
-	msg, err := s.createAddPulseMessage(nebulaId, validators, pulseId, hash)
+	senderIndex := s.oracleInterval % uint64(len(validators))
+	senderPubKey := solana_common.PublicKeyFromBytes(validators[senderIndex][1:33])
+	msg, err := s.createAddPulseMessage(nebulaId, validators, pulseId, hash, senderPubKey)
 	if err != nil {
 		return "", err
 	}
@@ -377,7 +424,7 @@ func (s *SolanaAdapter) SetOraclesToNebula(nebulaId account.NebulaId, oracles []
 		zap.L().Error(err.Error())
 		return "", err
 	}
-	msg, err := s.createUpdateOraclesMessage(ctx, nebulaId, oracles, round, n.Bft, customParams)
+	msg, err := s.createUpdateOraclesMessage(ctx, nebulaId, oracles, round, n.Bft, customParams, s.account.PublicKey)
 	if err != nil {
 		zap.L().Error(err.Error())
 		return "", err
@@ -479,7 +526,7 @@ func (s *SolanaAdapter) SignConsuls(consulsAddresses []*account.OraclesPubKey, r
 			fmt.Println("Recovered in SignConsuls", r)
 		}
 	}()
-	s.updateRecentBlockHash(context.Background())
+	s.updateRecentBlockHash(context.Background(), "update_consuls")
 	senderPubKey := solana_common.PublicKeyFromBytes(sender[1:33])
 	zap.L().Sugar().Debugf("Sender pubkey: %s", senderPubKey.ToBase58())
 	msg, err := s.createUpdateConsulsMessage(context.Background(), consulsAddresses, roundId, senderPubKey)
@@ -506,8 +553,8 @@ func (s *SolanaAdapter) SignOracles(nebulaId account.NebulaId, oracles []*accoun
 			fmt.Println("Recovered in SignOracles", r)
 		}
 	}()
-	s.updateOraclesRecentBlockHash(context.Background())
-
+	s.updateRecentBlockHash(context.Background(), "update_oracles")
+	senderPubKey := solana_common.PublicKeyFromBytes(sender[1:33])
 	customParams, err := rpc.GlobalClient.NebulaCustomParams(nebulaId, account.Solana)
 	if err != nil {
 		return []byte{}, err
@@ -531,7 +578,7 @@ func (s *SolanaAdapter) SignOracles(nebulaId account.NebulaId, oracles []*accoun
 			new_oracles = append(new_oracles, &new_or)
 		}
 	}
-	msg, err := s.createUpdateOraclesMessage(context.Background(), nebulaId, new_oracles, round, n.Bft, customParams)
+	msg, err := s.createUpdateOraclesMessage(context.Background(), nebulaId, new_oracles, round, n.Bft, customParams, senderPubKey)
 	if err != nil {
 		return nil, err
 	}
@@ -637,13 +684,13 @@ func (s *SolanaAdapter) createUpdateConsulsMessage(ctx context.Context, consulsA
 				sender, s.gravityContract, s.programID, s.multisigAccount, currentConsuls, uint8(len(currentConsuls)), uint64(roundId), solanaConsuls,
 			),
 		},
-		s.recentBlockHash,
+		s.recentBlockHashes["update_consuls"],
 	)
 
 	return message, nil
 }
 
-func (s *SolanaAdapter) createUpdateOraclesMessage(ctx context.Context, nebulaId account.NebulaId, oraclesAddresses []*account.OraclesPubKey, roundId int64, Bft uint8, customParams storage.NebulaCustomParams) (types.Message, error) {
+func (s *SolanaAdapter) createUpdateOraclesMessage(ctx context.Context, nebulaId account.NebulaId, oraclesAddresses []*account.OraclesPubKey, roundId int64, Bft uint8, customParams storage.NebulaCustomParams, sender solana_common.PublicKey) (types.Message, error) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in createUpdateOraclesMessage", r)
@@ -704,13 +751,13 @@ func (s *SolanaAdapter) createUpdateOraclesMessage(ctx context.Context, nebulaId
 				Bft,
 			),
 		},
-		s.oraclesRecentBlockHash,
+		s.recentBlockHashes["update_oracles"],
 	)
 
 	return message, nil
 }
 
-func (s *SolanaAdapter) createAddPulseMessage(nebulaId account.NebulaId, validators []account.OraclesPubKey, pulseId uint64, hash []byte) (types.Message, error) {
+func (s *SolanaAdapter) createAddPulseMessage(nebulaId account.NebulaId, validators []account.OraclesPubKey, pulseId uint64, hash []byte, sender solana_common.PublicKey) (types.Message, error) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in createAddPulseMessage", r)
@@ -725,13 +772,13 @@ func (s *SolanaAdapter) createAddPulseMessage(nebulaId account.NebulaId, validat
 	solanaValidators := vals.ToPubKeys()
 	nid := solana_common.PublicKeyFromBytes(nebulaId[:])
 	message := types.NewMessage(
-		s.account.PublicKey,
+		sender,
 		[]types.Instruction{
 			instructions.NebulaAddPulseInstruction(
-				s.account.PublicKey, s.programID, nid, solanaValidators, pulseId, hash,
+				sender, s.programID, nid, solanaValidators, pulseId, hash,
 			),
 		},
-		s.recentBlockHash,
+		s.recentBlockHashes["oracle"],
 	)
 	return message, nil
 }
@@ -750,29 +797,30 @@ func (s *SolanaAdapter) createSendValueToSubsMessage(nebulaId account.NebulaId, 
 				s.account.PublicKey, s.programID, nid, DataType, value, pulseId, id,
 			),
 		},
-		s.recentBlockHash,
+		s.recentBlockHashes["oracle"],
 	)
 	return message, nil
 }
 
-func (s *SolanaAdapter) updateRecentBlockHash(ctx context.Context) {
+func (s *SolanaAdapter) updateRecentBlockHash(ctx context.Context, key string) {
 	res, err := s.client.GetRecentBlockhash(ctx)
 	if err != nil {
 		zap.L().Sugar().Error(err.Error())
 		return
 	}
-	s.recentBlockHash = res.Blockhash
-	zap.L().Sugar().Debugf("New ReccentBlockHash: %s", s.recentBlockHash)
+	s.recentBlockHashes[key] = res.Blockhash
+	zap.L().Sugar().Debugf("New ReccentBlockHash: %s", s.recentBlockHashes[key])
 }
-func (s *SolanaAdapter) updateOraclesRecentBlockHash(ctx context.Context) {
-	res, err := s.client.GetRecentBlockhash(ctx)
-	if err != nil {
-		zap.L().Sugar().Error(err.Error())
-		return
-	}
-	s.oraclesRecentBlockHash = res.Blockhash
-	zap.L().Sugar().Debugf("New Oracles ReccentBlockHash: %s", s.recentBlockHash)
-}
+
+// func (s *SolanaAdapter) updateOraclesRecentBlockHash(ctx context.Context) {
+// 	res, err := s.client.GetRecentBlockhash(ctx)
+// 	if err != nil {
+// 		zap.L().Sugar().Error(err.Error())
+// 		return
+// 	}
+// 	s.oraclesRecentBlockHash = res.Blockhash
+// 	zap.L().Sugar().Debugf("New Oracles ReccentBlockHash: %s", s.recentBlockHash)
+// }
 
 func (s *SolanaAdapter) GetCurrentBFT(ctx context.Context) (byte, error) {
 	defer func() {

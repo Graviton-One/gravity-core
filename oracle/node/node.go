@@ -404,7 +404,7 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 			zap.L().Debug("Oracles map is empty")
 			return nil
 		}
-		if tcHeight%uint64(len(oracles)) != myRound {
+		if intervalId%uint64(len(oracles)) != myRound {
 			zap.L().Debug("Len oracles != myRound")
 			return nil
 		}
