@@ -10,6 +10,7 @@ import (
 )
 
 func main() {
+
 	app := &cli.App{
 		Name:  "Gravity CLI",
 		Usage: "the gravity command line interface",

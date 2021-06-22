@@ -8,6 +8,8 @@ import (
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
 	"github.com/Gravity-Tech/gravity-core/common/storage"
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"go.uber.org/zap"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
@@ -15,6 +17,10 @@ import (
 )
 
 func (scheduler *Scheduler) process(height int64) {
+	msg := message.NewMessage(watermill.NewUUID(), []byte("Hello, world!"))
+	if err := EventBus.Publish("example.topic", msg); err != nil {
+		panic(err)
+	}
 	err := scheduler.processByHeight(height)
 	if err != nil {
 		fmt.Printf("Error:%s\n", err)

@@ -4,9 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"sort"
 
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"go.uber.org/zap"
 
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
@@ -15,6 +19,8 @@ import (
 	calculator "github.com/Gravity-Tech/gravity-core/common/score"
 	"github.com/Gravity-Tech/gravity-core/common/storage"
 )
+
+var EventBus *gochannel.GoChannel
 
 const (
 	HardforkHeight = 95574
@@ -38,11 +44,39 @@ type ConsulInfo struct {
 	IsConsul    bool
 }
 
+func PublishMessage(topic string, rawmsg []byte) {
+	msg := message.NewMessage(watermill.NewUUID(), rawmsg)
+	if err := EventBus.Publish(topic, msg); err != nil {
+		zap.L().Error(err.Error())
+	}
+}
+
+func serve(messages <-chan *message.Message) {
+	for msg := range messages {
+		log.Printf("received message: %s, payload: %s", msg.UUID, string(msg.Payload))
+
+		// we need to Acknowledge that we received and processed the message,
+		// otherwise, it will be resent over and over again.
+		msg.Ack()
+	}
+}
 func New(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, ledger *account.LedgerValidator, localHost string, ctx context.Context) (*Scheduler, error) {
+	EventBus = gochannel.NewGoChannel(
+		gochannel.Config{},
+		watermill.NewStdLogger(false, false),
+	)
+
 	client, err := gravity.New(localHost)
 	if err != nil {
 		return nil, err
 	}
+
+	messages, err := EventBus.Subscribe(context.Background(), "example.topic")
+	if err != nil {
+		panic(err)
+	}
+	go serve(messages)
+
 	return &Scheduler{
 		Ledger:   ledger,
 		Adaptors: adaptors,
