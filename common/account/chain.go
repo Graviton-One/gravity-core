@@ -15,6 +15,7 @@ const (
 	Fantom
 	Avax
 	Solana
+	Polygon
 )
 
 var (
@@ -38,6 +39,8 @@ func ParseChainType(chainType string) (ChainType, error) {
 		return Waves, nil
 	case "solana":
 		return Solana, nil
+	case "polygon":
+		return Polygon, nil
 	default:
 		return 0, ErrParseChainType
 	}
@@ -58,6 +61,8 @@ func (ch ChainType) String() string {
 		return "avax"
 	case Solana:
 		return "solana"
+	case Polygon:
+		return "polygon"
 	default:
 		return "ethereum"
 	}

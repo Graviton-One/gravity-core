@@ -105,6 +105,11 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 		if err != nil {
 			return nil, err
 		}
+	case account.Polygon:
+		adaptor, err = adaptors.NewPolygonAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.PolygonAdapterWithGhClient(ghClient))
+		if err != nil {
+			return nil, err
+		}
 	case account.Ethereum:
 		adaptor, err = adaptors.NewEthereumAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.EthAdapterWithGhClient(ghClient))
 		if err != nil {
