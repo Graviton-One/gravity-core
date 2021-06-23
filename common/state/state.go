@@ -66,6 +66,7 @@ func SetState(tx *transactions.Transaction, store *storage.Storage, adaptors map
 		return err
 	}
 	zap.L().Sugar().Debugf("SetState func[%s]", tx.Func)
+	//scheduler.PublishMessage("example.topic", []byte(fmt.Sprintf("SetState func[%s]", tx.Func)))
 	switch tx.Func {
 	case transactions.Commit:
 		return commit(store, tx)
@@ -177,6 +178,8 @@ func addOracleInNebula(store *storage.Storage, tx *transactions.Transaction) err
 	} else if err != nil {
 		return err
 	}
+
+	zap.L().Sugar().Debug("ORACLES BY NEBULA", oraclesByNebula)
 
 	if _, ok := oraclesByNebula[pubKey.ToString(nebula.ChainType)]; ok {
 		return ErrAddOracleInNebula

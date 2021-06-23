@@ -6,6 +6,8 @@ import (
 	"github.com/tendermint/tendermint/crypto"
 )
 
+var GlobalClient *gravity.Client
+
 type Config struct {
 	Host    string
 	pubKey  account.ConsulPubKey
@@ -27,4 +29,13 @@ func NewConfig(host string, ghClientUrl string, privKey crypto.PrivKey) (*Config
 		pubKey:  ghPubKey,
 		client:  ghClient,
 	}, nil
+}
+
+func NewGlobalClient(ghClientUrl string) error {
+	ghClient, err := gravity.New(ghClientUrl)
+	if err != nil {
+		return err
+	}
+	GlobalClient = ghClient
+	return nil
 }

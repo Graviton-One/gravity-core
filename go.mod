@@ -3,11 +3,13 @@ module github.com/Gravity-Tech/gravity-core
 go 1.14
 
 require (
+	github.com/ThreeDotsLabs/watermill v1.1.1
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/dgraph-io/badger v1.6.1
 	github.com/ethereum/go-ethereum v1.9.23
 	github.com/gookit/validate v1.2.8
+	github.com/lithammer/shortuuid/v3 v3.0.7 // indirect
 	github.com/mr-tron/base58 v1.2.0
 	github.com/near/borsh-go v0.3.0
 	github.com/novifinancial/serde-reflection/serde-generate/runtime/golang v0.0.0-20210311194640-4c3416aad7d0

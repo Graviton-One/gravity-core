@@ -458,6 +458,9 @@ func (adaptor *HecoAdaptor) SignConsuls(consulsAddresses []*account.OraclesPubKe
 
 	return sign, nil
 }
+func (adaptor *HecoAdaptor) SignHash(nebulaId account.NebulaId, intervalId uint64, pulseId uint64, hash []byte) ([]byte, error) {
+	return adaptor.Sign(hash)
+}
 func (adaptor *HecoAdaptor) SignOracles(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, round int64, sender account.OraclesPubKey) ([]byte, error) {
 	nebula, err := ethereum.NewNebula(common.BytesToAddress(nebulaId.ToBytes(account.Ethereum)), adaptor.ethClient)
 	if err != nil {

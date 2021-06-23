@@ -36,7 +36,10 @@ type Pulse struct {
    pub initializer_pubkey: Pubkey,
 */
 type NebulaContract struct {
-	RoundsDict         map[uint64]byte
+	RoundsDict struct {
+		K []uint64
+		V []byte
+	}
 	SubscriptionsQueue [][16]uint8
 	Oracles            []common.PublicKey
 	Bft                uint8
@@ -44,21 +47,27 @@ type NebulaContract struct {
 	GravityContract    common.PublicKey
 	DataType           DataType
 	LastRound          uint64
+	SubscriptionIds    [][16]uint8
 	LastPulseId        uint64
-	SubscriptionsMap   map[[16]uint8]Subscription
-	PulsesMap          map[uint64]Pulse
-	IsPulseSent        map[uint64]byte
-	IsInitialized      byte
-	InitializerPubkey  common.PublicKey
+	SubscriptionsMap   struct {
+		K [][16]uint8
+		V []Subscription
+	}
+	PulsesMap struct {
+		K []uint64
+		V []Pulse
+	}
+	IsPulseSent struct {
+		K []uint64
+		V []byte
+	}
+	IsInitialized     byte
+	InitializerPubkey common.PublicKey
 }
 
 func NewNebulaContract() NebulaContract {
 	c := NebulaContract{}
-	c.RoundsDict = make(map[uint64]byte)
 	c.SubscriptionsQueue = make([][16]uint8, 0)
 	c.Oracles = make([]common.PublicKey, 0)
-	c.SubscriptionsMap = make(map[[16]uint8]Subscription)
-	c.PulsesMap = make(map[uint64]Pulse)
-	c.IsPulseSent = make(map[uint64]byte)
 	return c
 }

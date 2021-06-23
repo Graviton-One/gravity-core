@@ -154,6 +154,9 @@ func (adaptor *WavesAdaptor) Sign(msg []byte) ([]byte, error) {
 	}
 	return sig.Bytes(), nil
 }
+func (adaptor *WavesAdaptor) SignHash(nebulaId account.NebulaId, intervalId uint64, pulseId uint64, hash []byte) ([]byte, error) {
+	return adaptor.Sign(hash)
+}
 func (adaptor *WavesAdaptor) PubKey() account.OraclesPubKey {
 	pubKey := crypto.GeneratePublicKey(adaptor.secret)
 	oraclePubKey := account.BytesToOraclePubKey(pubKey[:], account.Waves)
@@ -372,6 +375,11 @@ func (adaptor *WavesAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId 
 }
 
 func (adaptor *WavesAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracles []*account.OraclesPubKey, signs map[account.OraclesPubKey][]byte, round int64, ctx context.Context) (string, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			zap.L().Sugar().Error("Recovered in SignOracles", r)
+		}
+	}()
 	nebulaAddress := base58.Encode(nebulaId.ToBytes(account.Waves))
 	lastRoundState, _, err := adaptor.helper.GetStateByAddressAndKey(nebulaAddress, "last_round_"+fmt.Sprintf("%d", round), ctx)
 	if err != nil {
