@@ -270,7 +270,11 @@ func (adaptor *PolygonAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseI
 			return err
 		}
 
-		transactOpt := bind.NewKeyedTransactor(adaptor.privKey)
+		transactOpt, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, big.NewInt(137))
+		if err != nil {
+			zap.L().Error(err.Error())
+			return err
+		}
 		transactOpt.GasLimit = 150000 * 5
 
 		zap.L().Sugar().Debug("transactOpt is nil", transactOpt == nil)
