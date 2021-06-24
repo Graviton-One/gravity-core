@@ -103,8 +103,8 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 			for nk, val := range nebulae {
 				nebulaWG.Add(1)
 				_nk, _val := nk, val
-				go func(nKey string, nInfo storage.NebulaInfo) {
-					defer nebulaWG.Done()
+				go func(nwg *sync.WaitGroup, nKey string, nInfo storage.NebulaInfo) {
+					defer nwg.Done()
 					nebulaId, err := account.StringToNebulaId(nKey, nInfo.ChainType)
 					if err != nil {
 						fmt.Printf("Error:%s\n", err.Error())
@@ -135,7 +135,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 						success = true
 					}
 
-				}(_nk, _val)
+				}(&nebulaWG, _nk, _val)
 			}
 
 			consulsWG.Wait()
