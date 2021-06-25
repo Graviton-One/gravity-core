@@ -185,10 +185,6 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 	if err != nil && err != gravity.ErrValueNotFound {
 		return err
 	}
-	// } else if err == nil {
-	// 	zap.L().
-	// 	return nil
-	// }
 
 	consuls, err := scheduler.client.ConsulsCandidate()
 	if err != nil {
@@ -213,7 +209,6 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 		oracle := oraclesByConsul[chainType]
 		consulsAddresses = append(consulsAddresses, &oracle)
 	}
-	//sender := scheduler.Adaptors[chainType].PubKey()
 	sign, err := scheduler.Adaptors[chainType].SignConsuls(consulsAddresses, roundId, sender)
 	if err != nil {
 		return err
