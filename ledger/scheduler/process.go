@@ -386,7 +386,7 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 
 	id, err := scheduler.Adaptors[chainType].SendConsulsToGravityContract(newConsulsAddresses, signs, round, scheduler.ctx)
 	if err != nil {
-		zap.L().Error(err.Error())
+		zap.L().Sugar().Errorf("Chain [%s] err: %s", chainType, err.Error())
 		return err
 	}
 	if id != "" {
@@ -484,7 +484,7 @@ func (scheduler *Scheduler) setConsulTargetChainPubKey(oracle account.OraclesPub
 		zap.L().Error(err.Error())
 		return err
 	}
-	zap.L().Sugar().Debug("Oracles", oracles)
+	//zap.L().Sugar().Debug("Oracles", oracles)
 
 	if _, ok := oracles[chainType]; ok {
 		zap.L().Sugar().Debugf("pubkey for chain [%s] exists", chainType)
