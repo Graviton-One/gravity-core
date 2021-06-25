@@ -1534,9 +1534,12 @@ func (_Nebula *NebulaCaller) OracleQueue(opts *bind.CallOpts) (struct {
 		First [32]byte
 		Last  [32]byte
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
-	outstruct.First = out[0].([32]byte)
-	outstruct.Last = out[1].([32]byte)
+	outstruct.First = *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+	outstruct.Last = *abi.ConvertType(out[1], new([32]byte)).(*[32]byte)
 
 	return *outstruct, err
 
@@ -1607,9 +1610,12 @@ func (_Nebula *NebulaCaller) PulseQueue(opts *bind.CallOpts) (struct {
 		First [32]byte
 		Last  [32]byte
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
-	outstruct.First = out[0].([32]byte)
-	outstruct.Last = out[1].([32]byte)
+	outstruct.First = *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+	outstruct.Last = *abi.ConvertType(out[1], new([32]byte)).(*[32]byte)
 
 	return *outstruct, err
 
@@ -1649,9 +1655,12 @@ func (_Nebula *NebulaCaller) Pulses(opts *bind.CallOpts, arg0 *big.Int) (struct 
 		DataHash [32]byte
 		Height   *big.Int
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
-	outstruct.DataHash = out[0].([32]byte)
-	outstruct.Height = out[1].(*big.Int)
+	outstruct.DataHash = *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+	outstruct.Height = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
 
@@ -1757,11 +1766,14 @@ func (_Nebula *NebulaCaller) Subscriptions(opts *bind.CallOpts, arg0 [32]byte) (
 		MinConfirmations uint8
 		Reward           *big.Int
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
-	outstruct.Owner = out[0].(common.Address)
-	outstruct.ContractAddress = out[1].(common.Address)
-	outstruct.MinConfirmations = out[2].(uint8)
-	outstruct.Reward = out[3].(*big.Int)
+	outstruct.Owner = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.ContractAddress = *abi.ConvertType(out[1], new(common.Address)).(*common.Address)
+	outstruct.MinConfirmations = *abi.ConvertType(out[2], new(uint8)).(*uint8)
+	outstruct.Reward = *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
 
@@ -1805,9 +1817,12 @@ func (_Nebula *NebulaCaller) SubscriptionsQueue(opts *bind.CallOpts) (struct {
 		First [32]byte
 		Last  [32]byte
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
-	outstruct.First = out[0].([32]byte)
-	outstruct.Last = out[1].([32]byte)
+	outstruct.First = *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+	outstruct.Last = *abi.ConvertType(out[1], new([32]byte)).(*[32]byte)
 
 	return *outstruct, err
 
