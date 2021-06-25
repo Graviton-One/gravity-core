@@ -300,6 +300,7 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 	}
 	exist, err := scheduler.Adaptors[chainType].RoundExist(round, scheduler.ctx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
@@ -309,6 +310,7 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 
 	lastRound, err := scheduler.Adaptors[chainType].LastRound(scheduler.ctx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
@@ -318,11 +320,13 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 
 	consuls, err := scheduler.client.Consuls()
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
 	newConsuls, err := scheduler.client.ConsulsCandidate()
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
@@ -382,6 +386,7 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 
 	id, err := scheduler.Adaptors[chainType].SendConsulsToGravityContract(newConsulsAddresses, signs, round, scheduler.ctx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 	if id != "" {
