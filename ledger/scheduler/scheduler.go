@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
 	"sort"
 
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
 	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"go.uber.org/zap"
 
@@ -21,6 +19,8 @@ import (
 )
 
 var EventBus *gochannel.GoChannel
+var GlobalScheduler *Scheduler
+var SchedulerEventServer *EventServer
 
 const (
 	HardforkHeight = 95574
@@ -44,22 +44,6 @@ type ConsulInfo struct {
 	IsConsul    bool
 }
 
-func PublishMessage(topic string, rawmsg []byte) {
-	msg := message.NewMessage(watermill.NewUUID(), rawmsg)
-	if err := EventBus.Publish(topic, msg); err != nil {
-		zap.L().Error(err.Error())
-	}
-}
-
-func serve(messages <-chan *message.Message) {
-	for msg := range messages {
-		log.Printf("received message: %s, payload: %s", msg.UUID, string(msg.Payload))
-
-		// we need to Acknowledge that we received and processed the message,
-		// otherwise, it will be resent over and over again.
-		msg.Ack()
-	}
-}
 func New(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, ledger *account.LedgerValidator, localHost string, ctx context.Context) (*Scheduler, error) {
 	EventBus = gochannel.NewGoChannel(
 		gochannel.Config{},
@@ -71,18 +55,19 @@ func New(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, ledger *acc
 		return nil, err
 	}
 
-	messages, err := EventBus.Subscribe(context.Background(), "example.topic")
+	messages, err := EventBus.Subscribe(context.Background(), "ledger.events")
 	if err != nil {
 		panic(err)
 	}
-	go serve(messages)
-
-	return &Scheduler{
+	SchedulerEventServer = NewEventServer()
+	go SchedulerEventServer.Serve(messages)
+	GlobalScheduler = &Scheduler{
 		Ledger:   ledger,
 		Adaptors: adaptors,
 		ctx:      ctx,
 		client:   client,
-	}, nil
+	}
+	return GlobalScheduler, nil
 }
 
 func CalculateRound(height int64) int64 {
@@ -110,7 +95,13 @@ func IsRoundStart(height int64) bool {
 
 func (scheduler *Scheduler) HandleBlock(height int64, store *storage.Storage, isSync bool, isConsul bool) error {
 	if !isSync && isConsul {
-		go scheduler.process(height)
+		PublishMessage("ledger.events", SchedulerEvent{
+			Name: "handle_block",
+			Params: map[string]interface{}{
+				"height": height,
+			},
+		})
+		//go scheduler.process(height)
 	}
 
 	roundId := CalculateRound(height)

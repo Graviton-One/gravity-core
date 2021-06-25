@@ -10,6 +10,7 @@ require (
 	github.com/ethereum/go-ethereum v1.10.4
 	github.com/gookit/validate v1.2.8
 	github.com/lithammer/shortuuid/v3 v3.0.7 // indirect
+	github.com/mitchellh/mapstructure v1.4.1
 	github.com/mr-tron/base58 v1.2.0
 	github.com/near/borsh-go v0.3.0
 	github.com/novifinancial/serde-reflection/serde-generate/runtime/golang v0.0.0-20210311194640-4c3416aad7d0

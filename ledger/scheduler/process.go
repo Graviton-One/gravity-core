@@ -8,19 +8,14 @@ import (
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
 	"github.com/Gravity-Tech/gravity-core/common/storage"
-	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill/message"
 	"go.uber.org/zap"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
 )
 
-func (scheduler *Scheduler) process(height int64) {
-	msg := message.NewMessage(watermill.NewUUID(), []byte("Hello, world!"))
-	if err := EventBus.Publish("example.topic", msg); err != nil {
-		panic(err)
-	}
+func (scheduler *Scheduler) Process(height int64) {
+	zap.L().Debug("Called process func")
 	err := scheduler.processByHeight(height)
 	if err != nil {
 		fmt.Printf("Error:%s\n", err)
@@ -101,6 +96,9 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 			var nebulaWG sync.WaitGroup
 
 			for nk, val := range nebulae {
+				if val.ChainType != k {
+					continue
+				}
 				nebulaWG.Add(1)
 				_nk, _val := nk, val
 				go func(nwg *sync.WaitGroup, nKey string, nInfo storage.NebulaInfo) {
