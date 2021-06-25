@@ -7,7 +7,7 @@ require (
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/dgraph-io/badger v1.6.1
-	github.com/ethereum/go-ethereum v1.10.4
+	github.com/ethereum/go-ethereum v1.9.25
 	github.com/gookit/validate v1.2.8
 	github.com/lithammer/shortuuid/v3 v3.0.7 // indirect
 	github.com/mitchellh/mapstructure v1.4.1
