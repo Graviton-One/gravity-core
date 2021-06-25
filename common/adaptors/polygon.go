@@ -276,7 +276,7 @@ func (adaptor *PolygonAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseI
 			return err
 		}
 		transactOpt.GasLimit = 150000 * 5
-
+		transactOpt.Context = ctx
 		zap.L().Sugar().Debug("transactOpt is nil", transactOpt == nil)
 		switch SubType(t) {
 		case Int64:

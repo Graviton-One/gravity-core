@@ -418,8 +418,9 @@ func (adaptor *BinanceAdaptor) SendConsulsToGravityContract(newConsulsAddresses 
 		s[index] = bytes32S
 		v[index] = sign[64:][0] + 27
 	}
-
-	tx, err := adaptor.gravityContract.UpdateConsuls(bind.NewKeyedTransactor(adaptor.privKey), consulsAddress, v[:], r[:], s[:], big.NewInt(round))
+	opts := bind.NewKeyedTransactor(adaptor.privKey)
+	opts.Context = ctx
+	tx, err := adaptor.gravityContract.UpdateConsuls(opts, consulsAddress, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
 		return "", err
 	}

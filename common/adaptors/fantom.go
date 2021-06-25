@@ -431,6 +431,7 @@ func (adaptor *FantomAdaptor) SendConsulsToGravityContract(newConsulsAddresses [
 	}
 	transactor := bind.NewKeyedTransactor(adaptor.privKey)
 	transactor.GasLimit = 150000 * 5
+	transactor.Context = ctx
 	tx, err := adaptor.gravityContract.UpdateConsuls(transactor, consulsAddress, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
 		return "", err
