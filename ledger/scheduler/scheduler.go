@@ -55,7 +55,7 @@ func New(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, ledger *acc
 		return nil, err
 	}
 
-	messages, err := EventBus.Subscribe(context.Background(), "ledger.events")
+	messages, err := EventBus.Subscribe(ctx, "ledger.events")
 	if err != nil {
 		panic(err)
 	}

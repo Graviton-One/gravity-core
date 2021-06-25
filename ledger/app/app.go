@@ -105,7 +105,7 @@ func (app *GHApplication) CheckTx(req abcitypes.RequestCheckTx) abcitypes.Respon
 
 	store := storage.New()
 	store.NewTransaction(app.db)
-	zap.L().Sugar().Debugf("CheckTx: %s", "try to set state")
+	//zap.L().Sugar().Debugf("CheckTx: %s", "try to set state")
 	err = state.SetState(tx, store, app.adaptors, app.IsSync, app.ctx)
 	if err != nil {
 		zap.L().Error(err.Error())

@@ -295,6 +295,9 @@ func (scheduler *Scheduler) signOraclesByNebula(roundId int64, nebulaId account.
 	return nil
 }
 func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType account.ChainType) error {
+	if scheduler.ctx == nil {
+		zap.L().Debug("Context is nil")
+	}
 	exist, err := scheduler.Adaptors[chainType].RoundExist(round, scheduler.ctx)
 	if err != nil {
 		return err
