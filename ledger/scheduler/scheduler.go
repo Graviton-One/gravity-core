@@ -19,7 +19,7 @@ import (
 )
 
 var EventBus *gochannel.GoChannel
-var GlobalScheduler *Scheduler
+var GlobalScheduler Scheduler
 var SchedulerEventServer *EventServer
 
 const (
@@ -61,13 +61,13 @@ func New(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, ledger *acc
 	}
 	SchedulerEventServer = NewEventServer()
 	go SchedulerEventServer.Serve(messages)
-	GlobalScheduler = &Scheduler{
+	GlobalScheduler = Scheduler{
 		Ledger:   ledger,
 		Adaptors: adaptors,
 		ctx:      ctx,
 		client:   client,
 	}
-	return GlobalScheduler, nil
+	return &GlobalScheduler, nil
 }
 
 func CalculateRound(height int64) int64 {
