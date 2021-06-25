@@ -232,7 +232,7 @@ func (adaptor *FantomAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64
 
 	opt := bind.NewKeyedTransactor(adaptor.privKey)
 	opt.GasLimit = 150000 * 5
-
+	opt.Context = ctx
 	opt.GasPrice, err = adaptor.ethClient.SuggestGasPrice(ctx)
 	if err != nil {
 		return "", err
@@ -267,7 +267,7 @@ func (adaptor *FantomAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId
 
 		transactOpt := bind.NewKeyedTransactor(adaptor.privKey)
 		transactOpt.GasLimit = 150000 * 5
-
+		transactOpt.Context = ctx
 		zap.L().Sugar().Debug("transactOpt is nil", transactOpt == nil)
 		switch SubType(t) {
 		case Int64:
@@ -373,6 +373,7 @@ func (adaptor *FantomAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, orac
 	}
 	transactor := bind.NewKeyedTransactor(adaptor.privKey)
 	transactor.GasLimit = 150000 * 5
+	transactor.Context = ctx
 	tx, err := nebula.UpdateOracles(transactor, oraclesAddresses, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
 		return "", err

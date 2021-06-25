@@ -237,7 +237,7 @@ func (adaptor *PolygonAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint6
 
 	opt := bind.NewKeyedTransactor(adaptor.privKey)
 	opt.GasLimit = 150000 * 5
-
+	opt.Context = ctx
 	opt.GasPrice, err = adaptor.ethClient.SuggestGasPrice(ctx)
 	if err != nil {
 		return "", err
@@ -382,6 +382,7 @@ func (adaptor *PolygonAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, ora
 	}
 	transactor := bind.NewKeyedTransactor(adaptor.privKey)
 	transactor.GasLimit = 150000 * 5
+	transactor.Context = ctx
 	tx, err := nebula.UpdateOracles(transactor, oraclesAddresses, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
 		return "", err
@@ -440,6 +441,7 @@ func (adaptor *PolygonAdaptor) SendConsulsToGravityContract(newConsulsAddresses 
 	}
 	transactor := bind.NewKeyedTransactor(adaptor.privKey)
 	transactor.GasLimit = 150000 * 5
+	transactor.Context = ctx
 	tx, err := adaptor.gravityContract.UpdateConsuls(transactor, consulsAddress, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
 		return "", err

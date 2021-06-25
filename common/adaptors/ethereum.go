@@ -301,7 +301,7 @@ func (adaptor *EthereumAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint
 	copy(resultBytes32[:], hash)
 
 	opt := bind.NewKeyedTransactor(adaptor.privKey)
-
+	opt.Context = ctx
 	opt.GasPrice, err = adaptor.ethClient.SuggestGasPrice(ctx)
 	if err != nil {
 		return "", err
@@ -335,6 +335,7 @@ func (adaptor *EthereumAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulse
 		}
 
 		transactOpt := bind.NewKeyedTransactor(adaptor.privKey)
+		transactOpt.Context = ctx
 		zap.L().Sugar().Debug("transactOpt is nil", transactOpt == nil)
 
 		switch SubType(t) {
@@ -435,8 +436,9 @@ func (adaptor *EthereumAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, or
 		s[index] = bytes32S
 		v[index] = sign[64:][0] + 27
 	}
-
-	tx, err := nebula.UpdateOracles(bind.NewKeyedTransactor(adaptor.privKey), oraclesAddresses, v[:], r[:], s[:], big.NewInt(round))
+	opts := bind.NewKeyedTransactor(adaptor.privKey)
+	opts.Context = ctx
+	tx, err := nebula.UpdateOracles(opts, oraclesAddresses, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
 		return "", err
 	}
