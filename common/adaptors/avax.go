@@ -5,11 +5,9 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
-	"time"
 
 	"github.com/Gravity-Tech/gravity-core/abi"
 	"github.com/Gravity-Tech/gravity-core/abi/ethereum"
@@ -119,30 +117,16 @@ func (adaptor *AvaxAdaptor) SignHash(nebulaId account.NebulaId, intervalId uint6
 	return adaptor.Sign(hash)
 }
 func (adaptor *AvaxAdaptor) WaitTx(id string, ctx context.Context) error {
-	nCtx, _ := context.WithTimeout(ctx, waitTimeout*time.Second)
-	queryTicker := time.NewTicker(time.Second * 3)
-	defer queryTicker.Stop()
-
-	hash, err := hexutil.Decode(id)
+	tx, _, err := adaptor.ethClient.TransactionByHash(ctx, common.HexToHash(id))
+	if err != nil {
+		return err
+	}
+	_, err = bind.WaitMined(ctx, adaptor.ethClient, tx)
 	if err != nil {
 		return err
 	}
 
-	var txHash common.Hash
-	copy(txHash[:], hash)
-
-	for {
-		select {
-		case <-nCtx.Done():
-			return errors.New("tx not found")
-		case <-queryTicker.C:
-		}
-		receipt, _ := adaptor.ethClient.TransactionReceipt(nCtx, txHash)
-		if receipt != nil {
-			return nil
-		}
-	}
-
+	return nil
 }
 func (adaptor *AvaxAdaptor) PubKey() account.OraclesPubKey {
 	pubKey := crypto.CompressPubkey(&adaptor.privKey.PublicKey)

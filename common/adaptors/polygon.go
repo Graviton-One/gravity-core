@@ -5,11 +5,9 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
-	"time"
 
 	"github.com/Gravity-Tech/gravity-core/abi"
 	"github.com/Gravity-Tech/gravity-core/abi/ethereum"
@@ -121,30 +119,16 @@ func (adaptor *PolygonAdaptor) SignHash(nebulaId account.NebulaId, intervalId ui
 }
 
 func (adaptor *PolygonAdaptor) WaitTx(id string, ctx context.Context) error {
-	nCtx, _ := context.WithTimeout(ctx, waitTimeout*time.Second)
-	queryTicker := time.NewTicker(time.Second * 3)
-	defer queryTicker.Stop()
-
-	hash, err := hexutil.Decode(id)
+	tx, _, err := adaptor.ethClient.TransactionByHash(ctx, common.HexToHash(id))
+	if err != nil {
+		return err
+	}
+	_, err = bind.WaitMined(ctx, adaptor.ethClient, tx)
 	if err != nil {
 		return err
 	}
 
-	var txHash common.Hash
-	copy(txHash[:], hash)
-
-	for {
-		select {
-		case <-nCtx.Done():
-			return errors.New("tx not found")
-		case <-queryTicker.C:
-		}
-		receipt, _ := adaptor.ethClient.TransactionReceipt(nCtx, txHash)
-		if receipt != nil {
-			return nil
-		}
-	}
-
+	return nil
 }
 func (adaptor *PolygonAdaptor) PubKey() account.OraclesPubKey {
 	pubKey := crypto.CompressPubkey(&adaptor.privKey.PublicKey)
@@ -235,7 +219,10 @@ func (adaptor *PolygonAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint6
 	var resultBytes32 [32]byte
 	copy(resultBytes32[:], hash)
 
-	opt := bind.NewKeyedTransactor(adaptor.privKey)
+	opt, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, big.NewInt(int64(137)))
+	if err != nil {
+		return "", err
+	}
 	opt.GasLimit = 150000 * 5
 
 	opt.GasPrice, err = adaptor.ethClient.SuggestGasPrice(ctx)
@@ -380,7 +367,10 @@ func (adaptor *PolygonAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, ora
 		s[index] = bytes32S
 		v[index] = sign[64:][0] + 27
 	}
-	transactor := bind.NewKeyedTransactor(adaptor.privKey)
+	transactor, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, big.NewInt(int64(137)))
+	if err != nil {
+		return "", err
+	}
 	transactor.GasLimit = 150000 * 5
 	tx, err := nebula.UpdateOracles(transactor, oraclesAddresses, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
@@ -438,7 +428,10 @@ func (adaptor *PolygonAdaptor) SendConsulsToGravityContract(newConsulsAddresses 
 		s[index] = bytes32S
 		v[index] = sign[64:][0] + 27
 	}
-	transactor := bind.NewKeyedTransactor(adaptor.privKey)
+	transactor, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, big.NewInt(int64(137)))
+	if err != nil {
+		return "", err
+	}
 	transactor.GasLimit = 150000 * 5
 	tx, err := adaptor.gravityContract.UpdateConsuls(transactor, consulsAddress, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
