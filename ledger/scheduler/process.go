@@ -7,7 +7,6 @@ import (
 
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
-	"github.com/Gravity-Tech/gravity-core/common/storage"
 	"go.uber.org/zap"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
@@ -93,49 +92,60 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 				zap.L().Error(err.Error())
 				return
 			}
-			var nebulaWG sync.WaitGroup
+			//var nebulaWG sync.WaitGroup
 
 			for nk, val := range nebulae {
 				if val.ChainType != k {
 					continue
 				}
-				nebulaWG.Add(1)
-				_nk, _val := nk, val
-				go func(nwg *sync.WaitGroup, nKey string, nInfo storage.NebulaInfo) {
-					defer nwg.Done()
-					nebulaId, err := account.StringToNebulaId(nKey, nInfo.ChainType)
-					if err != nil {
-						fmt.Printf("Error:%s\n", err.Error())
-						return
-					}
 
-					success := false
-					attempts := 4
-					for {
-						if success || attempts == 0 {
-							break
-						}
-						err = scheduler.signOraclesByNebula(roundId, nebulaId, nInfo.ChainType, oraclesBySenderConsul[k])
-						time.Sleep(time.Second * 5)
-						if err != nil {
-							zap.L().Error(err.Error())
-							attempts -= 1
-							continue
-						}
+				payload := map[string]interface{}{
+					"nebula_key": nk,
+					"round_id":   roundId,
+					"sender":     oraclesBySenderConsul[k],
+					"is_sender":  index == int64(consulInfo.ConsulIndex),
+				}
+				PublishMessage("ledger.events", SchedulerEvent{
+					Name:   "update_oracles",
+					Params: payload,
+				})
 
-						if index == int64(consulInfo.ConsulIndex) {
-							err = scheduler.sendOraclesToNebula(nebulaId, nInfo.ChainType, roundId)
-							if err != nil {
-								attempts -= 1
-								continue
-							}
-						}
-						success = true
-					}
+				// nebulaWG.Add(1)
+				// _nk, _val := nk, val
+				// go func(nwg *sync.WaitGroup, nKey string, nInfo storage.NebulaInfo) {
+				// 	defer nwg.Done()
+				// 	nebulaId, err := account.StringToNebulaId(nKey, nInfo.ChainType)
+				// 	if err != nil {
+				// 		fmt.Printf("Error:%s\n", err.Error())
+				// 		return
+				// 	}
 
-				}(&nebulaWG, _nk, _val)
+				// 	success := false
+				// 	attempts := 4
+				// 	for {
+				// 		if success || attempts == 0 {
+				// 			break
+				// 		}
+				// 		err = scheduler.signOraclesByNebula(roundId, nebulaId, nInfo.ChainType, oraclesBySenderConsul[k])
+				// 		time.Sleep(time.Second * 5)
+				// 		if err != nil {
+				// 			zap.L().Error(err.Error())
+				// 			attempts -= 1
+				// 			continue
+				// 		}
+
+				// 		if index == int64(consulInfo.ConsulIndex) {
+				// 			err = scheduler.sendOraclesToNebula(nebulaId, nInfo.ChainType, roundId)
+				// 			if err != nil {
+				// 				attempts -= 1
+				// 				continue
+				// 			}
+				// 		}
+				// 		success = true
+				// 	}
+
+				// }(&nebulaWG, _nk, _val)
 			}
-
 			consulsWG.Wait()
 		}(&wg, _ck, _cv)
 	}

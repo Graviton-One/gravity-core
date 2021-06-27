@@ -61,6 +61,7 @@ func ListenRpcServer(config *Config) {
 	http.HandleFunc("/listNebulas", func(rp http.ResponseWriter, rq *http.Request) {
 		listNebulasHandler(rp, rq)
 	})
+
 	err := http.ListenAndServe(cfg.Host, nil)
 	if err != nil {
 		fmt.Printf("Error Private RPC: %s", err.Error())
