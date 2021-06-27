@@ -104,6 +104,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 					"round_id":   roundId,
 					"sender":     oraclesBySenderConsul[k],
 					"is_sender":  index == int64(consulInfo.ConsulIndex),
+					"chain_type": val.ChainType,
 				}
 				PublishMessage("ledger.events", SchedulerEvent{
 					Name:   "update_oracles",
