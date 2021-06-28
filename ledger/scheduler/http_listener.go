@@ -16,9 +16,9 @@ func startHttpListener() {
 
 func HttpUpdateOraclesHandler(c echo.Context) error {
 	payload := struct {
-		NebulaKey string            `mapstructure:"nebula_key"`
-		ChainType account.ChainType `mapstructure:"chain_type"`
-		RoundId   int64             `mapstructure:"round_id"`
+		NebulaKey string            `json:"nebula_key"`
+		ChainType account.ChainType `json:"chain_type"`
+		RoundId   int64             `json:"round_id"`
 	}{}
 	if err := c.Bind(&payload); err != nil {
 		zap.L().Error(err.Error())
@@ -28,6 +28,7 @@ func HttpUpdateOraclesHandler(c echo.Context) error {
 	adaptor, ok := GlobalScheduler.Adaptors[payload.ChainType]
 	if !ok {
 		zap.L().Debug("adaptor not exists")
+		return c.String(http.StatusNotFound, "adaptor not found")
 	}
 
 	eventPayload := map[string]interface{}{
