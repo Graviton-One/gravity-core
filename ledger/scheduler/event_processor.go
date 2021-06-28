@@ -150,7 +150,7 @@ func startHttpListener() {
 	logger := watermill.NewStdLogger(true, true)
 	//channelPublisher, err := EventBus.Subscribe(EventBus, "ledger.events")
 	httpSubscriber, err := http.NewSubscriber(
-		"http://localhost:3501",
+		"127.0.0.1:3501",
 		http.SubscriberConfig{
 			UnmarshalMessageFunc: func(topic string, request *stdHttp.Request) (*message.Message, error) {
 				b, err := ioutil.ReadAll(request.Body)
