@@ -753,7 +753,7 @@ func (s *SolanaAdapter) createUpdateOraclesMessage(ctx context.Context, nebulaId
 		},
 		s.recentBlockHashes["update_oracles"],
 	)
-
+	zap.L().Sugar().Debug("Message created: ", message)
 	return message, nil
 }
 
