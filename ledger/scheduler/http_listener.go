@@ -24,7 +24,7 @@ func HttpUpdateOraclesHandler(c echo.Context) error {
 		zap.L().Error(err.Error())
 		return err
 	}
-
+	zap.L().Sugar().Debug("payload ", payload)
 	adaptor, ok := GlobalScheduler.Adaptors[payload.ChainType]
 	if !ok {
 		zap.L().Debug("adaptor not exists")
