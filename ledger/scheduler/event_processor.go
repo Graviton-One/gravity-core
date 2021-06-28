@@ -1,23 +1,14 @@
 package scheduler
 
 import (
-	"context"
 	"encoding/json"
-	"io/ioutil"
-	"log"
 	"sync"
 	"time"
 
-	stdHttp "net/http"
-
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill-http/pkg/http"
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
-	"github.com/ThreeDotsLabs/watermill/message/router/plugin"
 	"github.com/mitchellh/mapstructure"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -56,6 +47,7 @@ func NewEventServer() *EventServer {
 	}
 	server.SetHandler("handle_block", HandleBlock)
 	server.SetHandler("update_oracles", UpdateOraclesHandler)
+
 	return server
 }
 func (s *EventServer) SetHandler(name string, handler EventHandler) {
@@ -148,73 +140,73 @@ func UpdateOraclesHandler(event SchedulerEvent) error {
 	return nil
 }
 
-func startHttpListener() {
-	logger := watermill.NewStdLogger(true, true)
-	//channelPublisher, err := EventBus.Subscribe(EventBus, "ledger.events")
-	httpSubscriber, err := http.NewSubscriber(
-		"127.0.0.1:3501",
-		http.SubscriberConfig{
-			UnmarshalMessageFunc: func(topic string, request *stdHttp.Request) (*message.Message, error) {
-				b, err := ioutil.ReadAll(request.Body)
-				if err != nil {
-					return nil, errors.Wrap(err, "cannot read body")
-				}
+// func startHttpListener() {
+// 	logger := watermill.NewStdLogger(true, true)
+// 	//channelPublisher, err := EventBus.Subscribe(EventBus, "ledger.events")
+// 	httpSubscriber, err := http.NewSubscriber(
+// 		"127.0.0.1:3501",
+// 		http.SubscriberConfig{
+// 			UnmarshalMessageFunc: func(topic string, request *stdHttp.Request) (*message.Message, error) {
+// 				b, err := ioutil.ReadAll(request.Body)
+// 				if err != nil {
+// 					return nil, errors.Wrap(err, "cannot read body")
+// 				}
 
-				return message.NewMessage(watermill.NewUUID(), b), nil
-			},
-		},
-		logger,
-	)
-	if err != nil {
-		zap.L().Error(err.Error())
-		return
-	}
+// 				return message.NewMessage(watermill.NewUUID(), b), nil
+// 			},
+// 		},
+// 		logger,
+// 	)
+// 	if err != nil {
+// 		zap.L().Error(err.Error())
+// 		return
+// 	}
 
-	r, err := message.NewRouter(
-		message.RouterConfig{},
-		logger,
-	)
-	if err != nil {
-		zap.L().Error(err.Error())
-		return
-	}
+// 	r, err := message.NewRouter(
+// 		message.RouterConfig{},
+// 		logger,
+// 	)
+// 	if err != nil {
+// 		zap.L().Error(err.Error())
+// 		return
+// 	}
 
-	r.AddMiddleware(
-		middleware.Recoverer,
-		middleware.CorrelationID,
-	)
-	r.AddPlugin(plugin.SignalsHandler)
+// 	r.AddMiddleware(
+// 		middleware.Recoverer,
+// 		middleware.CorrelationID,
+// 	)
+// 	r.AddPlugin(plugin.SignalsHandler)
 
-	r.AddHandler(
-		"http_to_ledger",
-		"/webhooks", // this is the URL of our API
-		httpSubscriber,
-		"ledger.events", // this is the topic the message will be published to
-		EventBus,
-		func(msg *message.Message) ([]*message.Message, error) {
-			webhook := SchedulerEvent{}
+// 	r.AddHandler(
+// 		"http_to_ledger",
+// 		"/webhooks", // this is the URL of our API
+// 		httpSubscriber,
+// 		"ledger.events", // this is the topic the message will be published to
+// 		EventBus,
+// 		func(msg *message.Message) ([]*message.Message, error) {
+// 			webhook := SchedulerEvent{}
 
-			if err := json.Unmarshal(msg.Payload, &webhook); err != nil {
-				return nil, errors.Wrap(err, "cannot unmarshal message")
-			}
+// 			if err := json.Unmarshal(msg.Payload, &webhook); err != nil {
+// 				return nil, errors.Wrap(err, "cannot unmarshal message")
+// 			}
 
-			// Simply forward the message from HTTP Subscriber to Kafka Publisher
-			return []*message.Message{msg}, nil
-		},
-	)
-	// HTTP server needs to be started after router is ready.
-	go func() {
-		log.Println("waiting for router ready")
-		<-r.Running()
-		log.Println("starting http server")
-		err = httpSubscriber.StartHTTPServer()
-		if err != nil {
-			zap.L().Error(err.Error())
-		}
-	}()
+// 			// Simply forward the message from HTTP Subscriber to Kafka Publisher
+// 			return []*message.Message{msg}, nil
+// 		},
+// 	)
+// 	// HTTP server needs to be started after router is ready.
+// 	go func() {
+// 		log.Println("waiting for router ready")
+// 		<-r.Running()
+// 		log.Println("starting http server")
+// 		err = httpSubscriber.StartHTTPServer()
+// 		if err != nil {
+// 			zap.L().Error(err.Error())
+// 		}
+// 	}()
 
-	err = r.Run(context.Background())
-	if err != nil {
-		zap.L().Error(err.Error())
-	}
-}
+// 	err = r.Run(context.Background())
+// 	if err != nil {
+// 		zap.L().Error(err.Error())
+// 	}
+// }

@@ -10,6 +10,7 @@ require (
 	github.com/dgraph-io/badger v1.6.1
 	github.com/ethereum/go-ethereum v1.9.25
 	github.com/gookit/validate v1.2.8
+	github.com/labstack/echo/v4 v4.3.0
 	github.com/lithammer/shortuuid/v3 v3.0.7 // indirect
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/mr-tron/base58 v1.2.0
