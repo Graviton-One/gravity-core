@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"sync"
 	"time"
 
@@ -203,9 +204,17 @@ func startHttpListener() {
 	)
 	// HTTP server needs to be started after router is ready.
 	go func() {
+		log.Println("waiting for router ready")
 		<-r.Running()
-		_ = httpSubscriber.StartHTTPServer()
+		log.Println("starting http server")
+		err = httpSubscriber.StartHTTPServer()
+		if err != nil {
+			zap.L().Error(err.Error())
+		}
 	}()
 
-	_ = r.Run(context.Background())
+	err = r.Run(context.Background())
+	if err != nil {
+		zap.L().Error(err.Error())
+	}
 }
