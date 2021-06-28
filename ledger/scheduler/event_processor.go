@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"sync"
@@ -201,6 +202,10 @@ func startHttpListener() {
 		},
 	)
 	// HTTP server needs to be started after router is ready.
-	<-r.Running()
-	_ = httpSubscriber.StartHTTPServer()
+	go func() {
+		<-r.Running()
+		_ = httpSubscriber.StartHTTPServer()
+	}()
+
+	_ = r.Run(context.Background())
 }
