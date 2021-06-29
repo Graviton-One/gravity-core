@@ -9,9 +9,10 @@ RUN apt-get update && \
 
 RUN cd cmd/gravity/ && \
     go build -o gravity && \
+    chmod 777 gravity && \
     cp gravity /bin/
 
-FROM ubuntu:18.04
+FROM golang:alpine
 
 COPY --from=ledger /node/docker/entrypoint-ledger.sh .
 COPY --from=ledger /node/cmd/gravity/gravity /bin/
