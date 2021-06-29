@@ -65,27 +65,6 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 			}
 			zap.L().Sugar().Debugf("RoundId %d, lastRound [%s] - %d", roundId, k, lastRound)
 			isExist = uint64(roundId) == lastRound
-			if uint64(roundId) <= lastRound {
-				zap.L().Debug("roundId <= lastRound")
-				return
-			}
-
-			var consulsWG sync.WaitGroup
-			consulsWG.Add(1)
-			go func() {
-				defer consulsWG.Done()
-				err = scheduler.signConsulsResult(roundId, _ck, oraclesBySenderConsul[_ck])
-				if err != nil {
-					zap.L().Error(err.Error())
-				}
-				time.Sleep(time.Second * 5)
-				if index == int64(consulInfo.ConsulIndex) {
-					err = scheduler.sendConsulsToGravityContract(roundId, _ck)
-					if err != nil {
-						zap.L().Error(err.Error())
-					}
-				}
-			}()
 
 			nebulae, err := scheduler.client.Nebulae()
 			if err != nil {
@@ -97,6 +76,31 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 			for nk, val := range nebulae {
 				if val.ChainType != k {
 					continue
+				}
+
+				if ManualUpdate.Active {
+					found := false
+					nindex := int(-1)
+					for i, n := range ManualUpdate.UpdateQueue {
+						if n.Id == nk && n.ChainType == val.ChainType {
+							found = true
+							nindex = i
+							break
+						}
+					}
+					if found {
+						ManualUpdate.UpdateQueue = append(ManualUpdate.UpdateQueue[:nindex], ManualUpdate.UpdateQueue[nindex+1:]...)
+						if len(ManualUpdate.UpdateQueue) == 0 {
+							ManualUpdate.Active = false
+						}
+					} else {
+						continue
+					}
+				} else {
+					if uint64(roundId) <= lastRound {
+						zap.L().Debug("roundId <= lastRound")
+						return
+					}
 				}
 
 				payload := map[string]interface{}{
@@ -147,6 +151,29 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 
 				// }(&nebulaWG, _nk, _val)
 			}
+
+			if uint64(roundId) <= lastRound {
+				zap.L().Debug("roundId <= lastRound")
+				return
+			}
+
+			var consulsWG sync.WaitGroup
+			consulsWG.Add(1)
+			go func() {
+				defer consulsWG.Done()
+				err = scheduler.signConsulsResult(roundId, _ck, oraclesBySenderConsul[_ck])
+				if err != nil {
+					zap.L().Error(err.Error())
+				}
+				time.Sleep(time.Second * 5)
+				if index == int64(consulInfo.ConsulIndex) {
+					err = scheduler.sendConsulsToGravityContract(roundId, _ck)
+					if err != nil {
+						zap.L().Error(err.Error())
+					}
+				}
+			}()
+
 			consulsWG.Wait()
 		}(&wg, _ck, _cv)
 	}

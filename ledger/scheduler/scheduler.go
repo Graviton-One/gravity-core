@@ -18,9 +18,19 @@ import (
 	"github.com/Gravity-Tech/gravity-core/common/storage"
 )
 
+type NebulaToUpdate struct {
+	Id        string
+	ChainType account.ChainType
+}
+type ManualUpdateStruct struct {
+	Active      bool
+	UpdateQueue []NebulaToUpdate
+}
+
 var EventBus *gochannel.GoChannel
 var GlobalScheduler Scheduler
 var SchedulerEventServer *EventServer
+var ManualUpdate ManualUpdateStruct
 
 const (
 	HardforkHeight = 95574
@@ -45,6 +55,8 @@ type ConsulInfo struct {
 }
 
 func New(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, ledger *account.LedgerValidator, localHost string, ctx context.Context) (*Scheduler, error) {
+	ManualUpdate.Active = false
+	ManualUpdate.UpdateQueue = []NebulaToUpdate{}
 	EventBus = gochannel.NewGoChannel(
 		gochannel.Config{},
 		watermill.NewStdLogger(false, false),

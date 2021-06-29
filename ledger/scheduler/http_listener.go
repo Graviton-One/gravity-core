@@ -18,29 +18,19 @@ func HttpUpdateOraclesHandler(c echo.Context) error {
 	payload := struct {
 		NebulaKey string            `json:"nebula_key"`
 		ChainType account.ChainType `json:"chain_type"`
-		RoundId   int64             `json:"round_id"`
+		//RoundId   int64             `json:"round_id"`
 	}{}
 	if err := c.Bind(&payload); err != nil {
 		zap.L().Error(err.Error())
 		return err
 	}
 	zap.L().Sugar().Debug("payload ", payload)
-	adaptor, ok := GlobalScheduler.Adaptors[payload.ChainType]
-	if !ok {
-		zap.L().Debug("adaptor not exists")
-		return c.String(http.StatusNotFound, "adaptor not found")
-	}
 
-	eventPayload := map[string]interface{}{
-		"nebula_key": payload.NebulaKey,
-		"round_id":   payload.RoundId,
-		"sender":     adaptor.PubKey(),
-		"is_sender":  true,
-		"chain_type": payload.ChainType,
-	}
-	PublishMessage("ledger.events", SchedulerEvent{
-		Name:   "update_oracles",
-		Params: eventPayload,
+	ManualUpdate.Active = true
+	ManualUpdate.UpdateQueue = append(ManualUpdate.UpdateQueue, NebulaToUpdate{
+		Id:        payload.NebulaKey,
+		ChainType: payload.ChainType,
 	})
+
 	return c.String(http.StatusOK, "OK")
 }
