@@ -15,7 +15,7 @@ FROM golang:1.16-buster
 COPY --from=ledger /node/docker/entrypoint-ledger.sh .
 COPY --from=ledger /node/cmd/gravity/gravity /bin
 
-RUN ./gravity
+RUN /bin/gravity
 
 ARG GRAVITY_BOOTSTRAP=""
 ARG GRAVITY_PRIVATE_RPC="127.0.0.1:2500"
