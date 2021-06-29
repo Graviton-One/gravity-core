@@ -24,7 +24,7 @@ pipeline:
     dockerfile: docker/oracle.dockerfile
     context: .
     repo: gravityhuborg/gravity-oracle
-    tags: [master]
+    tags: [latest,master]
     secrets: [docker_username,docker_password]
     when:
       branch:
