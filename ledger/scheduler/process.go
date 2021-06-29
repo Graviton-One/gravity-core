@@ -79,6 +79,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 				}
 
 				if ManualUpdate.Active {
+					zap.L().Sugar().Debugf("Check for manual update the Nebula")
 					found := false
 					nindex := int(-1)
 					for i, n := range ManualUpdate.UpdateQueue {
@@ -94,6 +95,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 							ManualUpdate.Active = false
 						}
 					} else {
+						zap.L().Sugar().Debugf("Manual updated Nebula [%s] not found", nk)
 						continue
 					}
 				} else {
