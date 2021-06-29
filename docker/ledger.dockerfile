@@ -4,17 +4,16 @@ WORKDIR /node
 
 COPY . /node
 
-RUN apt-get update && \
-    apt-get install -y jq
+RUN chmod 777 docker/entrypoint-ledger.sh
 
 RUN cd cmd/gravity/ && \
     go build -o gravity && \
-    cp gravity /bin/
+    chmod 777 gravity
 
-FROM ubuntu:18.04
+FROM golang:1.16-buster
 
 COPY --from=ledger /node/docker/entrypoint-ledger.sh .
-COPY --from=ledger /node/cmd/gravity/gravity /bin/
+COPY --from=ledger /node/cmd/gravity/gravity /bin
 
 ARG GRAVITY_BOOTSTRAP=""
 ARG GRAVITY_PRIVATE_RPC="127.0.0.1:2500"
@@ -33,4 +32,4 @@ ENV GENESIS_CFG_PATH=$GENESIS_CFG_PATH
 
 VOLUME /etc/gravity/
 
-ENTRYPOINT ./entrypoint-ledger.sh
+ENTRYPOINT ["/bin/sh", "./entrypoint-ledger.sh"]
