@@ -1,17 +1,21 @@
-FROM golang:1.16-alpine as ledger
+FROM golang:1.16-buster as ledger
 
 WORKDIR /node
 
 COPY . /node
 
+RUN chmod 777 docker/entrypoint-ledger.sh
+
 RUN cd cmd/gravity/ && \
     go build -o gravity && \
     chmod 777 gravity
 
-FROM golang:1.16-alpine
+FROM golang:1.16-buster
 
 COPY --from=ledger /node/docker/entrypoint-ledger.sh .
-COPY --from=ledger /node/cmd/gravity/gravity /bin/
+COPY --from=ledger /node/cmd/gravity/gravity /bin
+
+RUN ./gravity
 
 ARG GRAVITY_BOOTSTRAP=""
 ARG GRAVITY_PRIVATE_RPC="127.0.0.1:2500"
@@ -30,4 +34,4 @@ ENV GENESIS_CFG_PATH=$GENESIS_CFG_PATH
 
 VOLUME /etc/gravity/
 
-ENTRYPOINT ./entrypoint-ledger.sh
+ENTRYPOINT ["/bin/sh", "./entrypoint-ledger.sh"]
