@@ -1,18 +1,14 @@
-FROM golang:1.16-buster as ledger
+FROM golang:1.16-alpine as ledger
 
 WORKDIR /node
 
 COPY . /node
 
-RUN apt-get update && \
-    apt-get install -y jq
-
 RUN cd cmd/gravity/ && \
     go build -o gravity && \
-    chmod 777 gravity && \
-    cp gravity /bin/
+    chmod 777 gravity
 
-FROM golang:alpine
+FROM golang:1.16-alpine
 
 COPY --from=ledger /node/docker/entrypoint-ledger.sh .
 COPY --from=ledger /node/cmd/gravity/gravity /bin/
