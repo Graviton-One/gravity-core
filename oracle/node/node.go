@@ -225,7 +225,10 @@ func (node *Node) Start(ctx context.Context) {
 	var lastPulseId uint64
 
 	ch, err := node.gravityClient.HttpClient.WSEvents.Subscribe(ctx, "gravity-oracle", "tm.event='NewBlock'", 999)
-	if err == nil {
+
+	if err != nil {
+		zap.L().Sugar().Debug("Subscribe Error: ", err.Error())
+	} else {
 		go func() {
 			for {
 				a := <-ch
