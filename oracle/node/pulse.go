@@ -15,6 +15,7 @@ import (
 
 func (node *Node) commit(data *extractor.Data, tcHeight uint64, pulseId uint64) ([]byte, error) {
 	dataBytes := toBytes(data, node.extractor.ExtractorType)
+	zap.L().Sugar().Debugf("Extractor data type: %d", node.extractor.ExtractorType)
 	commit := crypto.Keccak256(dataBytes)
 	fmt.Printf("Commit: %s - %s \n", hexutil.Encode(dataBytes), hexutil.Encode(commit[:]))
 
