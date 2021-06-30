@@ -244,14 +244,14 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 	return nil
 }
 func (scheduler *Scheduler) signOraclesByNebula(roundId int64, nebulaId account.NebulaId, chainType account.ChainType, sender account.OraclesPubKey) error {
-	_, err := scheduler.client.SignNewOraclesByConsul(scheduler.Ledger.PubKey, chainType, nebulaId, roundId)
-	if err != nil && err != gravity.ErrValueNotFound {
-		zap.L().Error(err.Error())
-		return err
-	} else if err == nil {
-		zap.L().Debug("Returning from func signOraclesByNebula")
-		//return nil
-	}
+	// _, err := scheduler.client.SignNewOraclesByConsul(scheduler.Ledger.PubKey, chainType, nebulaId, roundId)
+	// if err != nil && err != gravity.ErrValueNotFound {
+	// 	zap.L().Error(err.Error())
+	// 	return err
+	// } else if err == nil {
+	// 	zap.L().Debug("Returning from func signOraclesByNebula")
+	// 	//return nil
+	// }
 	bftOraclesByNebula, err := scheduler.client.BftOraclesByNebula(chainType, nebulaId)
 	if err != nil {
 		zap.L().Error(err.Error())
