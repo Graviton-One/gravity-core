@@ -377,7 +377,9 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 		if roundState.data == nil && !roundState.RevealExist {
 			return nil
 		}
-
+		if len(roundState.resultHash) != 0 {
+			return nil
+		}
 		value, hash, err := node.signResult(intervalId, pulseId, ctx)
 		if err != nil {
 			zap.L().Error(err.Error())
