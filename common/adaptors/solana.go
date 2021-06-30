@@ -270,7 +270,7 @@ func (s *SolanaAdapter) ValueType(nebulaId account.NebulaId, ctx context.Context
 		zap.L().Error(err.Error())
 		return 0, err
 	}
-	return abi.ExtractorType(n.DataType), nil
+	return abi.ExtractorType(abi.BytesType), nil //HardCode
 }
 
 func (s *SolanaAdapter) AddPulse(nebulaId account.NebulaId, pulseId uint64, validators []account.OraclesPubKey, hash []byte, ctx context.Context) (string, error) {
