@@ -109,12 +109,14 @@ func UpdateOraclesInstruction(fromAccount, programID, nebulaAccount common.Publi
 	*/
 	data, err := common.SerializeData(struct {
 		Instruction uint8
+		Bft         uint8
 		NewOracles  []common.PublicKey
-		PulseID     uint8
+		PulseID     uint64
 	}{
 		Instruction: 1,
+		Bft:         uint8(len(CurrentOracles)),
 		NewOracles:  NewOracles,
-		PulseID:     uint8(pulseID),
+		PulseID:     uint64(pulseID),
 	})
 	if err != nil {
 		return nil, err
@@ -127,7 +129,7 @@ func UpdateOraclesInstruction(fromAccount, programID, nebulaAccount common.Publi
 	for _, oracle := range CurrentOracles {
 		accounts = append(accounts, types.AccountMeta{
 			PubKey:     oracle,
-			IsSigner:   false,
+			IsSigner:   true,
 			IsWritable: false,
 		})
 	}
@@ -163,7 +165,7 @@ func SendHashValueInstruction(fromAccount, programID, nebulaAccount common.Publi
 	for _, oracle := range currentOracles {
 		accounts = append(accounts, types.AccountMeta{
 			PubKey:     oracle,
-			IsSigner:   false,
+			IsSigner:   true,
 			IsWritable: false,
 		})
 	}
@@ -174,7 +176,7 @@ func SendHashValueInstruction(fromAccount, programID, nebulaAccount common.Publi
 	}, nil
 }
 
-func SendValueToSubsInstruction(fromAccount, programID, nebulaAccount common.PublicKey, currentOracles []common.PublicKey, pulseID uint64, subscriptionID [16]byte) (*types.Instruction, error) {
+func SendValueToSubsInstruction(fromAccount, programID, nebulaAccount common.PublicKey, currentOracles []common.PublicKey, pulseID uint64, subscriptionID [16]byte, dType DataType, Hash []byte) (*types.Instruction, error) {
 
 	/*
 	   SendValueToSubs {
@@ -185,10 +187,14 @@ func SendValueToSubsInstruction(fromAccount, programID, nebulaAccount common.Pub
 	*/
 	data, err := common.SerializeData(struct {
 		Instruction   uint8
+		DataHash      []byte
+		DataType      DataType
 		PulseID       uint64
 		SubsriptionID [16]byte
 	}{
 		Instruction:   3,
+		DataHash:      Hash,
+		DataType:      dType,
 		PulseID:       pulseID,
 		SubsriptionID: subscriptionID,
 	})
