@@ -308,8 +308,8 @@ func (s *SolanaAdapter) AddPulse(nebulaId account.NebulaId, pulseId uint64, vali
 		return "", fmt.Errorf("Oracles map is empty")
 	}
 
-	senderIndex := s.oracleInterval % uint64(len(validators))
-	senderPubKey := solana_common.PublicKeyFromBytes(validators[senderIndex][1:33])
+	senderIndex := s.oracleInterval % uint64(len(oracles))
+	senderPubKey := solana_common.PublicKeyFromBytes(oracles[senderIndex][1:33])
 	msg, err := s.createAddPulseMessage(nebulaId, oracles, pulseId, hash, senderPubKey)
 	if err != nil {
 		return "", err
