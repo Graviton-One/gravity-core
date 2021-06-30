@@ -98,7 +98,7 @@ func NebulaAddPulseInstruction(fromAccount, targetProgramID, nebulaId common.Pub
 		        data_hash: Vec<u8>,
 		    }
 	*/
-	newHash := [32]byte{}
+	newHash := [64]byte{}
 	copy(newHash[:], hash)
 
 	data, err := common.SerializeData(struct {
