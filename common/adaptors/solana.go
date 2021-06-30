@@ -265,11 +265,11 @@ func (s *SolanaAdapter) ValueType(nebulaId account.NebulaId, ctx context.Context
 			fmt.Println("Recovered in ValueType", r)
 		}
 	}()
-	n, err := s.getNebulaContractState(ctx, s.nebulaContract.ToBase58())
-	if err != nil {
-		zap.L().Error(err.Error())
-		return 0, err
-	}
+	// n, err := s.getNebulaContractState(ctx, s.nebulaContract.ToBase58())
+	// if err != nil {
+	// 	zap.L().Error(err.Error())
+	// 	return 0, err
+	// }
 	return abi.ExtractorType(abi.BytesType), nil //HardCode
 }
 
