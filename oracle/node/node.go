@@ -377,7 +377,7 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 		if roundState.data == nil && !roundState.RevealExist {
 			return nil
 		}
-		if roundState.resultValue == nil {
+		if roundState.resultValue != nil {
 			zap.L().Debug("Round sign exists")
 			return nil
 		}
