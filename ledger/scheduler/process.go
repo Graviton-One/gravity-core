@@ -180,7 +180,10 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 		}(&wg, _ck, _cv)
 	}
 	wg.Wait()
-	ManualUpdate.Disable()
+	if ManualUpdate.Active {
+		ManualUpdate.Disable()
+	}
+
 	lastRound, err := scheduler.client.LastRoundApproved()
 	if err != nil && err != gravity.ErrValueNotFound {
 		return err
