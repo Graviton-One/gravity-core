@@ -323,6 +323,7 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 			zap.L().Debug("Commit subround Extractor Data is empty")
 			return nil
 		}
+		zap.L().Sugar().Debug("Extracted data ", data)
 
 		commit, err := node.commit(data, intervalId, pulseId)
 		if err != nil {
