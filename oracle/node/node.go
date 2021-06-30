@@ -224,6 +224,16 @@ func (node *Node) Start(ctx context.Context) {
 	var pulseCountInBlock uint64
 	var lastPulseId uint64
 
+	ch, err := node.gravityClient.HttpClient.WSEvents.Subscribe(ctx, "gravity-oracle", "tm.event='NewBlock'", 999)
+	if err == nil {
+		go func() {
+			for {
+				a := <-ch
+				zap.L().Sugar().Debug(a)
+			}
+		}()
+	}
+
 	roundState := new(RoundState)
 	for {
 		time.Sleep(time.Duration(TimeoutMs) * time.Millisecond)
