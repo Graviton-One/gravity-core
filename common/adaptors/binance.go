@@ -215,7 +215,7 @@ func (adaptor *BinanceAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint6
 	copy(resultBytes32[:], hash)
 
 	opt := bind.NewKeyedTransactor(adaptor.privKey)
-
+	opt.Context = ctx
 	opt.GasPrice, err = adaptor.ethClient.SuggestGasPrice(ctx)
 	if err != nil {
 		return "", err
@@ -248,6 +248,7 @@ func (adaptor *BinanceAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseI
 		}
 
 		transactOpt := bind.NewKeyedTransactor(adaptor.privKey)
+		transactOpt.Context = ctx
 		switch SubType(t) {
 		case Int64:
 			v, err := strconv.ParseInt(value.Value, 10, 64)
@@ -345,8 +346,9 @@ func (adaptor *BinanceAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, ora
 		s[index] = bytes32S
 		v[index] = sign[64:][0] + 27
 	}
-
-	tx, err := nebula.UpdateOracles(bind.NewKeyedTransactor(adaptor.privKey), oraclesAddresses, v[:], r[:], s[:], big.NewInt(round))
+	opts := bind.NewKeyedTransactor(adaptor.privKey)
+	opts.Context = ctx
+	tx, err := nebula.UpdateOracles(opts, oraclesAddresses, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
 		return "", err
 	}
@@ -402,8 +404,9 @@ func (adaptor *BinanceAdaptor) SendConsulsToGravityContract(newConsulsAddresses 
 		s[index] = bytes32S
 		v[index] = sign[64:][0] + 27
 	}
-
-	tx, err := adaptor.gravityContract.UpdateConsuls(bind.NewKeyedTransactor(adaptor.privKey), consulsAddress, v[:], r[:], s[:], big.NewInt(round))
+	opts := bind.NewKeyedTransactor(adaptor.privKey)
+	opts.Context = ctx
+	tx, err := adaptor.gravityContract.UpdateConsuls(opts, consulsAddress, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
 		return "", err
 	}

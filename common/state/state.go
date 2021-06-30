@@ -351,7 +351,7 @@ func signNewOracles(store *storage.Storage, tx *transactions.Transaction) error 
 	if err != nil && err != storage.ErrKeyNotFound {
 		return err
 	} else if err == nil {
-		return ErrSignIsExist
+		//return ErrSignIsExist
 	}
 
 	err = store.SetSignOracles(tx.SenderPubKey, nebulaAddress, roundId, sign)

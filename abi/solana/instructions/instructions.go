@@ -83,7 +83,7 @@ func NebulaUpdateOraclesInstruction(fromAccount, targetProgramID, nebulaDataAcco
 		{PubKey: multisigAccount, IsSigner: false, IsWritable: true},
 	}
 	for _, s := range signers {
-		accounts = append(accounts, types.AccountMeta{PubKey: s, IsSigner: false, IsWritable: false})
+		accounts = append(accounts, types.AccountMeta{PubKey: s, IsSigner: true, IsWritable: false})
 	}
 	return types.Instruction{
 		Accounts:  accounts,
@@ -119,7 +119,7 @@ func NebulaAddPulseInstruction(fromAccount, targetProgramID, nebulaId common.Pub
 		{PubKey: nebulaId, IsSigner: false, IsWritable: true},
 	}
 	for _, s := range signers {
-		accounts = append(accounts, types.AccountMeta{PubKey: s, IsSigner: false, IsWritable: false})
+		accounts = append(accounts, types.AccountMeta{PubKey: s, IsSigner: true, IsWritable: false})
 	}
 	return types.Instruction{
 		Accounts:  accounts,
@@ -139,16 +139,16 @@ func NebulaSendValueToSubsInstruction(fromAccount, targetProgramID, nebulaId com
 	*/
 	data, err := common.SerializeData(struct {
 		Instruction    uint8
+		Value          []byte
 		DataType       uint8
 		PulseID        uint64
 		SubscriptionID [16]byte
-		Value          []byte
 	}{
 		Instruction:    3,
+		Value:          value,
 		DataType:       DataType,
 		PulseID:        PulseId,
 		SubscriptionID: SubscriptionID,
-		Value:          value,
 	})
 	if err != nil {
 		panic(err)

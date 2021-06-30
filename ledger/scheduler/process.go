@@ -7,20 +7,14 @@ import (
 
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
 	"github.com/Gravity-Tech/gravity-core/common/gravity"
-	"github.com/Gravity-Tech/gravity-core/common/storage"
-	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill/message"
 	"go.uber.org/zap"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
 )
 
-func (scheduler *Scheduler) process(height int64) {
-	msg := message.NewMessage(watermill.NewUUID(), []byte("Hello, world!"))
-	if err := EventBus.Publish("example.topic", msg); err != nil {
-		panic(err)
-	}
+func (scheduler *Scheduler) Process(height int64) {
+	zap.L().Debug("Called process func")
 	err := scheduler.processByHeight(height)
 	if err != nil {
 		fmt.Printf("Error:%s\n", err)
@@ -55,6 +49,10 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 	if height%50 != 0 {
 		return nil
 	}
+	go func() {
+		time.Sleep(time.Second * 10)
+		ManualUpdate.Disable()
+	}()
 	isExist := true
 	var wg sync.WaitGroup
 	for k, v := range scheduler.Adaptors {
@@ -71,6 +69,59 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 			}
 			zap.L().Sugar().Debugf("RoundId %d, lastRound [%s] - %d", roundId, k, lastRound)
 			isExist = uint64(roundId) == lastRound
+
+			nebulae, err := scheduler.client.Nebulae()
+			if err != nil {
+				zap.L().Error(err.Error())
+				return
+			}
+			//var nebulaWG sync.WaitGroup
+
+			for nk, val := range nebulae {
+				if val.ChainType != k {
+					continue
+				}
+
+				if ManualUpdate.Active {
+					zap.L().Sugar().Debug("Check for manual update the Nebula ", ManualUpdate)
+					found := false
+					nindex := int(-1)
+					for i, n := range ManualUpdate.UpdateQueue {
+						if n.Id == nk && n.ChainType == val.ChainType {
+							found = true
+							nindex = i
+							break
+						}
+					}
+					if found {
+						ManualUpdate.UpdateQueue = append(ManualUpdate.UpdateQueue[:nindex], ManualUpdate.UpdateQueue[nindex+1:]...)
+						if len(ManualUpdate.UpdateQueue) == 0 {
+							ManualUpdate.Active = false
+						}
+					} else {
+						zap.L().Sugar().Debugf("Manual updated Nebula [%s] not found", nk)
+						continue
+					}
+				} else {
+					if uint64(roundId) <= lastRound {
+						zap.L().Debug("roundId <= lastRound")
+						return
+					}
+				}
+
+				payload := map[string]interface{}{
+					"nebula_key": nk,
+					"round_id":   roundId,
+					"sender":     oraclesBySenderConsul[k],
+					"is_sender":  index == int64(consulInfo.ConsulIndex),
+					"chain_type": val.ChainType,
+				}
+				PublishMessage("ledger.events", SchedulerEvent{
+					Name:   "update_oracles",
+					Params: payload,
+				})
+			}
+
 			if uint64(roundId) <= lastRound {
 				zap.L().Debug("roundId <= lastRound")
 				return
@@ -92,51 +143,6 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 					}
 				}
 			}()
-
-			nebulae, err := scheduler.client.Nebulae()
-			if err != nil {
-				zap.L().Error(err.Error())
-				return
-			}
-			var nebulaWG sync.WaitGroup
-
-			for nk, val := range nebulae {
-				nebulaWG.Add(1)
-				_nk, _val := nk, val
-				go func(nKey string, nInfo storage.NebulaInfo) {
-					defer nebulaWG.Done()
-					nebulaId, err := account.StringToNebulaId(nKey, nInfo.ChainType)
-					if err != nil {
-						fmt.Printf("Error:%s\n", err.Error())
-						return
-					}
-
-					success := false
-					attempts := 4
-					for {
-						if success || attempts == 0 {
-							break
-						}
-						err = scheduler.signOraclesByNebula(roundId, nebulaId, nInfo.ChainType, oraclesBySenderConsul[k])
-						time.Sleep(time.Second * 5)
-						if err != nil {
-							zap.L().Error(err.Error())
-							attempts -= 1
-							continue
-						}
-
-						if index == int64(consulInfo.ConsulIndex) {
-							err = scheduler.sendOraclesToNebula(nebulaId, nInfo.ChainType, roundId)
-							if err != nil {
-								attempts -= 1
-								continue
-							}
-						}
-						success = true
-					}
-
-				}(_nk, _val)
-			}
 
 			consulsWG.Wait()
 		}(&wg, _ck, _cv)
@@ -187,10 +193,6 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 	if err != nil && err != gravity.ErrValueNotFound {
 		return err
 	}
-	// } else if err == nil {
-	// 	zap.L().
-	// 	return nil
-	// }
 
 	consuls, err := scheduler.client.ConsulsCandidate()
 	if err != nil {
@@ -215,7 +217,6 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 		oracle := oraclesByConsul[chainType]
 		consulsAddresses = append(consulsAddresses, &oracle)
 	}
-	//sender := scheduler.Adaptors[chainType].PubKey()
 	sign, err := scheduler.Adaptors[chainType].SignConsuls(consulsAddresses, roundId, sender)
 	if err != nil {
 		return err
@@ -243,14 +244,14 @@ func (scheduler *Scheduler) signConsulsResult(roundId int64, chainType account.C
 	return nil
 }
 func (scheduler *Scheduler) signOraclesByNebula(roundId int64, nebulaId account.NebulaId, chainType account.ChainType, sender account.OraclesPubKey) error {
-	_, err := scheduler.client.SignNewOraclesByConsul(scheduler.Ledger.PubKey, chainType, nebulaId, roundId)
-	if err != nil && err != gravity.ErrValueNotFound {
-		zap.L().Error(err.Error())
-		return err
-	} else if err == nil {
-		return nil
-	}
-
+	// _, err := scheduler.client.SignNewOraclesByConsul(scheduler.Ledger.PubKey, chainType, nebulaId, roundId)
+	// if err != nil && err != gravity.ErrValueNotFound {
+	// 	zap.L().Error(err.Error())
+	// 	return err
+	// } else if err == nil {
+	// 	zap.L().Debug("Returning from func signOraclesByNebula")
+	// 	//return nil
+	// }
 	bftOraclesByNebula, err := scheduler.client.BftOraclesByNebula(chainType, nebulaId)
 	if err != nil {
 		zap.L().Error(err.Error())
@@ -302,8 +303,12 @@ func (scheduler *Scheduler) signOraclesByNebula(roundId int64, nebulaId account.
 	return nil
 }
 func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType account.ChainType) error {
+	if scheduler.ctx == nil {
+		zap.L().Debug("Context is nil")
+	}
 	exist, err := scheduler.Adaptors[chainType].RoundExist(round, scheduler.ctx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
@@ -313,6 +318,7 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 
 	lastRound, err := scheduler.Adaptors[chainType].LastRound(scheduler.ctx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
@@ -322,11 +328,13 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 
 	consuls, err := scheduler.client.Consuls()
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
 	newConsuls, err := scheduler.client.ConsulsCandidate()
 	if err != nil {
+		zap.L().Error(err.Error())
 		return err
 	}
 
@@ -386,6 +394,7 @@ func (scheduler *Scheduler) sendConsulsToGravityContract(round int64, chainType 
 
 	id, err := scheduler.Adaptors[chainType].SendConsulsToGravityContract(newConsulsAddresses, signs, round, scheduler.ctx)
 	if err != nil {
+		zap.L().Sugar().Errorf("Chain [%s] err: %s", chainType, err.Error())
 		return err
 	}
 	if id != "" {
@@ -483,7 +492,7 @@ func (scheduler *Scheduler) setConsulTargetChainPubKey(oracle account.OraclesPub
 		zap.L().Error(err.Error())
 		return err
 	}
-	zap.L().Sugar().Debug("Oracles", oracles)
+	//zap.L().Sugar().Debug("Oracles", oracles)
 
 	if _, ok := oracles[chainType]; ok {
 		zap.L().Sugar().Debugf("pubkey for chain [%s] exists", chainType)

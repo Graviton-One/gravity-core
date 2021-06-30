@@ -224,7 +224,7 @@ func (adaptor *PolygonAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint6
 		return "", err
 	}
 	opt.GasLimit = 150000 * 5
-
+	opt.Context = ctx
 	opt.GasPrice, err = adaptor.ethClient.SuggestGasPrice(ctx)
 	if err != nil {
 		return "", err
@@ -263,7 +263,7 @@ func (adaptor *PolygonAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseI
 			return err
 		}
 		transactOpt.GasLimit = 150000 * 5
-
+		transactOpt.Context = ctx
 		zap.L().Sugar().Debug("transactOpt is nil", transactOpt == nil)
 		switch SubType(t) {
 		case Int64:
@@ -372,6 +372,7 @@ func (adaptor *PolygonAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, ora
 		return "", err
 	}
 	transactor.GasLimit = 150000 * 5
+	transactor.Context = ctx
 	tx, err := nebula.UpdateOracles(transactor, oraclesAddresses, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
 		return "", err
@@ -433,6 +434,7 @@ func (adaptor *PolygonAdaptor) SendConsulsToGravityContract(newConsulsAddresses 
 		return "", err
 	}
 	transactor.GasLimit = 150000 * 5
+	transactor.Context = ctx
 	tx, err := adaptor.gravityContract.UpdateConsuls(transactor, consulsAddress, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
 		return "", err
