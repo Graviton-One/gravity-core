@@ -212,6 +212,7 @@ func (s *SolanaAdapter) Sign(msg []byte) ([]byte, error) {
 	return ed25519.Sign(s.account.PrivateKey, msg), nil
 }
 func (s *SolanaAdapter) SignHash(nebulaId account.NebulaId, intervalId uint64, pulseId uint64, hash []byte) ([]byte, error) {
+	s.updateRecentBlockHash(context.Background(), "oracle")
 	var oracles []account.OraclesPubKey
 	s.oracleInterval = intervalId
 	oraclesMap, err := s.ghClient.BftOraclesByNebula(account.Solana, nebulaId)
@@ -324,6 +325,7 @@ func (s *SolanaAdapter) SendValueToSubs(nebulaId account.NebulaId, pulseId uint6
 			fmt.Println("Recovered in SendValueToSubs", r)
 		}
 	}()
+	s.updateRecentBlockHash(context.Background(), "oracle_send_value")
 	nst, err := s.getNebulaContractState(ctx, s.nebulaContract.ToBase58())
 	if err != nil {
 		zap.L().Sugar().Error(err.Error())
@@ -797,7 +799,7 @@ func (s *SolanaAdapter) createSendValueToSubsMessage(nebulaId account.NebulaId, 
 				s.account.PublicKey, s.programID, nid, DataType, value, pulseId, id,
 			),
 		},
-		s.recentBlockHashes["oracle"],
+		s.recentBlockHashes["oracle_send_value"],
 	)
 	return message, nil
 }
