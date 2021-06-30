@@ -49,6 +49,10 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 	if height%50 != 0 {
 		return nil
 	}
+	go func() {
+		time.Sleep(time.Second * 10)
+		ManualUpdate.Disable()
+	}()
 	isExist := true
 	var wg sync.WaitGroup
 	for k, v := range scheduler.Adaptors {
@@ -116,42 +120,6 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 					Name:   "update_oracles",
 					Params: payload,
 				})
-
-				// nebulaWG.Add(1)
-				// _nk, _val := nk, val
-				// go func(nwg *sync.WaitGroup, nKey string, nInfo storage.NebulaInfo) {
-				// 	defer nwg.Done()
-				// 	nebulaId, err := account.StringToNebulaId(nKey, nInfo.ChainType)
-				// 	if err != nil {
-				// 		fmt.Printf("Error:%s\n", err.Error())
-				// 		return
-				// 	}
-
-				// 	success := false
-				// 	attempts := 4
-				// 	for {
-				// 		if success || attempts == 0 {
-				// 			break
-				// 		}
-				// 		err = scheduler.signOraclesByNebula(roundId, nebulaId, nInfo.ChainType, oraclesBySenderConsul[k])
-				// 		time.Sleep(time.Second * 5)
-				// 		if err != nil {
-				// 			zap.L().Error(err.Error())
-				// 			attempts -= 1
-				// 			continue
-				// 		}
-
-				// 		if index == int64(consulInfo.ConsulIndex) {
-				// 			err = scheduler.sendOraclesToNebula(nebulaId, nInfo.ChainType, roundId)
-				// 			if err != nil {
-				// 				attempts -= 1
-				// 				continue
-				// 			}
-				// 		}
-				// 		success = true
-				// 	}
-
-				// }(&nebulaWG, _nk, _val)
 			}
 
 			if uint64(roundId) <= lastRound {
@@ -180,9 +148,6 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 		}(&wg, _ck, _cv)
 	}
 	wg.Wait()
-	if ManualUpdate.Active {
-		ManualUpdate.Disable()
-	}
 
 	lastRound, err := scheduler.client.LastRoundApproved()
 	if err != nil && err != gravity.ErrValueNotFound {
