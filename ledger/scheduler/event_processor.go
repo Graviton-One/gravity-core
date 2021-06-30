@@ -112,19 +112,14 @@ func UpdateOraclesHandler(event SchedulerEvent) error {
 		zap.L().Error(err.Error())
 		return err
 	}
+	err = GlobalScheduler.signOraclesByNebula(Event.RoundId, nebulaId, Event.ChainType, Event.Sender)
+	time.Sleep(time.Second * 5)
 
 	success := false
 	attempts := 4
 	for {
 		if success || attempts == 0 {
 			break
-		}
-		err = GlobalScheduler.signOraclesByNebula(Event.RoundId, nebulaId, Event.ChainType, Event.Sender)
-		time.Sleep(time.Second * 5)
-		if err != nil {
-			zap.L().Error(err.Error())
-			attempts -= 1
-			continue
 		}
 
 		if Event.IsSender {
