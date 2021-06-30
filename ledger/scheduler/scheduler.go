@@ -54,6 +54,10 @@ type ConsulInfo struct {
 	IsConsul    bool
 }
 
+func (ma ManualUpdateStruct) Disable() {
+	ma.Active = false
+	ma.UpdateQueue = []NebulaToUpdate{}
+}
 func New(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, ledger *account.LedgerValidator, localHost string, ctx context.Context) (*Scheduler, error) {
 	ManualUpdate.Active = false
 	ManualUpdate.UpdateQueue = []NebulaToUpdate{}
