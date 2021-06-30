@@ -213,35 +213,36 @@ func (s *SolanaAdapter) Sign(msg []byte) ([]byte, error) {
 }
 func (s *SolanaAdapter) SignHash(nebulaId account.NebulaId, intervalId uint64, pulseId uint64, hash []byte) ([]byte, error) {
 	s.updateRecentBlockHash(context.Background(), "oracle")
-	var oracles []account.OraclesPubKey
+	var validators []account.OraclesPubKey
 	s.oracleInterval = intervalId
 	oraclesMap, err := s.ghClient.BftOraclesByNebula(account.Solana, nebulaId)
 	if err != nil {
 		zap.L().Sugar().Debugf("BFT error: %s , \n %s", err, zap.Stack("trace").String)
 		return []byte{}, nil
 	}
-	myPubKey := s.PubKey()
-	if _, ok := oraclesMap[(&myPubKey).ToString(account.Solana)]; !ok {
-		zap.L().Debug("Oracle not found")
-		return []byte{}, fmt.Errorf("Oracles not found")
-	}
 
+	oracles := SortablePubkey{}
 	for k, v := range oraclesMap {
 		oracle, err := account.StringToOraclePubKey(k, v)
 		if err != nil {
 			return []byte{}, err
 		}
-		oracles = append(oracles, oracle)
+		pubKey := solana_common.PublicKeyFromBytes(oracle[1:33])
+		oracles = append(oracles, pubKey)
+		validators = append(validators, oracle)
 	}
+
+	sort.Sort(&oracles)
+	solanaOracles := oracles.ToPubKeys()
 
 	if len(oracles) == 0 {
 		zap.L().Debug("Oracles map is empty")
 		return []byte{}, fmt.Errorf("Oracles map is empty")
 	}
 
-	sender := intervalId % uint64(len(oracles))
-	senderPubKey := solana_common.PublicKeyFromBytes(oracles[sender][1:33])
-	msg, err := s.createAddPulseMessage(nebulaId, oracles, pulseId, hash, senderPubKey)
+	sender := intervalId % uint64(len(solanaOracles))
+	senderPubKey := solanaOracles[sender]
+	msg, err := s.createAddPulseMessage(nebulaId, validators, pulseId, hash, senderPubKey)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -283,34 +284,20 @@ func (s *SolanaAdapter) AddPulse(nebulaId account.NebulaId, pulseId uint64, vali
 			fmt.Println("Recovered in AddPulse", r)
 		}
 	}()
-	var oracles []account.OraclesPubKey
-	oraclesMap, err := s.ghClient.BftOraclesByNebula(account.Solana, nebulaId)
-	if err != nil {
-		zap.L().Sugar().Debugf("BFT error: %s , \n %s", err, zap.Stack("trace").String)
-		return "", nil
-	}
-	myPubKey := s.PubKey()
-	if _, ok := oraclesMap[(&myPubKey).ToString(account.Solana)]; !ok {
-		zap.L().Debug("Oracle not found")
-		return "", fmt.Errorf("Oracles not found")
+
+	oracles := SortablePubkey{}
+	for _, v := range validators {
+
+		pubKey := solana_common.PublicKeyFromBytes(v[1:33])
+		oracles = append(oracles, pubKey)
 	}
 
-	for k, v := range oraclesMap {
-		oracle, err := account.StringToOraclePubKey(k, v)
-		if err != nil {
-			return "", err
-		}
-		oracles = append(oracles, oracle)
-	}
-
-	if len(oracles) == 0 {
-		zap.L().Debug("Oracles map is empty")
-		return "", fmt.Errorf("Oracles map is empty")
-	}
+	sort.Sort(&oracles)
+	solanaOracles := oracles.ToPubKeys()
 
 	senderIndex := s.oracleInterval % uint64(len(oracles))
-	senderPubKey := solana_common.PublicKeyFromBytes(oracles[senderIndex][1:33])
-	msg, err := s.createAddPulseMessage(nebulaId, oracles, pulseId, hash, senderPubKey)
+	senderPubKey := solanaOracles[senderIndex]
+	msg, err := s.createAddPulseMessage(nebulaId, validators, pulseId, hash, senderPubKey)
 	if err != nil {
 		return "", err
 	}
