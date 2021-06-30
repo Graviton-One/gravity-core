@@ -299,6 +299,7 @@ func (s *SolanaAdapter) AddPulse(nebulaId account.NebulaId, pulseId uint64, vali
 			continue
 		}
 		solsigs[vpk] = sign
+		zap.L().Sugar().Debug("L sig: ", s.account.PublicKey.ToBase58(), " -> ", base58.Encode(sign))
 	}
 	selfSig, err := s.Sign(serializedMessage)
 	if err != nil {
@@ -306,7 +307,7 @@ func (s *SolanaAdapter) AddPulse(nebulaId account.NebulaId, pulseId uint64, vali
 		return "", err
 	}
 	zap.L().Sugar().Debug("Send msg: ", base58.Encode(serializedMessage))
-	solsigs[s.account.PublicKey] = selfSig
+	//solsigs[s.account.PublicKey] = selfSig
 	zap.L().Sugar().Debug("Self sig: ", s.account.PublicKey.ToBase58(), " -> ", base58.Encode(selfSig))
 	tx, err := types.CreateTransaction(msg, solsigs)
 	if err != nil {
