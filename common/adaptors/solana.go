@@ -738,10 +738,10 @@ func (s *SolanaAdapter) createUpdateOraclesMessage(ctx context.Context, nebulaId
 	nebulaContract := nebulaContract_interface.(string)
 
 	message := types.NewMessage(
-		s.account.PublicKey,
+		sender,
 		[]types.Instruction{
 			instructions.NebulaUpdateOraclesInstruction(
-				s.account.PublicKey,
+				sender,
 				nid,
 				solana_common.PublicKeyFromString(nebulaContract),
 				solana_common.PublicKeyFromString(multisigAccount),
