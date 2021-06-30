@@ -31,6 +31,6 @@ func HttpUpdateOraclesHandler(c echo.Context) error {
 		Id:        payload.NebulaKey,
 		ChainType: payload.ChainType,
 	})
-
+	zap.L().Sugar().Debugf("Added manual update nebula: ", ManualUpdate)
 	return c.String(http.StatusOK, "OK")
 }

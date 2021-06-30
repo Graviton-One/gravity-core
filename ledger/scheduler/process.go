@@ -79,7 +79,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 				}
 
 				if ManualUpdate.Active {
-					zap.L().Sugar().Debugf("Check for manual update the Nebula")
+					zap.L().Sugar().Debug("Check for manual update the Nebula ", ManualUpdate)
 					found := false
 					nindex := int(-1)
 					for i, n := range ManualUpdate.UpdateQueue {
