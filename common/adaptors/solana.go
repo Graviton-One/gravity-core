@@ -283,9 +283,34 @@ func (s *SolanaAdapter) AddPulse(nebulaId account.NebulaId, pulseId uint64, vali
 			fmt.Println("Recovered in AddPulse", r)
 		}
 	}()
+	var oracles []account.OraclesPubKey
+	oraclesMap, err := s.ghClient.BftOraclesByNebula(account.Solana, nebulaId)
+	if err != nil {
+		zap.L().Sugar().Debugf("BFT error: %s , \n %s", err, zap.Stack("trace").String)
+		return "", nil
+	}
+	myPubKey := s.PubKey()
+	if _, ok := oraclesMap[(&myPubKey).ToString(account.Solana)]; !ok {
+		zap.L().Debug("Oracle not found")
+		return "", fmt.Errorf("Oracles not found")
+	}
+
+	for k, v := range oraclesMap {
+		oracle, err := account.StringToOraclePubKey(k, v)
+		if err != nil {
+			return "", err
+		}
+		oracles = append(oracles, oracle)
+	}
+
+	if len(oracles) == 0 {
+		zap.L().Debug("Oracles map is empty")
+		return "", fmt.Errorf("Oracles map is empty")
+	}
+
 	senderIndex := s.oracleInterval % uint64(len(validators))
 	senderPubKey := solana_common.PublicKeyFromBytes(validators[senderIndex][1:33])
-	msg, err := s.createAddPulseMessage(nebulaId, validators, pulseId, hash, senderPubKey)
+	msg, err := s.createAddPulseMessage(nebulaId, oracles, pulseId, hash, senderPubKey)
 	if err != nil {
 		return "", err
 	}
@@ -796,6 +821,7 @@ func (s *SolanaAdapter) createAddPulseMessage(nebulaId account.NebulaId, validat
 		},
 		s.recentBlockHashes["oracle"],
 	)
+	zap.L().Sugar().Debugf("Block hash %s", s.recentBlockHashes["oracle"])
 	return message, nil
 }
 
