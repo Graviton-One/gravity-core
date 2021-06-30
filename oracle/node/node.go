@@ -230,18 +230,21 @@ func (node *Node) Start(ctx context.Context) {
 
 	if err != nil {
 		zap.L().Sugar().Debug("Subscribe Error: ", err.Error())
-	} else {
-		go func() {
-			for {
-				a := <-ch
-				zap.L().Sugar().Debug(a)
-			}
-		}()
+		panic(err)
 	}
+	// else {
+	// 	go func() {
+	// 		for {
+	// 			a := <-ch
+	// 			zap.L().Sugar().Debug(a)
+	// 		}
+	// 	}()
+	// }
 
 	roundState := new(RoundState)
 	for {
-		time.Sleep(time.Duration(TimeoutMs) * time.Millisecond)
+		//time.Sleep(time.Duration(TimeoutMs) * time.Millisecond)
+		<-ch
 		if pulseCountInBlock >= node.MaxPulseCountInBlock {
 			continue
 		}

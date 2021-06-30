@@ -303,7 +303,7 @@ func (s *SolanaAdapter) AddPulse(nebulaId account.NebulaId, pulseId uint64, vali
 			continue
 		}
 		solsigs[vpk] = sign
-		zap.L().Sugar().Debug("L sig: ", s.account.PublicKey.ToBase58(), " -> ", base58.Encode(sign))
+		zap.L().Sugar().Debug("L sig: ", vpk.ToBase58(), " -> ", base58.Encode(sign))
 	}
 	selfSig, err := s.Sign(serializedMessage)
 	if err != nil {
