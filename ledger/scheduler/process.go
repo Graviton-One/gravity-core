@@ -249,6 +249,7 @@ func (scheduler *Scheduler) signOraclesByNebula(roundId int64, nebulaId account.
 		zap.L().Error(err.Error())
 		return err
 	} else if err == nil {
+		zap.L().Debug("Returning from func signOraclesByNebula")
 		return nil
 	}
 	bftOraclesByNebula, err := scheduler.client.BftOraclesByNebula(chainType, nebulaId)
