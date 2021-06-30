@@ -250,7 +250,11 @@ func (s *SolanaAdapter) SignHash(nebulaId account.NebulaId, intervalId uint64, p
 		zap.L().Sugar().Error(err.Error())
 		return []byte{}, err
 	}
-	return s.Sign(serializedMessage)
+
+	sig, err := s.Sign(serializedMessage)
+	zap.L().Sugar().Debugf("msg: %s", base58.Encode(serializedMessage))
+	zap.L().Sugar().Debugf("sig: %s", base58.Encode(sig))
+	return sig, err
 }
 
 func (s *SolanaAdapter) PubKey() account.OraclesPubKey {
