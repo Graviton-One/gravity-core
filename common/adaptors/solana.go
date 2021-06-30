@@ -291,6 +291,15 @@ func (s *SolanaAdapter) AddPulse(nebulaId account.NebulaId, pulseId uint64, vali
 		return "", err
 	}
 	solsigs := make(map[solana_common.PublicKey]types.Signature)
+	for _, validator := range validators {
+		vpk := solana_common.PublicKeyFromBytes(validator[1:33])
+		sign, err := s.ghClient.Result(account.Solana, nebulaId, int64(pulseId), validator)
+		if err != nil {
+			zap.L().Sugar().Error(err.Error())
+			continue
+		}
+		solsigs[vpk] = sign
+	}
 	selfSig, err := s.Sign(serializedMessage)
 	if err != nil {
 		zap.L().Sugar().Error(err.Error())
