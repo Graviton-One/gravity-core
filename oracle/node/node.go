@@ -224,6 +224,8 @@ func (node *Node) Start(ctx context.Context) {
 	var pulseCountInBlock uint64
 	var lastPulseId uint64
 
+	node.gravityClient.HttpClient.WSEvents.Start()
+	defer node.gravityClient.HttpClient.WSEvents.Stop()
 	ch, err := node.gravityClient.HttpClient.WSEvents.Subscribe(ctx, "gravity-oracle", "tm.event='NewBlock'", 999)
 
 	if err != nil {
