@@ -131,7 +131,7 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 	if err != nil {
 		return nil, err
 	}
-
+	zap.L().Sugar().Debug("Creating oracle, nbula is ", nebulaId)
 	return &Node{
 		validator: validator,
 		nebulaId:  nebulaId,
