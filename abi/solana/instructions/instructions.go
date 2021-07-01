@@ -132,7 +132,10 @@ func NebulaAddPulseInstruction(fromAccount, targetProgramID, nebulaId, multisigI
 	}
 }
 
-func NebulaSendValueToSubsInstruction(fromAccount, targetProgramID, nebulaId common.PublicKey, DataType uint8, value []byte, PulseId uint64, SubscriptionID [16]byte) types.Instruction {
+func NebulaSendValueToSubsInstruction(fromAccount,
+	targetProgramID, nebulaId, nebulaState, nebulaMultisig common.PublicKey,
+	ibportProgramAccount, ibportDataAccount, tokenProgramAddress, recipient, ibPortPDA common.PublicKey,
+	DataType uint8, value []byte, PulseId uint64, SubscriptionID [16]byte) types.Instruction {
 	/*
 			SendValueToSubs {
 		        data_type: DataType,
@@ -163,7 +166,15 @@ func NebulaSendValueToSubsInstruction(fromAccount, targetProgramID, nebulaId com
 
 	accounts := []types.AccountMeta{
 		{PubKey: fromAccount, IsSigner: true, IsWritable: true},
-		{PubKey: nebulaId, IsSigner: false, IsWritable: true},
+		{PubKey: nebulaState, IsSigner: false, IsWritable: true},
+		{PubKey: nebulaMultisig, IsSigner: false, IsWritable: true},
+
+		{PubKey: common.TokenProgramID, IsWritable: false, IsSigner: false},
+		{PubKey: ibportProgramAccount, IsWritable: false, IsSigner: false},
+		{PubKey: ibportDataAccount, IsWritable: true, IsSigner: false},
+		{PubKey: tokenProgramAddress, IsWritable: true, IsSigner: false},
+		{PubKey: recipient, IsWritable: true, IsSigner: false},
+		{PubKey: ibPortPDA, IsWritable: false, IsSigner: false},
 	}
 	return types.Instruction{
 		Accounts:  accounts,
