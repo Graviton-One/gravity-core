@@ -92,7 +92,7 @@ func NebulaUpdateOraclesInstruction(fromAccount, targetProgramID, nebulaDataAcco
 	}
 }
 
-func NebulaAddPulseInstruction(fromAccount, targetProgramID, nebulaId common.PublicKey, signers []common.PublicKey, PulseId uint64, hash []byte) types.Instruction {
+func NebulaAddPulseInstruction(fromAccount, targetProgramID, nebulaId, multisigId, nebulaState common.PublicKey, signers []common.PublicKey, PulseId uint64, hash []byte) types.Instruction {
 	/*
 			SendHashValue {
 		        data_hash: Vec<u8>,
@@ -120,6 +120,8 @@ func NebulaAddPulseInstruction(fromAccount, targetProgramID, nebulaId common.Pub
 	accounts := []types.AccountMeta{
 		{PubKey: fromAccount, IsSigner: true, IsWritable: true},
 		{PubKey: nebulaId, IsSigner: false, IsWritable: true},
+		{PubKey: multisigId, IsSigner: false, IsWritable: true},
+		{PubKey: nebulaState, IsSigner: false, IsWritable: true},
 	}
 	for _, s := range signers {
 		accounts = append(accounts, types.AccountMeta{PubKey: s, IsSigner: true, IsWritable: false})
