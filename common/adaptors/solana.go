@@ -69,6 +69,11 @@ type SolanaAdapter struct {
 	//hashRecentBlockHash    string
 	Bft            uint8
 	oracleInterval uint64
+
+	ibportProgramAccount solana_common.PublicKey
+	ibportDataAccount    solana_common.PublicKey
+	tokenProgramAddress  solana_common.PublicKey
+	ibPortPDA            solana_common.PublicKey
 }
 type SolanaAdapterOption func(*SolanaAdapter) error
 
@@ -98,6 +103,27 @@ func SolanaAdapterWithCustom(custom map[string]interface{}) SolanaAdapterOption 
 		if ok {
 			s.programID = solana_common.PublicKeyFromString(programID)
 		}
+
+		ibportProgramAccount, ok := custom["ib_port_program"].(string)
+		if ok {
+			s.ibportProgramAccount = solana_common.PublicKeyFromString(ibportProgramAccount)
+		}
+
+		ibportDataAccount, ok := custom["ib_port_data"].(string)
+		if ok {
+			s.ibportDataAccount = solana_common.PublicKeyFromString(ibportDataAccount)
+		}
+
+		tokenProgramAddress, ok := custom["token_program"].(string)
+		if ok {
+			s.tokenProgramAddress = solana_common.PublicKeyFromString(tokenProgramAddress)
+		}
+
+		ibPortPDA, ok := custom["ib_port_pda"].(string)
+		if ok {
+			s.ibPortPDA = solana_common.PublicKeyFromString(ibPortPDA)
+		}
+
 		return nil
 	}
 }
@@ -813,6 +839,12 @@ func (s *SolanaAdapter) createAddPulseMessage(nebulaId account.NebulaId, validat
 	return message, nil
 }
 
+func RecipientFromByteArray(byteArray []byte) []byte {
+	// 'm' (1 byte) + swapId (16 bytes) + float (8 bytes)
+	offset := 1 + 16 + 8
+	return byteArray[offset : offset+32]
+}
+
 func (s *SolanaAdapter) createSendValueToSubsMessage(nebulaId account.NebulaId, pulseId uint64, DataType uint8, value []byte, id [16]byte) (types.Message, error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -820,11 +852,16 @@ func (s *SolanaAdapter) createSendValueToSubsMessage(nebulaId account.NebulaId, 
 		}
 	}()
 	nid := solana_common.PublicKeyFromBytes(nebulaId[:])
+	recipient := solana_common.PublicKeyFromBytes(RecipientFromByteArray(value))
 	message := types.NewMessage(
 		s.account.PublicKey,
 		[]types.Instruction{
 			instructions.NebulaSendValueToSubsInstruction(
-				s.account.PublicKey, s.programID, nid, DataType, value, pulseId, id,
+				s.account.PublicKey, s.programID, nid,
+				s.nebulaContract, s.multisigAccount,
+				s.ibportProgramAccount, s.ibportDataAccount,
+				s.tokenProgramAddress, recipient, s.ibPortPDA,
+				DataType, value, pulseId, id,
 			),
 		},
 		s.recentBlockHashes["oracle_send_value"],
