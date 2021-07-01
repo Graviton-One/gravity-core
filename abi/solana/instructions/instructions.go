@@ -119,7 +119,6 @@ func NebulaAddPulseInstruction(fromAccount, targetProgramID, nebulaId, multisigI
 
 	accounts := []types.AccountMeta{
 		{PubKey: fromAccount, IsSigner: true, IsWritable: true},
-		{PubKey: nebulaId, IsSigner: false, IsWritable: true},
 		{PubKey: nebulaState, IsSigner: false, IsWritable: true},
 		{PubKey: multisigId, IsSigner: false, IsWritable: true},
 	}
