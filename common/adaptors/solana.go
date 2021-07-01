@@ -803,7 +803,7 @@ func (s *SolanaAdapter) createAddPulseMessage(nebulaId account.NebulaId, validat
 		sender,
 		[]types.Instruction{
 			instructions.NebulaAddPulseInstruction(
-				sender, s.programID, nid, solanaValidators, pulseId, hash,
+				sender, s.programID, nid, s.multisigAccount, s.nebulaContract, solanaValidators, pulseId, hash,
 			),
 		},
 		s.recentBlockHashes["oracle"],
