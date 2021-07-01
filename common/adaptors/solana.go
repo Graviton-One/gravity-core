@@ -796,6 +796,7 @@ func (s *SolanaAdapter) createAddPulseMessage(nebulaId account.NebulaId, validat
 		pubKey := solana_common.PublicKeyFromBytes(v[1:33])
 		vals = append(vals, pubKey)
 	}
+	program := solana_common.PublicKeyFromBytes(nebulaId[:])
 	sort.Sort(&vals)
 	solanaValidators := vals.ToPubKeys()
 	nid := solana_common.PublicKeyFromBytes(nebulaId[:])
@@ -803,7 +804,7 @@ func (s *SolanaAdapter) createAddPulseMessage(nebulaId account.NebulaId, validat
 		sender,
 		[]types.Instruction{
 			instructions.NebulaAddPulseInstruction(
-				sender, s.programID, nid, s.multisigAccount, s.nebulaContract, solanaValidators, pulseId, hash,
+				sender, program, nid, s.multisigAccount, s.nebulaContract, solanaValidators, pulseId, hash,
 			),
 		},
 		s.recentBlockHashes["oracle"],
