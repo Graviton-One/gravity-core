@@ -4,6 +4,7 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/wavesplatform/gowaves/pkg/crypto"
+	"go.uber.org/zap"
 )
 
 const (
@@ -31,6 +32,7 @@ func StringToNebulaId(address string, chainType ChainType) (NebulaId, error) {
 	case Solana:
 		nebulaBytes := base58.Decode(address)
 		nebula = BytesToNebulaId(nebulaBytes)
+		zap.L().Sugar().Debug("NebulaId: ", nebula)
 	}
 
 	return nebula, nil
