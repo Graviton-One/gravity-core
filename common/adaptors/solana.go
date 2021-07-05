@@ -383,7 +383,7 @@ func (s *SolanaAdapter) SendValueToSubs(nebulaId account.NebulaId, pulseId uint6
 		zap.L().Sugar().Error(err.Error())
 		return err
 	}
-	ids := nst.SubscriptionsQueue
+	ids := nst.SubscriptionsMap.K
 	dtype := uint8(0)
 	for _, id := range ids {
 		zap.L().Sugar().Debug("IDs iterate", id)
