@@ -412,7 +412,7 @@ func (s *SolanaAdapter) SendValueToSubs(nebulaId account.NebulaId, pulseId uint6
 			dtype = 2
 		}
 		if len(val) > 0 {
-			msg, err := s.createSendValueToSubsMessage(nebulaId, pulseId, dtype, val, id)
+			msg, err := s.createSendValueToSubsMessage(nebulaId, pulseId-1, dtype, val, id)
 			if err != nil {
 				return err
 			}
