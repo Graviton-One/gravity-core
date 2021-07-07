@@ -98,8 +98,8 @@ func NebulaAddPulseInstruction(fromAccount, targetProgramID, nebulaId, multisigI
 		        data_hash: Vec<u8>,
 		    }
 	*/
-	newHash := [64]byte{}
-	copy(newHash[:], hash)
+	// newHash := [64]byte{}
+	// copy(newHash[:], hash)
 
 	data, err := common.SerializeData(struct {
 		Instruction uint8
@@ -108,7 +108,7 @@ func NebulaAddPulseInstruction(fromAccount, targetProgramID, nebulaId, multisigI
 	}{
 		Instruction: 2,
 		//PulseID:     PulseId,
-		Hash: newHash[:],
+		Hash: hash,
 	})
 	if err != nil {
 		panic(err)
