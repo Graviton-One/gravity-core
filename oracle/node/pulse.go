@@ -8,6 +8,7 @@ import (
 	"github.com/Gravity-Tech/gravity-core/oracle/extractor"
 	"go.uber.org/zap"
 
+	"github.com/Gravity-Tech/gravity-core/common/hashing"
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -116,7 +117,9 @@ func (node *Node) signResult(intervalId uint64, pulseId uint64, ctx context.Cont
 		return nil, nil, err
 	}
 
-	hash := crypto.Keccak256(toBytes(result, node.extractor.ExtractorType))
+	// hash := crypto.Keccak256(toBytes(result, node.extractor.ExtractorType))
+	hash := hashing.WrappedKeccak256(toBytes(result, node.extractor.ExtractorType), node.chainType)
+
 	sign, err := node.adaptor.SignHash(node.nebulaId, intervalId, pulseId, hash)
 	if err != nil {
 		zap.L().Error(err.Error())
