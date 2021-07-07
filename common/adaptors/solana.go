@@ -447,7 +447,43 @@ func (s *SolanaAdapter) SendValueToSubs(nebulaId account.NebulaId, pulseId uint6
 			}
 
 			log.Println("txHash:", txSig)
+			//send burn confirmations
+			if val[0] == 'u' {
+				msg, err := s.createConfirmProcessedMessage(val)
+				if err != nil {
+					return err
+				}
+				serializedMessage, err := msg.Serialize()
+				if err != nil {
+					zap.L().Sugar().Error(err.Error())
+					return err
+				}
+				solsigs := make(map[solana_common.PublicKey]types.Signature)
+				selfSig, err := s.Sign(serializedMessage)
+				if err != nil {
+					zap.L().Sugar().Error(err.Error())
+					return err
+				}
+				zap.L().Sugar().Debug("Send msg: ", base58.Encode(serializedMessage))
+				solsigs[s.account.PublicKey] = selfSig
+				zap.L().Sugar().Debug("Self sig: ", s.account.PublicKey.ToBase58(), " -> ", base58.Encode(selfSig))
+				tx, err := types.CreateTransaction(msg, solsigs)
+				if err != nil {
+					return err
+				}
+				rawTx, err := tx.Serialize()
+				if err != nil {
+					zap.L().Sugar().Error(err.Error())
+					return err
+				}
 
+				txSig, err := s.client.SendRawTransaction(ctx, rawTx)
+				if err != nil {
+					zap.L().Sugar().Error(err.Error())
+					return err
+				}
+				log.Println("Confirm txHash:", txSig)
+			}
 		}
 	}
 	return nil
@@ -851,6 +887,10 @@ func (s *SolanaAdapter) createSendValueToSubsMessage(nebulaId account.NebulaId, 
 			fmt.Println("Recovered in createSendValueToSubsMessage", r)
 		}
 	}()
+	recentBlockHash, err := s.client.GetRecentBlockhash(context.Background())
+	if err != nil {
+		return types.Message{}, err
+	}
 	nid := solana_common.PublicKeyFromBytes(nebulaId[:])
 	recipient := solana_common.PublicKeyFromBytes(RecipientFromByteArray(value))
 	message := types.NewMessage(
@@ -864,7 +904,32 @@ func (s *SolanaAdapter) createSendValueToSubsMessage(nebulaId account.NebulaId, 
 				DataType, value, pulseId, id,
 			),
 		},
-		s.recentBlockHashes["oracle_send_value"],
+		recentBlockHash.Blockhash,
+	)
+	return message, nil
+}
+
+func (s *SolanaAdapter) createConfirmProcessedMessage(value []byte) (types.Message, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in createConfirmProcessedMessage", r)
+		}
+	}()
+	recentBlockHash, err := s.client.GetRecentBlockhash(context.Background())
+	if err != nil {
+		return types.Message{}, err
+	}
+	recipient := solana_common.PublicKeyFromBytes(RecipientFromByteArray(value))
+	message := types.NewMessage(
+		s.account.PublicKey,
+		[]types.Instruction{
+			instructions.NebulaConfirmProcessedRequestInstruction(
+				s.account.PublicKey, s.ibportProgramAccount, s.ibportDataAccount,
+				s.tokenProgramAddress, recipient, s.ibPortPDA,
+				value,
+			),
+		},
+		recentBlockHash.Blockhash,
 	)
 	return message, nil
 }

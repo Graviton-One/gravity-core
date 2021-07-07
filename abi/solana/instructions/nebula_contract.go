@@ -11,7 +11,7 @@ type Subscription struct {
 }
 type Pulse struct {
 	DataHash []byte
-	Height   uint64
+	//Height   uint64
 }
 
 /*
@@ -68,8 +68,8 @@ type NebulaContract struct {
 		V []Subscription
 	}
 	PulsesMap struct {
-		K []uint64
-		V []Pulse
+		K []Pulse
+		V []uint64
 	}
 	IsInitialized     byte
 	InitializerPubkey common.PublicKey

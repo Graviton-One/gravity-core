@@ -182,3 +182,43 @@ func NebulaSendValueToSubsInstruction(fromAccount,
 		Data:      data,
 	}
 }
+
+func NebulaConfirmProcessedRequestInstruction(fromAccount,
+	ibportProgramAccount, ibportDataAccount, tokenProgramAddress, recipient, ibPortPDA common.PublicKey,
+	requestID []byte) types.Instruction {
+	/*
+			SendValueToSubs {
+		        data_type: DataType,
+		        pulse_id: PulseID,
+		        subscription_id: SubscriptionID,
+				value: Vec<u8>
+		    },
+	*/
+	data, err := common.SerializeData(struct {
+		Instruction uint8
+		RequestID   []byte
+	}{
+		Instruction: 3,
+		RequestID:   requestID,
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("--------- RAW INSTRUCTION DATA -----------")
+	fmt.Printf("%s\n", hex.EncodeToString(data))
+	fmt.Println("------- END RAW INSTRUCTION DATA ---------")
+
+	accounts := []types.AccountMeta{
+		{PubKey: fromAccount, IsSigner: true, IsWritable: true},
+		{PubKey: ibportDataAccount, IsWritable: true, IsSigner: false},
+		{PubKey: common.TokenProgramID, IsWritable: false, IsSigner: false},
+		{PubKey: tokenProgramAddress, IsWritable: true, IsSigner: false},
+		{PubKey: recipient, IsWritable: true, IsSigner: false},
+		{PubKey: ibPortPDA, IsWritable: false, IsSigner: false},
+	}
+	return types.Instruction{
+		Accounts:  accounts,
+		ProgramID: ibportProgramAccount,
+		Data:      data,
+	}
+}
