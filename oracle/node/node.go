@@ -324,6 +324,7 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 	case state.CommitSubRound:
 		zap.L().Sugar().Debugf("Commit subround pulseId: %d", pulseId)
 		if len(roundState.commitHash) != 0 {
+			zap.L().Sugar().Debug("Len(commit hash): ", len(roundState.commitHash), roundState.commitHash)
 			return nil
 		}
 		_, err := node.gravityClient.CommitHash(node.chainType, node.nebulaId, int64(intervalId), int64(pulseId), node.oraclePubKey)
