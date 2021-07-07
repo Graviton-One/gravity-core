@@ -16,7 +16,7 @@ import (
 func (node *Node) commit(data *extractor.Data, tcHeight uint64, pulseId uint64) ([]byte, error) {
 	dataBytes := toBytes(data, node.extractor.ExtractorType)
 	zap.L().Sugar().Debugf("Extractor data type: %d", node.extractor.ExtractorType)
-	// commit := crypto.Keccak256(dataBytes)
+
 	commit := hashing.WrappedKeccak256(dataBytes, node.chainType)
 	fmt.Printf("Commit: %s - %s \n", hexutil.Encode(dataBytes), hexutil.Encode(commit[:]))
 
@@ -117,7 +117,6 @@ func (node *Node) signResult(intervalId uint64, pulseId uint64, ctx context.Cont
 		return nil, nil, err
 	}
 
-	// hash := crypto.Keccak256(toBytes(result, node.extractor.ExtractorType))
 	hash := hashing.WrappedKeccak256(toBytes(result, node.extractor.ExtractorType), node.chainType)
 
 	sign, err := node.adaptor.SignHash(node.nebulaId, intervalId, pulseId, hash)
@@ -146,6 +145,9 @@ func (node *Node) signResult(intervalId uint64, pulseId uint64, ctx context.Cont
 		},
 		transactions.BytesValue{
 			Value: node.oraclePubKey[:],
+		},
+		transactions.IntValue{
+			Value: int64(node.chainType),
 		},
 	})
 

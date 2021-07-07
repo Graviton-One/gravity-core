@@ -8,11 +8,10 @@ import (
 	"errors"
 
 	"github.com/Gravity-Tech/gravity-core/common/adaptors"
+	"github.com/Gravity-Tech/gravity-core/common/hashing"
 	"go.uber.org/zap"
 
 	"github.com/Gravity-Tech/gravity-core/ledger/scheduler"
-
-	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/Gravity-Tech/gravity-core/common/account"
 	"github.com/Gravity-Tech/gravity-core/common/storage"
@@ -134,6 +133,7 @@ func reveal(store *storage.Storage, tx *transactions.Transaction) error {
 	height := tx.Value(3).(int64)
 	reveal := tx.Value(4).([]byte)
 	pubKeyBytes := tx.Value(5).([]byte)
+	chainType := tx.Value(6).(int64)
 	var pubKey account.OraclesPubKey
 	copy(pubKey[:], pubKeyBytes)
 	zap.L().Sugar().Debug("State reveal", commit, nebula, pulseId, height, reveal, pubKeyBytes)
@@ -148,7 +148,7 @@ func reveal(store *storage.Storage, tx *transactions.Transaction) error {
 			return err
 		}
 
-		expectedHash := crypto.Keccak256(reveal)
+		expectedHash := hashing.WrappedKeccak256(reveal[:], account.ChainType(chainType))
 		if !bytes.Equal(commitBytes, expectedHash[:]) {
 			return ErrInvalidReveal
 		}
