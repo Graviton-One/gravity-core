@@ -175,7 +175,8 @@ func (s *SolanaAdapter) GetHeight(ctx context.Context) (uint64, error) {
 }
 
 func (s *SolanaAdapter) WaitTx(id string, ctx context.Context) error {
-	time.Sleep(time.Second * 20)
+	time.Sleep(time.Second * 30)
+
 	// u := url.URL{Scheme: "ws", Host: "testnet.solana.com", Path: "/"}
 	// log.Printf("connecting to %s", u.String())
 
