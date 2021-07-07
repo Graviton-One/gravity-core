@@ -462,7 +462,6 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 			return nil
 		}
 		zap.L().Sugar().Debugf("Adding pulse id: %d", pulseId)
-
 		txId, err := node.adaptor.AddPulse(node.nebulaId, pulseId, oracles, roundState.resultHash, ctx)
 
 		if err != nil {
