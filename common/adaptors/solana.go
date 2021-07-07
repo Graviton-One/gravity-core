@@ -439,7 +439,7 @@ func (s *SolanaAdapter) SendValueToSubs(nebulaId account.NebulaId, pulseId uint6
 				zap.L().Sugar().Error(err.Error())
 				return err
 			}
-
+			zap.L().Sugar().Debug("SendValueToSubs(Base64): ", base64.StdEncoding.EncodeToString(rawTx))
 			txSig, err := s.client.SendRawTransaction(ctx, rawTx)
 			if err != nil {
 				zap.L().Sugar().Error(err.Error())
@@ -476,7 +476,7 @@ func (s *SolanaAdapter) SendValueToSubs(nebulaId account.NebulaId, pulseId uint6
 					zap.L().Sugar().Error(err.Error())
 					return err
 				}
-
+				zap.L().Sugar().Debug("SendConfirmation(Base64): ", base64.StdEncoding.EncodeToString(rawTx))
 				txSig, err := s.client.SendRawTransaction(ctx, rawTx)
 				if err != nil {
 					zap.L().Sugar().Error(err.Error())
