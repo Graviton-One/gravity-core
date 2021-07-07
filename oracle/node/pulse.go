@@ -11,13 +11,13 @@ import (
 	"github.com/Gravity-Tech/gravity-core/common/hashing"
 	"github.com/Gravity-Tech/gravity-core/common/transactions"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func (node *Node) commit(data *extractor.Data, tcHeight uint64, pulseId uint64) ([]byte, error) {
 	dataBytes := toBytes(data, node.extractor.ExtractorType)
 	zap.L().Sugar().Debugf("Extractor data type: %d", node.extractor.ExtractorType)
-	commit := crypto.Keccak256(dataBytes)
+	// commit := crypto.Keccak256(dataBytes)
+	commit := hashing.WrappedKeccak256(dataBytes, node.chainType)
 	fmt.Printf("Commit: %s - %s \n", hexutil.Encode(dataBytes), hexutil.Encode(commit[:]))
 
 	tx, err := transactions.New(node.validator.pubKey, transactions.Commit, node.validator.privKey)
