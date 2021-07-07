@@ -223,7 +223,7 @@ func (node *Node) Start(ctx context.Context) {
 	var lastTcHeight uint64
 	var pulseCountInBlock uint64
 	var lastPulseId uint64
-
+	firstCommitIteration := true
 	node.gravityClient.HttpClient.WSEvents.Start()
 	defer node.gravityClient.HttpClient.WSEvents.Stop()
 	ch, err := node.gravityClient.HttpClient.WSEvents.Subscribe(ctx, "gravity-oracle", "tm.event='NewBlock'", 999)
@@ -257,7 +257,15 @@ func (node *Node) Start(ctx context.Context) {
 
 		if lastPulseId != newLastPulseId {
 			lastPulseId = newLastPulseId
-			roundState = &RoundState{}
+			roundState = &RoundState{
+				data:        nil,
+				commitHash:  []byte{},
+				resultValue: nil,
+				resultHash:  []byte{},
+				isSent:      false,
+				commitSent:  false,
+				RevealExist: false,
+			}
 		}
 		zap.L().Sugar().Debugf("Round Loop Pulse new: %d last:%d", newLastPulseId, lastPulseId)
 		tcHeight, err := node.adaptor.GetHeight(ctx)
@@ -269,11 +277,22 @@ func (node *Node) Start(ctx context.Context) {
 			if tcHeight != lastTcHeight {
 				zap.L().Sugar().Infof("Tc Height: %d\n", tcHeight)
 				lastTcHeight = tcHeight
-				if tcHeight%node.blocksInterval == 0 {
+				if firstCommitIteration {
 					pulseCountInBlock = 0
-					roundState = &RoundState{}
+					roundState = &RoundState{
+						data:        nil,
+						commitHash:  []byte{},
+						resultValue: nil,
+						resultHash:  []byte{},
+						isSent:      false,
+						commitSent:  false,
+						RevealExist: false,
+					}
+					firstCommitIteration = false
 				}
 			}
+		} else {
+			firstCommitIteration = true
 		}
 
 		oraclesMap, err := node.gravityClient.BftOraclesByNebula(node.chainType, node.nebulaId)
