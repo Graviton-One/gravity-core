@@ -257,7 +257,7 @@ func (node *Node) Start(ctx context.Context) {
 
 		if lastPulseId != newLastPulseId {
 			lastPulseId = newLastPulseId
-			roundState = new(RoundState)
+			roundState = &RoundState{}
 		}
 		zap.L().Sugar().Debugf("Round Loop Pulse new: %d last:%d", newLastPulseId, lastPulseId)
 		tcHeight, err := node.adaptor.GetHeight(ctx)
@@ -271,7 +271,7 @@ func (node *Node) Start(ctx context.Context) {
 				lastTcHeight = tcHeight
 				if tcHeight%node.blocksInterval == 0 {
 					pulseCountInBlock = 0
-					roundState = new(RoundState)
+					roundState = &RoundState{}
 				}
 			}
 		}
@@ -315,10 +315,15 @@ func (node *Node) Start(ctx context.Context) {
 }
 
 func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64, intervalId uint64, roundState *RoundState, ctx context.Context) error {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("execute round", r)
+		}
+	}()
 	switch round {
 	case state.CommitSubRound:
 		zap.L().Sugar().Debugf("Commit subround pulseId: %d", pulseId)
-		if roundState.commitHash != nil {
+		if len(roundState.commitHash) != 0 {
 			return nil
 		}
 		_, err := node.gravityClient.CommitHash(node.chainType, node.nebulaId, int64(intervalId), int64(pulseId), node.oraclePubKey)
@@ -326,6 +331,7 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 			zap.L().Error(err.Error())
 			return err
 		} else if err == nil {
+			zap.L().Sugar().Debugf("Commit subround pulseId: %d intervalId: %d exists", pulseId, intervalId)
 			return nil
 		}
 
@@ -353,8 +359,8 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 		zap.L().Sugar().Debug("Commit round end ", roundState)
 	case state.RevealSubRound:
 		zap.L().Debug("Reveal subround")
-		if roundState.commitHash == nil || roundState.RevealExist {
-			zap.L().Sugar().Debugf("CommitHash is nil: %t, RevealExist: %t", roundState.commitHash == nil, roundState.RevealExist)
+		if len(roundState.commitHash) == 0 || roundState.RevealExist {
+			zap.L().Sugar().Debugf("CommitHash is empty: %t, RevealExist: %t", len(roundState.commitHash) == 0, roundState.RevealExist)
 			return nil
 		}
 		_, err := node.gravityClient.Reveal(node.chainType, node.oraclePubKey, node.nebulaId, int64(intervalId), int64(pulseId), roundState.commitHash)

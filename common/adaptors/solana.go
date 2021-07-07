@@ -897,7 +897,7 @@ func (s *SolanaAdapter) createSendValueToSubsMessage(nebulaId account.NebulaId, 
 		s.account.PublicKey,
 		[]types.Instruction{
 			instructions.NebulaSendValueToSubsInstruction(
-				s.account.PublicKey, s.programID, nid,
+				s.account.PublicKey, nid, nid,
 				s.nebulaContract, s.multisigAccount,
 				s.ibportProgramAccount, s.ibportDataAccount,
 				s.tokenProgramAddress, recipient, s.ibPortPDA,
