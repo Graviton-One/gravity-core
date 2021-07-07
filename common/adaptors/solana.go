@@ -175,7 +175,7 @@ func (s *SolanaAdapter) GetHeight(ctx context.Context) (uint64, error) {
 }
 
 func (s *SolanaAdapter) WaitTx(id string, ctx context.Context) error {
-	time.Sleep(time.Second * 30)
+	time.Sleep(time.Second * 40)
 
 	// u := url.URL{Scheme: "ws", Host: "testnet.solana.com", Path: "/"}
 	// log.Printf("connecting to %s", u.String())
@@ -378,7 +378,6 @@ func (s *SolanaAdapter) SendValueToSubs(nebulaId account.NebulaId, pulseId uint6
 			fmt.Println("Recovered in SendValueToSubs", r)
 		}
 	}()
-	s.updateRecentBlockHash(context.Background(), "oracle_send_value")
 	nst, err := s.getNebulaContractState(ctx, s.nebulaContract.ToBase58())
 	if err != nil {
 		zap.L().Sugar().Error(err.Error())
