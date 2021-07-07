@@ -12,9 +12,7 @@ func WrappedKeccak256(input []byte, chain account.ChainType) []byte {
 	if chain != account.Solana {
 		return crypto.Keccak256(input[:])
 	}
-
-	hash := sha256.New()
-	hash.Write(input[:])
-
-	return hash.Sum(nil)
+	
+	digest := sha256.Sum256(input[:])
+	return digest[:]
 }
