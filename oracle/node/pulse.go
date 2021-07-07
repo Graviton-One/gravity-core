@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
-func (node *Node) commit(data *extractor.Data, tcHeight uint64, pulseId uint64) ([]byte, error) {
+func (node *Node) invokeCommitTx(data *extractor.Data, tcHeight uint64, pulseId uint64) ([]byte, error) {
 	dataBytes := toBytes(data, node.extractor.ExtractorType)
 	zap.L().Sugar().Debugf("Extractor data type: %d", node.extractor.ExtractorType)
 
@@ -52,7 +52,8 @@ func (node *Node) commit(data *extractor.Data, tcHeight uint64, pulseId uint64) 
 
 	return commit, nil
 }
-func (node *Node) reveal(tcHeight uint64, pulseId uint64, reveal *extractor.Data, commit []byte) error {
+
+func (node *Node) invokeRevealTx(tcHeight uint64, pulseId uint64, reveal *extractor.Data, commit []byte) error {
 	dataBytes := toBytes(reveal, node.extractor.ExtractorType)
 	fmt.Printf("Reveal: %s  - %s \n", hexutil.Encode(dataBytes), hexutil.Encode(commit))
 	println(base64.StdEncoding.EncodeToString(dataBytes))
@@ -89,7 +90,8 @@ func (node *Node) reveal(tcHeight uint64, pulseId uint64, reveal *extractor.Data
 
 	return nil
 }
-func (node *Node) signResult(intervalId uint64, pulseId uint64, ctx context.Context) (*extractor.Data, []byte, error) {
+
+func (node *Node) signRoundResult(intervalId uint64, pulseId uint64, ctx context.Context) (*extractor.Data, []byte, error) {
 	zap.L().Sugar().Debugf("signResults: interval: %d, pulseId: %d", intervalId, pulseId)
 	var values []extractor.Data
 	zap.L().Sugar().Debugf("gravity Reveals: chaintype: %d, pulseId: %d NebulaId: %s", node.chainType, pulseId, node.nebulaId.ToString(node.chainType))
