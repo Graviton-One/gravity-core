@@ -35,3 +35,10 @@ migration.txt
 
 cmd/gravity/gravity
 .vscode/
+/artifacts/
+/cache/
+/node_modules/
+/typechain/
+/coverage.json
+/coverage/
+*DS_Store
