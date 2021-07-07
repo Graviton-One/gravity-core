@@ -461,7 +461,7 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 			zap.L().Debug("Len oracles != myRound")
 			return nil
 		}
-		zap.L().Debug("Adding pulse")
+		zap.L().Sugar().Debugf("Adding pulse id: %d", pulseId)
 		txId, err := node.adaptor.AddPulse(node.nebulaId, pulseId, oracles, roundState.resultHash, ctx)
 
 		if err != nil {
@@ -479,7 +479,7 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 			zap.L().Sugar().Infof("Result tx id: %s", txId)
 
 			roundState.isSent = true
-			zap.L().Debug("Sending Value to subs")
+			zap.L().Sugar().Debugf("Sending Value to subs, pulse id: %d", pulseId)
 			err = node.adaptor.SendValueToSubs(node.nebulaId, pulseId, roundState.resultValue, ctx)
 			if err != nil {
 				zap.L().Sugar().Debugf("Error: %s", err)
