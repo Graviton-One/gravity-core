@@ -80,6 +80,9 @@ func (node *Node) invokeRevealTx(tcHeight uint64, pulseId uint64, reveal *extrac
 		transactions.BytesValue{
 			Value: node.oraclePubKey[:],
 		},
+		transactions.IntValue{
+			Value: int64(node.chainType),
+		},
 	})
 
 	err = node.gravityClient.SendTx(tx)
