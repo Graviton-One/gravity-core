@@ -27,7 +27,6 @@ type roundExecutor struct {}
 var oracleRoundExecutor = &roundExecutor{}
 
 
-func (re *roundExecutor) ExecuteCommitSubRound()
 
 func (re *roundExecutor) Execute(node *Node, props *roundExecuteProps) error {
 	pulseId := props.PulseID
