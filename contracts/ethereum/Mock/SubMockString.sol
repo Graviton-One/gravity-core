@@ -1,8 +1,8 @@
 pragma solidity <=0.7.0;
 
-import "../interfaces/ISubscriberInt.sol";
+import "../interfaces/ISubscriberString.sol";
 
-contract SubMockInt is ISubscriberInt {
+contract SubMockString is ISubscriberString {
     address payable nebulaAddress;
     uint256 reward;
     bool public isSent;
@@ -10,10 +10,10 @@ contract SubMockInt is ISubscriberInt {
         nebulaAddress = newNebulaAddress;
         reward = newReward;
     }
-    
-    receive() external payable { } 
-    
-    function attachValue(int64 data) override external {
+
+    receive() external payable { }
+
+    function attachValue(string calldata data) override external {
         isSent = true;
     }
 
