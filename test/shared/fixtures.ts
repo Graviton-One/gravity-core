@@ -3,6 +3,9 @@ import { BigNumber } from "ethers"
 
 import { Gravity } from "../../typechain/Gravity"
 import { TestNebula } from "../../typechain/TestNebula"
+import { SubMockBytes } from "../../typechain/SubMockBytes"
+import { SubMockInt } from "../../typechain/SubMockInt"
+import { SubMockString } from "../../typechain/SubMockString"
 
 import { Fixture } from "ethereum-waffle"
 
@@ -27,6 +30,9 @@ export const gravityFixture: Fixture<GravityFixture> =
 
 interface TestNebulaFixture extends GravityFixture {
   nebula: TestNebula
+  subMockBytes: SubMockBytes
+  subMockString: SubMockString
+  subMockInt: SubMockInt
 }
 
 export const testNebulaFixture: Fixture<TestNebulaFixture> =
@@ -55,5 +61,15 @@ export const testNebulaFixture: Fixture<TestNebulaFixture> =
        consul3.address],
       3
   )) as TestNebula
-  return { gravity, nebula }
+
+  const subMockBytesFactory = await ethers.getContractFactory("SubMockBytes")
+  const subMockBytes = await subMockBytesFactory.deploy(nebula.address, 0)
+
+  const subMockStringFactory = await ethers.getContractFactory("SubMockString")
+  const subMockString = await subMockStringFactory.deploy(nebula.address, 0)
+
+  const subMockIntFactory = await ethers.getContractFactory("SubMockInt")
+  const subMockInt = await subMockIntFactory.deploy(nebula.address, 0)
+
+  return { gravity, nebula, subMockBytes, subMockString, subMockInt }
 }
