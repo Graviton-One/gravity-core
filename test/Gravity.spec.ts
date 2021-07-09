@@ -69,35 +69,35 @@ describe("Gravity", () => {
   describe("#hashNewConsuls", () => {
     it("hashes one address", async () => {
       let roundId = 1
-      let hash1 = ethers.utils.solidityPack([ "address" ], [ consul2.address ]);
-      let hash2 = ethers.utils.solidityKeccak256([ "bytes", "uint256" ], [ hash1, roundId ])
+      let pack = ethers.utils.solidityPack([ "address" ], [ consul2.address ]);
+      let hash = ethers.utils.solidityKeccak256([ "bytes", "uint256" ], [ pack, roundId ])
 
       let hashNewConsuls = await gravity.hashNewConsuls([consul2.address], 1)
 
-      expect(hashNewConsuls).to.eq(hash2)
+      expect(hashNewConsuls).to.eq(hash)
     })
 
     it("hashes three addresses", async () => {
       let roundId = 1
-      let hash1 = ethers.utils.solidityPack([ "address" ], [ consul1.address ]);
-      let hash2 = ethers.utils.solidityPack([ "bytes", "address" ], [ hash1, consul2.address ]);
-      let hash3 = ethers.utils.solidityPack([ "bytes", "address" ], [ hash2, consul3.address ]);
-      let hash4 = ethers.utils.solidityKeccak256([ "bytes", "uint256" ], [ hash3, roundId ])
+      let pack1 = ethers.utils.solidityPack([ "address" ], [ consul1.address ]);
+      let pack2 = ethers.utils.solidityPack([ "bytes", "address" ], [ pack1, consul2.address ]);
+      let pack3 = ethers.utils.solidityPack([ "bytes", "address" ], [ pack2, consul3.address ]);
+      let hash = ethers.utils.solidityKeccak256([ "bytes", "uint256" ], [ pack3, roundId ])
 
       let hashNewConsuls = await gravity.hashNewConsuls([consul1.address, consul2.address, consul3.address], 1)
 
-      expect(hashNewConsuls).to.eq(hash4)
+      expect(hashNewConsuls).to.eq(hash)
     })
 
     it("hashes three addresses", async () => {
       let roundId = 1
       let addresses = [consul1.address, consul2.address, consul3.address]
-      let hash = packAddresses(addresses)
-      let hash1 = ethers.utils.solidityKeccak256([ "bytes", "uint256" ], [ hash, roundId ])
+      let pack = packAddresses(addresses)
+      let hash = ethers.utils.solidityKeccak256([ "bytes", "uint256" ], [ pack, roundId ])
 
       let hashNewConsuls = await gravity.hashNewConsuls(addresses, 1)
 
-      expect(hashNewConsuls).to.eq(hash1)
+      expect(hashNewConsuls).to.eq(hash)
     })
 
     it("hashes three addresses", async () => {
