@@ -1,4 +1,4 @@
-import { ethers, waffle } from "hardhat"
+import { ethers, waffle, network } from "hardhat"
 import { BigNumber } from "ethers"
 import { Gravity } from "../typechain/Gravity"
 import { TestNebula } from "../typechain/TestNebula"
@@ -247,9 +247,10 @@ describe("Nebula", () => {
       let rs = [sig1.r, sig2.r, sig3.r]
       let ss = [sig1.s, sig2.s, sig3.s]
 
+      let blockNumber = await wallet.provider.getBlockNumber()
       await expect(nebula.sendHashValue(hash, vs, rs, ss))
         .to.emit(nebula, "NewPulse")
-        .withArgs(1, 7, hash)
+        .withArgs(1, blockNumber+1, hash)
     })
   })
 
