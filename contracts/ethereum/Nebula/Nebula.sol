@@ -90,29 +90,20 @@ contract Nebula {
        rounds[newRound] = true;
     }
     
-    function validateDataProvider() internal view returns(bool) {
-        for(uint i = 0; i < oracles.length; i++) {
-            if (oracles[i] == msg.sender) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     function sendValueToSubByte(bytes memory value, uint256 pulseId, bytes32 subId) public {
-        require(validateDataProvider(), "caller is not one of the oracles");
+        require(keccak256(abi.encodePacked(value)) == pulses[pulseId].dataHash, "value was not approved by oracles");
         sendValueToSub(pulseId, subId);
         ISubscriberBytes(subscriptions[subId].contractAddress).attachValue(value);
     }
 
     function sendValueToSubInt(int64 value, uint256 pulseId, bytes32 subId) public {
-        require(validateDataProvider(), "caller is not one of the oracles");
+        require(keccak256(abi.encodePacked(value)) == pulses[pulseId].dataHash, "value was not approved by oracles");
         sendValueToSub(pulseId, subId);
         ISubscriberInt(subscriptions[subId].contractAddress).attachValue(value);
     }
 
     function sendValueToSubString(string memory value, uint256 pulseId, bytes32 subId) public {
-        require(validateDataProvider(), "caller is not one of the oracles");
+        require(keccak256(abi.encodePacked(value)) == pulses[pulseId].dataHash, "value was not approved by oracles");
         sendValueToSub(pulseId, subId);
         ISubscriberString(subscriptions[subId].contractAddress).attachValue(value);
     }

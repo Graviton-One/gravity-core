@@ -23,5 +23,10 @@
     "@types/chai-as-promised": "^7.1.4",
     "chai-as-promised": "^7.1.1",
     "typechain": "^5.0.0"
+  },
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "coverage": "hardhat coverage"
   }
 }

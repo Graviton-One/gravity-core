@@ -1,5 +1,5 @@
 import { ethers, waffle, network } from "hardhat"
-import { BigNumber } from "ethers"
+import { BigNumber, ContractTransaction } from "ethers"
 import { Gravity } from "../typechain/Gravity"
 import { TestNebula } from "../typechain/TestNebula"
 import { SubMockBytes } from "../typechain/SubMockBytes"
@@ -61,6 +61,27 @@ describe("Nebula", () => {
   function hashAddresses(addresses: string[]): string {
     let pack = packAddresses(addresses)
     return ethers.utils.solidityKeccak256([ "bytes" ], [ pack ])
+  }
+
+  async function sendHashValue(hash: string): Promise<ContractTransaction> {
+
+      const key1 = new ethers.utils.SigningKey(consul1.privateKey)
+      const signature1 = await key1.signDigest(ethers.utils.arrayify(hash))
+      let sig1 = ethers.utils.splitSignature(signature1);
+
+      const key2 = new ethers.utils.SigningKey(consul2.privateKey)
+      const signature2 = await key2.signDigest(ethers.utils.arrayify(hash))
+      let sig2 = ethers.utils.splitSignature(signature2);
+
+      const key3 = new ethers.utils.SigningKey(consul3.privateKey)
+      const signature3 = await key3.signDigest(ethers.utils.arrayify(hash))
+      let sig3 = ethers.utils.splitSignature(signature3);
+
+      let vs = [sig1.v, sig2.v, sig3.v]
+      let rs = [sig1.r, sig2.r, sig3.r]
+      let ss = [sig1.s, sig2.s, sig3.s]
+
+      return await nebula.sendHashValue(hash, vs, rs, ss)
   }
 
   it("constructor initializes variables", async () => {
@@ -220,6 +241,18 @@ describe("Nebula", () => {
       let ss = [sig1.s, sig2.s, sig3.s]
 
       let tx = await nebula.sendHashValue(hash, vs, rs, ss)
+      let rc = await tx.wait()
+      let blockNumber = rc.blockNumber
+
+      var pulse = await nebula.pulses(1) as Pulse
+      expect(pulse.dataHash).to.eq(hash)
+      expect(pulse.height).to.eq(blockNumber)
+    })
+
+    it("updates data hash for the next pulse", async () => {
+      let hash = ethers.utils.solidityKeccak256(["bytes"], ["0x01"])
+
+      let tx = await sendHashValue(hash)
       let rc = await tx.wait()
       let blockNumber = rc.blockNumber
 
@@ -425,12 +458,15 @@ describe("Nebula", () => {
       let id = ethers.utils.solidityKeccak256(["bytes"], [pack2])
 
       let value = "0x01"
+      let pulseId = 1
 
-      await expect(nebula.connect(consul1).sendValueToSubByte(value, 1, id))
+      await sendHashValue(ethers.utils.solidityKeccak256(["bytes"],[value]))
+
+      await expect(nebula.connect(consul1).sendValueToSubByte(value, pulseId, id))
         .to.be.revertedWith("function call to a non-contract account")
     })
 
-    it("fails if caller is not one of the oracles", async () => {
+    it("fails if value was not approved by oracles", async () => {
       let minConfirmations = 1
       let reward = 0
 
@@ -440,10 +476,12 @@ describe("Nebula", () => {
       let id = ethers.utils.solidityKeccak256(["bytes"], [pack2])
 
       let value = "0x01"
+      let pulseId = 1
 
       await nebula.subscribe(subMockBytes.address, minConfirmations, reward)
-      await expect(nebula.connect(other).sendValueToSubByte(value, 1, id))
-        .to.be.revertedWith("caller is not one of the oracles")
+
+      await expect(nebula.connect(consul1).sendValueToSubByte(value, pulseId, id))
+        .to.be.revertedWith("value was not approved by oracles")
     })
 
     it("fails if a value was sent to subscriber this pulse", async () => {
@@ -456,10 +494,14 @@ describe("Nebula", () => {
       let id = ethers.utils.solidityKeccak256(["bytes"], [pack2])
 
       let value = "0x01"
+      let pulseId = 1
 
       await nebula.subscribe(subMockBytes.address, minConfirmations, reward)
+
+      await sendHashValue(ethers.utils.solidityKeccak256(["bytes"],[value]))
+
       await nebula.connect(consul1).sendValueToSubByte(value, 1, id)
-      await expect(nebula.connect(consul1).sendValueToSubByte(value, 1, id))
+      await expect(nebula.connect(consul1).sendValueToSubByte(value, pulseId, id))
         .to.be.revertedWith("sub sent")
     })
 
@@ -473,13 +515,17 @@ describe("Nebula", () => {
       let id = ethers.utils.solidityKeccak256(["bytes"], [pack2])
 
       let value = "0x01"
+      let pulseId = 1
 
-      expect(await nebula.isPulseSubSent(1, id)).to.eq(false)
+      expect(await nebula.isPulseSubSent(pulseId, id)).to.eq(false)
 
       await nebula.subscribe(subMockBytes.address, minConfirmations, reward)
-      await nebula.connect(consul1).sendValueToSubByte(value, 1, id)
 
-      expect(await nebula.isPulseSubSent(1, id)).to.eq(true)
+      await sendHashValue(ethers.utils.solidityKeccak256(["bytes"],[value]))
+
+      await nebula.connect(consul1).sendValueToSubByte(value, pulseId, id)
+
+      expect(await nebula.isPulseSubSent(pulseId, id)).to.eq(true)
     })
 
     it("sends value to subscriber", async () => {
@@ -492,11 +538,15 @@ describe("Nebula", () => {
       let id = ethers.utils.solidityKeccak256(["bytes"], [pack2])
 
       let value = "0x01"
+      let pulseId = 1
 
       expect(await subMockBytes.isSent()).to.eq(false)
 
       await nebula.subscribe(subMockBytes.address, minConfirmations, reward)
-      await nebula.connect(consul1).sendValueToSubByte(value, 1, id)
+
+      await sendHashValue(ethers.utils.solidityKeccak256(["bytes"],[value]))
+
+      await nebula.connect(consul1).sendValueToSubByte(value, pulseId, id)
 
       expect(await subMockBytes.isSent()).to.eq(true)
 
@@ -514,12 +564,15 @@ describe("Nebula", () => {
       let id = ethers.utils.solidityKeccak256(["bytes"], [pack2])
 
       let value = "0x01"
+      let pulseId = 1
 
-      await expect(nebula.connect(consul1).sendValueToSubInt(value, 1, id))
+      await sendHashValue(ethers.utils.solidityKeccak256(["int64"],[value]))
+
+      await expect(nebula.connect(consul1).sendValueToSubInt(value, pulseId, id))
         .to.be.revertedWith("function call to a non-contract account")
     })
 
-    it("fails if caller is not one of the oracles", async () => {
+    it("fails if value was not approved by oracles", async () => {
       let minConfirmations = 1
       let reward = 0
 
@@ -529,10 +582,12 @@ describe("Nebula", () => {
       let id = ethers.utils.solidityKeccak256(["bytes"], [pack2])
 
       let value = "0x01"
+      let pulseId = 1
 
-      await nebula.subscribe(subMockInt.address, minConfirmations, reward)
-      await expect(nebula.connect(other).sendValueToSubInt(value, 1, id))
-        .to.be.revertedWith("caller is not one of the oracles")
+      await nebula.subscribe(subMockBytes.address, minConfirmations, reward)
+
+      await expect(nebula.connect(consul1).sendValueToSubInt(value, pulseId, id))
+        .to.be.revertedWith("value was not approved by oracles")
     })
 
     it("fails if a value was sent to subscriber this pulse", async () => {
@@ -545,10 +600,14 @@ describe("Nebula", () => {
       let id = ethers.utils.solidityKeccak256(["bytes"], [pack2])
 
       let value = "0x01"
+      let pulseId = 1
 
       await nebula.subscribe(subMockInt.address, minConfirmations, reward)
-      await nebula.connect(consul1).sendValueToSubInt(value, 1, id)
-      await expect(nebula.connect(consul1).sendValueToSubInt(value, 1, id))
+
+      await sendHashValue(ethers.utils.solidityKeccak256(["int64"],[value]))
+
+      await nebula.connect(consul1).sendValueToSubInt(value, pulseId, id)
+      await expect(nebula.connect(consul1).sendValueToSubInt(value, pulseId, id))
         .to.be.revertedWith("sub sent")
     })
 
@@ -562,13 +621,17 @@ describe("Nebula", () => {
       let id = ethers.utils.solidityKeccak256(["bytes"], [pack2])
 
       let value = "0x01"
+      let pulseId = 1
 
-      expect(await nebula.isPulseSubSent(1, id)).to.eq(false)
+      expect(await nebula.isPulseSubSent(pulseId, id)).to.eq(false)
 
       await nebula.subscribe(subMockInt.address, minConfirmations, reward)
-      await nebula.connect(consul1).sendValueToSubInt(value, 1, id)
 
-      expect(await nebula.isPulseSubSent(1, id)).to.eq(true)
+      await sendHashValue(ethers.utils.solidityKeccak256(["int64"],[value]))
+
+      await nebula.connect(consul1).sendValueToSubInt(value, pulseId, id)
+
+      expect(await nebula.isPulseSubSent(pulseId, id)).to.eq(true)
     })
 
     it("sends value to subscriber", async () => {
@@ -581,11 +644,15 @@ describe("Nebula", () => {
       let id = ethers.utils.solidityKeccak256(["bytes"], [pack2])
 
       let value = "0x01"
+      let pulseId = 1
 
       expect(await subMockInt.isSent()).to.eq(false)
 
       await nebula.subscribe(subMockInt.address, minConfirmations, reward)
-      await nebula.connect(consul1).sendValueToSubInt(value, 1, id)
+
+      await sendHashValue(ethers.utils.solidityKeccak256(["int64"],[value]))
+
+      await nebula.connect(consul1).sendValueToSubInt(value, pulseId, id)
 
       expect(await subMockInt.isSent()).to.eq(true)
 
@@ -603,12 +670,15 @@ describe("Nebula", () => {
       let id = ethers.utils.solidityKeccak256(["bytes"], [pack2])
 
       let value = "0x01"
+      let pulseId = 1
 
-      await expect(nebula.connect(consul1).sendValueToSubString(value, 1, id))
+      await sendHashValue(ethers.utils.solidityKeccak256(["string"],[value]))
+
+      await expect(nebula.connect(consul1).sendValueToSubString(value, pulseId, id))
         .to.be.revertedWith("function call to a non-contract account")
     })
 
-    it("fails if caller is not one of the oracles", async () => {
+    it("fails if value was not approved by oracles", async () => {
       let minConfirmations = 1
       let reward = 0
 
@@ -618,10 +688,12 @@ describe("Nebula", () => {
       let id = ethers.utils.solidityKeccak256(["bytes"], [pack2])
 
       let value = "0x01"
+      let pulseId = 1
 
-      await nebula.subscribe(subMockString.address, minConfirmations, reward)
-      await expect(nebula.connect(other).sendValueToSubString(value, 1, id))
-        .to.be.revertedWith("caller is not one of the oracles")
+      await nebula.subscribe(subMockBytes.address, minConfirmations, reward)
+
+      await expect(nebula.connect(consul1).sendValueToSubString(value, pulseId, id))
+        .to.be.revertedWith("value was not approved by oracles")
     })
 
     it("fails if a value was sent to subscriber this pulse", async () => {
@@ -634,10 +706,14 @@ describe("Nebula", () => {
       let id = ethers.utils.solidityKeccak256(["bytes"], [pack2])
 
       let value = "0x01"
+      let pulseId = 1
 
       await nebula.subscribe(subMockString.address, minConfirmations, reward)
-      await nebula.connect(consul1).sendValueToSubString(value, 1, id)
-      await expect(nebula.connect(consul1).sendValueToSubString(value, 1, id))
+
+      await sendHashValue(ethers.utils.solidityKeccak256(["string"],[value]))
+
+      await nebula.connect(consul1).sendValueToSubString(value, pulseId, id)
+      await expect(nebula.connect(consul1).sendValueToSubString(value, pulseId, id))
         .to.be.revertedWith("sub sent")
     })
 
@@ -651,13 +727,17 @@ describe("Nebula", () => {
       let id = ethers.utils.solidityKeccak256(["bytes"], [pack2])
 
       let value = "0x01"
+      let pulseId = 1
 
-      expect(await nebula.isPulseSubSent(1, id)).to.eq(false)
+      expect(await nebula.isPulseSubSent(pulseId, id)).to.eq(false)
 
       await nebula.subscribe(subMockString.address, minConfirmations, reward)
-      await nebula.connect(consul1).sendValueToSubString(value, 1, id)
 
-      expect(await nebula.isPulseSubSent(1, id)).to.eq(true)
+      await sendHashValue(ethers.utils.solidityKeccak256(["string"],[value]))
+
+      await nebula.connect(consul1).sendValueToSubString(value, pulseId, id)
+
+      expect(await nebula.isPulseSubSent(pulseId, id)).to.eq(true)
     })
 
     it("sends value to subscriber", async () => {
@@ -670,11 +750,15 @@ describe("Nebula", () => {
       let id = ethers.utils.solidityKeccak256(["bytes"], [pack2])
 
       let value = "0x01"
+      let pulseId = 1
 
       expect(await subMockString.isSent()).to.eq(false)
 
       await nebula.subscribe(subMockString.address, minConfirmations, reward)
-      await nebula.connect(consul1).sendValueToSubString(value, 1, id)
+
+      await sendHashValue(ethers.utils.solidityKeccak256(["string"],[value]))
+
+      await nebula.connect(consul1).sendValueToSubString(value, pulseId, id)
 
       expect(await subMockString.isSent()).to.eq(true)
 
