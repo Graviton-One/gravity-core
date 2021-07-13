@@ -41,6 +41,18 @@ type Validator struct {
 	pubKey  account.ConsulPubKey
 }
 
+// IntPow calculates n to the mth power. Since the result is an int, it is assumed that m is a positive power
+func IntPow(n, m int) int {
+	if m == 0 {
+		return 1
+	}
+	result := n
+	for i := 2; i <= m; i++ {
+		result *= n
+	}
+	return result
+}
+
 func NewValidator(privKey []byte) *Validator {
 	validatorPrivKey := tendermintCrypto.PrivKeyEd25519{}
 	copy(validatorPrivKey[:], privKey)
@@ -242,6 +254,7 @@ func (node *Node) Start(ctx context.Context) {
 	// }
 
 	roundState := new(RoundState)
+	attempts := 1
 	for {
 		//time.Sleep(time.Duration(TimeoutMs) * time.Millisecond)
 		<-ch
@@ -252,8 +265,11 @@ func (node *Node) Start(ctx context.Context) {
 		newLastPulseId, err := node.adaptor.LastPulseId(node.nebulaId, ctx)
 		if err != nil {
 			zap.L().Error(err.Error())
+			time.Sleep(time.Millisecond * time.Duration(IntPow(2, attempts)) * 20)
+			attempts = attempts + 1
 			continue
 		}
+		attempts = 1
 
 		if lastPulseId != newLastPulseId {
 			lastPulseId = newLastPulseId
