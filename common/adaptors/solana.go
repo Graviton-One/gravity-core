@@ -56,19 +56,16 @@ func (spk SortablePubkey) ToPubKeys() []solana_common.PublicKey {
 }
 
 type SolanaAdapter struct {
-	account         types.Account
-	programID       solana_common.PublicKey
-	gravityContract solana_common.PublicKey
-	nebulaContract  solana_common.PublicKey
-	multisigAccount solana_common.PublicKey
-	client          *solana.Client
-	ghClient        *gravity.Client
-	//recentBlockHash        string
+	account           types.Account
+	programID         solana_common.PublicKey
+	gravityContract   solana_common.PublicKey
+	nebulaProgram     solana_common.PublicKey
+	multisigAccount   solana_common.PublicKey
+	client            *solana.Client
+	ghClient          *gravity.Client
 	recentBlockHashes map[string]string
-	//oraclesRecentBlockHash string
-	//hashRecentBlockHash    string
-	Bft            uint8
-	oracleInterval uint64
+	Bft               uint8
+	oracleInterval    uint64
 
 	ibportProgramAccount solana_common.PublicKey
 	ibportDataAccount    solana_common.PublicKey
@@ -94,9 +91,9 @@ func SolanaAdapterWithCustom(custom map[string]interface{}) SolanaAdapterOption 
 		if ok {
 			s.multisigAccount = solana_common.PublicKeyFromString(multisigAccount)
 		}
-		nebulaContract, ok := custom["nebula_contract"].(string)
+		nebulaContract, ok := custom["nebula_program"].(string)
 		if ok {
-			s.nebulaContract = solana_common.PublicKeyFromString(nebulaContract)
+			s.nebulaProgram = solana_common.PublicKeyFromString(nebulaContract)
 		}
 
 		programID, ok := custom["program_id"].(string)
@@ -378,7 +375,8 @@ func (s *SolanaAdapter) SendValueToSubs(nebulaId account.NebulaId, pulseId uint6
 			fmt.Println("Recovered in SendValueToSubs", r)
 		}
 	}()
-	nst, err := s.getNebulaContractState(ctx, s.nebulaContract.ToBase58())
+	nid := solana_common.PublicKeyFromBytes(nebulaId[:])
+	nst, err := s.getNebulaContractState(ctx, nid.ToBase58())
 	if err != nil {
 		zap.L().Sugar().Error(err.Error())
 		return err
@@ -655,7 +653,8 @@ func (s *SolanaAdapter) LastPulseId(nebulaId account.NebulaId, ctx context.Conte
 			fmt.Println("Recovered in LatPulseId", r)
 		}
 	}()
-	n, err := s.getNebulaContractState(ctx, s.nebulaContract.ToBase58())
+	nid := solana_common.PublicKeyFromBytes(nebulaId[:])
+	n, err := s.getNebulaContractState(ctx, nid.ToBase58())
 	if err != nil {
 		zap.L().Error(err.Error())
 		return 0, err
@@ -772,7 +771,7 @@ func (s *SolanaAdapter) createUpdateOraclesMessage(ctx context.Context, nebulaId
 	}
 	sort.Sort(&newOracles)
 	solanaOracles := newOracles.ToPubKeys()
-	nid := solana_common.PublicKeyFromBytes(nebulaId[:])
+	nebulaDataAccount := solana_common.PublicKeyFromBytes(nebulaId[:])
 	// customParams, err := rpc.GlobalClient.NebulaCustomParams(nebulaId, account.Solana)
 	// if err != nil {
 	// 	return types.Message{}, err
@@ -780,23 +779,23 @@ func (s *SolanaAdapter) createUpdateOraclesMessage(ctx context.Context, nebulaId
 
 	multisigAccount_interface, ok := customParams["multisig_account"]
 	if !ok {
-		return types.Message{}, fmt.Errorf("Multisig account for nebula [%s] not declared", nid.ToBase58())
+		return types.Message{}, fmt.Errorf("Multisig account for nebula data account [%s] not declared", nebulaDataAccount.ToBase58())
 	}
 	multisigAccount := multisigAccount_interface.(string)
 
-	nebulaContract_interface, ok := customParams["nebula_contract"]
+	nebulaProgram_interface, ok := customParams["nebula_program"]
 	if !ok {
-		return types.Message{}, fmt.Errorf("Data account for nebula [%s] not declared", nid.ToBase58())
+		return types.Message{}, fmt.Errorf("Data account for nebula data account [%s] not declared", nebulaDataAccount.ToBase58())
 	}
-	nebulaContract := nebulaContract_interface.(string)
+	nebulaProgram := nebulaProgram_interface.(string)
 
 	message := types.NewMessage(
 		sender,
 		[]types.Instruction{
 			instructions.NebulaUpdateOraclesInstruction(
 				sender,
-				nid,
-				solana_common.PublicKeyFromString(nebulaContract),
+				solana_common.PublicKeyFromString(nebulaProgram),
+				nebulaDataAccount,
 				solana_common.PublicKeyFromString(multisigAccount),
 				solanaConsuls,
 				uint64(roundId),
@@ -821,15 +820,14 @@ func (s *SolanaAdapter) createAddPulseMessage(nebulaId account.NebulaId, validat
 		pubKey := solana_common.PublicKeyFromBytes(v[1:33])
 		vals = append(vals, pubKey)
 	}
-	program := solana_common.PublicKeyFromBytes(nebulaId[:])
+	nebulaDataAccount := solana_common.PublicKeyFromBytes(nebulaId[:])
 	sort.Sort(&vals)
 	solanaValidators := vals.ToPubKeys()
-	nid := solana_common.PublicKeyFromBytes(nebulaId[:])
 	message := types.NewMessage(
 		sender,
 		[]types.Instruction{
 			instructions.NebulaAddPulseInstruction(
-				sender, program, nid, s.multisigAccount, s.nebulaContract, solanaValidators, pulseId, hash,
+				sender, s.nebulaProgram, s.nebulaProgram, s.multisigAccount, nebulaDataAccount, solanaValidators, pulseId, hash,
 			),
 		},
 		s.recentBlockHashes["oracle"],
@@ -854,14 +852,14 @@ func (s *SolanaAdapter) createSendValueToSubsMessage(nebulaId account.NebulaId, 
 	if err != nil {
 		return types.Message{}, err
 	}
-	nid := solana_common.PublicKeyFromBytes(nebulaId[:])
+	nebulaDataAccount := solana_common.PublicKeyFromBytes(nebulaId[:])
 	recipient := solana_common.PublicKeyFromBytes(RecipientFromByteArray(value))
 	message := types.NewMessage(
 		s.account.PublicKey,
 		[]types.Instruction{
 			instructions.NebulaSendValueToSubsInstruction(
-				s.account.PublicKey, nid, nid,
-				s.nebulaContract, s.multisigAccount,
+				s.account.PublicKey, s.nebulaProgram, s.nebulaProgram,
+				nebulaDataAccount, s.multisigAccount,
 				s.ibportProgramAccount, s.ibportDataAccount,
 				s.tokenProgramAddress, recipient, s.ibPortPDA,
 				DataType, value, pulseId, id,
