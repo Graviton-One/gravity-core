@@ -194,7 +194,7 @@ func (node *Node) Init() error {
 	if err != nil {
 		return err
 	}
-
+	zap.L().Sugar().Debug("OraclesByNebula ", oraclesByNebulaKey)
 	_, ok = oraclesByNebulaKey[node.oraclePubKey.ToString(node.chainType)]
 	if !ok {
 		tx, err := transactions.New(node.validator.pubKey, transactions.AddOracleInNebula, node.validator.privKey)
