@@ -611,12 +611,12 @@ func (s *SolanaAdapter) SignOracles(nebulaId account.NebulaId, oracles []*accoun
 		return []byte{}, err
 	}
 	zap.L().Sugar().Debug("Custom params ", customParams)
-	nebulaContract, ok := customParams["nebula_contract"].(string)
-	if !ok {
-		return []byte{}, fmt.Errorf("Data account for nebula not declared")
-	}
-
-	n, err := s.getNebulaContractState(context.Background(), nebulaContract)
+	// nebulaProgram, ok := customParams["nebula_program"].(string)
+	// if !ok {
+	// 	return []byte{}, fmt.Errorf("Nebula account for nebula not declared")
+	// }
+	dataAccount := solana_common.PublicKeyFromBytes(nebulaId[:])
+	n, err := s.getNebulaContractState(context.Background(), dataAccount.ToBase58())
 	if err != nil {
 		return nil, err
 	}
