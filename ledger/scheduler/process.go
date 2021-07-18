@@ -116,6 +116,7 @@ func (scheduler *Scheduler) processByHeight(height int64) error {
 					"is_sender":  index == int64(consulInfo.ConsulIndex),
 					"chain_type": val.ChainType,
 				}
+				zap.L().Sugar().Debug("Update oracles payload ", payload)
 				PublishMessage("ledger.events", SchedulerEvent{
 					Name:   "update_oracles",
 					Params: payload,
