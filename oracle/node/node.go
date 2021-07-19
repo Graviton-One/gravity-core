@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Gravity-Tech/gravity-core/abi"
+	"github.com/mr-tron/base58"
 	"go.uber.org/zap"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -311,6 +312,7 @@ func (node *Node) Start(ctx context.Context) {
 			firstCommitIteration = true
 		}
 
+		zap.L().Sugar().Debugf("getting oracles for nebula [%s] chain type [%s]", base58.Encode(node.nebulaId[:]), node.chainType)
 		oraclesMap, err := node.gravityClient.BftOraclesByNebula(node.chainType, node.nebulaId)
 		if err != nil {
 			zap.L().Error(err.Error())
@@ -355,12 +357,12 @@ func (node *Node) execute(pulseId uint64, round state.SubRound, tcHeight uint64,
 			fmt.Println("execute round", r)
 		}
 	}()
-	
+
 	return oracleRoundExecutor.Execute(node, &roundExecuteProps{
-		PulseID: pulseId,
-		Round: round,
+		PulseID:    pulseId,
+		Round:      round,
 		IntervalID: intervalId,
 		RoundState: roundState,
-		Ctx: ctx,
+		Ctx:        ctx,
 	})
 }
