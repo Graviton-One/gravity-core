@@ -123,7 +123,7 @@ func (scheduler *Scheduler) HandleBlock(height int64, store *storage.Storage, is
 
 	roundId := CalculateRound(height)
 
-	if IsRoundStart(height) || height == 1 {
+	if height%100 == 0 || height == 1 {
 		if err := scheduler.calculateScores(store); err != nil {
 			zap.L().Error(err.Error())
 			return err
