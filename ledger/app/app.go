@@ -56,14 +56,15 @@ type GHApplication struct {
 
 var _ abcitypes.Application = (*GHApplication)(nil)
 
-func NewGHApplication(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, scheduler *scheduler.Scheduler, db *badger.DB, genesis *Genesis, ctx context.Context, config *config.LedgerConfig) (*GHApplication, error) {
+func NewGHApplication(adaptors map[account.ChainType]adaptors.IBlockchainAdaptor, newscheduler *scheduler.Scheduler, db *badger.DB, genesis *Genesis, ctx context.Context, config *config.LedgerConfig) (*GHApplication, error) {
+	scheduler.GlobalStorage = storage.New()
 	return &GHApplication{
 		db:           db,
 		adaptors:     adaptors,
-		scheduler:    scheduler,
+		scheduler:    newscheduler,
 		ctx:          ctx,
 		genesis:      genesis,
-		storage:      storage.New(),
+		storage:      scheduler.GlobalStorage,
 		ledgerConfig: config,
 	}, nil
 }

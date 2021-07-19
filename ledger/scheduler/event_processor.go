@@ -112,6 +112,7 @@ func UpdateOraclesHandler(event SchedulerEvent) error {
 		zap.L().Error(err.Error())
 		return err
 	}
+	GlobalScheduler.UpdateOracles(Event.RoundId, nebulaId, GlobalStorage)
 	err = GlobalScheduler.signOraclesByNebula(Event.RoundId, nebulaId, Event.ChainType, Event.Sender)
 	time.Sleep(time.Second * 5)
 

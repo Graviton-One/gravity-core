@@ -29,6 +29,7 @@ type ManualUpdateStruct struct {
 
 var EventBus *gochannel.GoChannel
 var GlobalScheduler Scheduler
+var GlobalStorage *storage.Storage
 var SchedulerEventServer *EventServer
 var ManualUpdate ManualUpdateStruct
 
@@ -146,7 +147,7 @@ func (scheduler *Scheduler) HandleBlock(height int64, store *storage.Storage, is
 				fmt.Printf("Error:%s\n", err.Error())
 				continue
 			}
-			err = scheduler.updateOracles(roundId, nebulaId, store)
+			err = scheduler.UpdateOracles(roundId, nebulaId, store)
 			if err != nil {
 				return err
 			}
@@ -241,7 +242,7 @@ func (scheduler *Scheduler) calculateScores(store *storage.Storage) error {
 
 	return nil
 }
-func (scheduler *Scheduler) updateOracles(roundId int64, nebulaId account.NebulaId, store *storage.Storage) error {
+func (scheduler *Scheduler) UpdateOracles(roundId int64, nebulaId account.NebulaId, store *storage.Storage) error {
 	zap.L().Debug("updateOracles called")
 	nebulaInfo, err := store.NebulaInfo(nebulaId)
 	if err != nil {
