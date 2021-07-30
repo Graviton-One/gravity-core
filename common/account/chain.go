@@ -66,7 +66,7 @@ func (ch ChainType) String() string {
 		return "solana"
 	case Polygon:
 		return "polygon"
-	case xDai:
+	case XDai:
 		return "xdai"
 	default:
 		return "ethereum"
