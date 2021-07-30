@@ -219,7 +219,7 @@ func (adaptor *XDaiAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64, 
 	var resultBytes32 [32]byte
 	copy(resultBytes32[:], hash)
 
-	opt, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, big.NewInt(int64(137)))
+	opt, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, big.NewInt(int64(100)))
 	if err != nil {
 		return "", err
 	}
@@ -257,7 +257,7 @@ func (adaptor *XDaiAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId u
 			return err
 		}
 
-		transactOpt, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, big.NewInt(137))
+		transactOpt, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, big.NewInt(100))
 		if err != nil {
 			zap.L().Error(err.Error())
 			return err
@@ -367,7 +367,7 @@ func (adaptor *XDaiAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracle
 		s[index] = bytes32S
 		v[index] = sign[64:][0] + 27
 	}
-	transactor, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, big.NewInt(int64(137)))
+	transactor, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, big.NewInt(int64(100)))
 	if err != nil {
 		return "", err
 	}
@@ -429,7 +429,7 @@ func (adaptor *XDaiAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*
 		s[index] = bytes32S
 		v[index] = sign[64:][0] + 27
 	}
-	transactor, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, big.NewInt(int64(137)))
+	transactor, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, big.NewInt(int64(100)))
 	if err != nil {
 		return "", err
 	}
