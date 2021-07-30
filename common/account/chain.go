@@ -16,6 +16,7 @@ const (
 	Avax
 	Solana
 	Polygon
+	XDai
 )
 
 var (
@@ -41,6 +42,8 @@ func ParseChainType(chainType string) (ChainType, error) {
 		return Solana, nil
 	case "polygon":
 		return Polygon, nil
+	case "xdai":
+		return XDai, nil
 	default:
 		return 0, ErrParseChainType
 	}
@@ -63,6 +66,8 @@ func (ch ChainType) String() string {
 		return "solana"
 	case Polygon:
 		return "polygon"
+	case xDai:
+		return "xdai"
 	default:
 		return "ethereum"
 	}
