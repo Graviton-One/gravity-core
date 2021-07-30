@@ -123,6 +123,11 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 		if err != nil {
 			return nil, err
 		}
+	case account.XDai:
+		adaptor, err = adaptors.NewXDaiAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.XDaiAdapterWithGhClient(ghClient))
+		if err != nil {
+			return nil, err
+		}
 	case account.Ethereum:
 		adaptor, err = adaptors.NewEthereumAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.EthAdapterWithGhClient(ghClient))
 		if err != nil {
