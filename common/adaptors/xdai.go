@@ -223,7 +223,7 @@ func (adaptor *XDaiAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64, 
 	if err != nil {
 		return "", err
 	}
-	opt.GasLimit = 150000 * 10
+	//opt.GasLimit = 150000 * 10
 	opt.Context = ctx
 	opt.GasPrice, err = adaptor.ethClient.SuggestGasPrice(ctx)
 	if err != nil {
@@ -262,7 +262,8 @@ func (adaptor *XDaiAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId u
 			zap.L().Error(err.Error())
 			return err
 		}
-		transactOpt.GasLimit = 150000 * 10
+		//transactOpt.GasLimit = 150000 * 10
+		transactOpt.GasPrice, err = adaptor.ethClient.SuggestGasPrice(ctx)
 		transactOpt.Context = ctx
 		zap.L().Sugar().Debug("transactOpt is nil", transactOpt == nil)
 		switch SubType(t) {
@@ -371,7 +372,8 @@ func (adaptor *XDaiAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracle
 	if err != nil {
 		return "", err
 	}
-	transactor.GasLimit = 150000 * 10
+	//transactor.GasLimit = 150000 * 10
+	transactor.GasPrice, err = adaptor.ethClient.SuggestGasPrice(ctx)
 	transactor.Context = ctx
 	tx, err := nebula.UpdateOracles(transactor, oraclesAddresses, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
@@ -433,7 +435,8 @@ func (adaptor *XDaiAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*
 	if err != nil {
 		return "", err
 	}
-	transactor.GasLimit = 150000 * 10
+	//transactor.GasLimit = 150000 * 10
+	transactor.GasPrice, err = adaptor.ethClient.SuggestGasPrice(ctx)
 	transactor.Context = ctx
 	tx, err := adaptor.gravityContract.UpdateConsuls(transactor, consulsAddress, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
