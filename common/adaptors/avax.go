@@ -217,7 +217,10 @@ func (adaptor *AvaxAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64, 
 	var resultBytes32 [32]byte
 	copy(resultBytes32[:], hash)
 
-	opt := bind.NewKeyedTransactor(adaptor.privKey)
+	opt, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, big.NewInt(int64(43114)))
+	if err != nil {
+		return "", err
+	}
 	opt.Context = ctx
 	opt.GasPrice, err = adaptor.ethClient.SuggestGasPrice(ctx)
 	if err != nil {
@@ -251,7 +254,10 @@ func (adaptor *AvaxAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId u
 			return err
 		}
 
-		transactOpt := bind.NewKeyedTransactor(adaptor.privKey)
+		transactOpt, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, big.NewInt(int64(43114)))
+		if err != nil {
+			return err
+		}
 		transactOpt.Context = ctx
 		zap.L().Sugar().Debug("transactOpt is nil", transactOpt == nil)
 		switch SubType(t) {
@@ -356,7 +362,10 @@ func (adaptor *AvaxAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, oracle
 		s[index] = bytes32S
 		v[index] = sign[64:][0] + 27
 	}
-	opts := bind.NewKeyedTransactor(adaptor.privKey)
+	opts, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, big.NewInt(int64(43114)))
+	if err != nil {
+		return "", err
+	}
 	opts.Context = ctx
 	tx, err := nebula.UpdateOracles(opts, oraclesAddresses, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
@@ -414,7 +423,10 @@ func (adaptor *AvaxAdaptor) SendConsulsToGravityContract(newConsulsAddresses []*
 		s[index] = bytes32S
 		v[index] = sign[64:][0] + 27
 	}
-	opts := bind.NewKeyedTransactor(adaptor.privKey)
+	opts, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, big.NewInt(int64(43114)))
+	if err != nil {
+		return "", err
+	}
 	opts.Context = ctx
 	tx, err := adaptor.gravityContract.UpdateConsuls(opts, consulsAddress, v[:], r[:], s[:], big.NewInt(round))
 	if err != nil {
