@@ -854,6 +854,14 @@ func (s *SolanaAdapter) createSendValueToSubsMessage(nebulaId account.NebulaId, 
 	}
 	nebulaDataAccount := solana_common.PublicKeyFromBytes(nebulaId[:])
 	recipient := solana_common.PublicKeyFromBytes(RecipientFromByteArray(value))
+
+	resp, err := s.client.GetAccountInfo(context.Background(), recipient.ToBase58(), solana.GetAccountInfoConfig{
+		Encoding: "base64",
+	})
+	if err != nil {
+		return types.Message{}, err
+	}
+	recipientOwner := solana_common.PublicKeyFromString(resp.Owner)
 	message := types.NewMessage(
 		s.account.PublicKey,
 		[]types.Instruction{
@@ -861,7 +869,7 @@ func (s *SolanaAdapter) createSendValueToSubsMessage(nebulaId account.NebulaId, 
 				s.account.PublicKey, s.nebulaProgram, s.nebulaProgram,
 				nebulaDataAccount, s.multisigAccount,
 				s.ibportProgramAccount, s.ibportDataAccount,
-				s.tokenProgramAddress, recipient, s.ibPortPDA,
+				s.tokenProgramAddress, recipient, s.ibPortPDA, recipientOwner,
 				DataType, value, pulseId, id,
 			),
 		},

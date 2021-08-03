@@ -134,7 +134,7 @@ func NebulaAddPulseInstruction(fromAccount, targetProgramID, nebulaId, multisigI
 
 func NebulaSendValueToSubsInstruction(fromAccount,
 	targetProgramID, nebulaId, nebulaState, nebulaMultisig common.PublicKey,
-	ibportProgramAccount, ibportDataAccount, tokenProgramAddress, recipient, ibPortPDA common.PublicKey,
+	ibportProgramAccount, ibportDataAccount, tokenProgramAddress, recipient, ibPortPDA, recipientOwner common.PublicKey,
 	DataType uint8, value []byte, PulseId uint64, SubscriptionID [16]byte) types.Instruction {
 	/*
 			SendValueToSubs {
@@ -175,6 +175,7 @@ func NebulaSendValueToSubsInstruction(fromAccount,
 		{PubKey: tokenProgramAddress, IsWritable: true, IsSigner: false},
 		{PubKey: recipient, IsWritable: true, IsSigner: false},
 		{PubKey: ibPortPDA, IsWritable: false, IsSigner: false},
+		{PubKey: recipientOwner, IsWritable: true, IsSigner: false},
 	}
 	return types.Instruction{
 		Accounts:  accounts,
