@@ -67,10 +67,11 @@ type SolanaAdapter struct {
 	Bft               uint8
 	oracleInterval    uint64
 
-	ibportProgramAccount solana_common.PublicKey
-	ibportDataAccount    solana_common.PublicKey
-	tokenProgramAddress  solana_common.PublicKey
-	ibPortPDA            solana_common.PublicKey
+	ibportProgramAccount  solana_common.PublicKey
+	ibportDataAccount     solana_common.PublicKey
+	tokenProgramAddress   solana_common.PublicKey
+	ibPortPDA             solana_common.PublicKey
+	IBPortPDAtokenAccount solana_common.PublicKey
 }
 type SolanaAdapterOption func(*SolanaAdapter) error
 
@@ -119,6 +120,10 @@ func SolanaAdapterWithCustom(custom map[string]interface{}) SolanaAdapterOption 
 		ibPortPDA, ok := custom["ib_port_pda"].(string)
 		if ok {
 			s.ibPortPDA = solana_common.PublicKeyFromString(ibPortPDA)
+		}
+		ibPortPDAtokenAccount, ok := custom["ib_port_pda"].(string)
+		if ok {
+			s.IBPortPDAtokenAccount = solana_common.PublicKeyFromString(ibPortPDAtokenAccount)
 		}
 
 		return nil
@@ -870,7 +875,7 @@ func (s *SolanaAdapter) createSendValueToSubsMessage(nebulaId account.NebulaId, 
 				nebulaDataAccount, s.multisigAccount,
 				s.ibportProgramAccount, s.ibportDataAccount,
 				s.tokenProgramAddress, recipient, s.ibPortPDA, recipientOwner,
-				DataType, value, pulseId, id,
+				s.IBPortPDAtokenAccount, DataType, value, pulseId, id,
 			),
 		},
 		recentBlockHash.Blockhash,
