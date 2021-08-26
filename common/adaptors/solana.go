@@ -121,7 +121,7 @@ func SolanaAdapterWithCustom(custom map[string]interface{}) SolanaAdapterOption 
 		if ok {
 			s.ibPortPDA = solana_common.PublicKeyFromString(ibPortPDA)
 		}
-		ibPortPDAtokenAccount, ok := custom["ib_port_pda"].(string)
+		ibPortPDAtokenAccount, ok := custom["ib_port_pda_token_account"].(string)
 		if ok {
 			s.IBPortPDAtokenAccount = solana_common.PublicKeyFromString(ibPortPDAtokenAccount)
 		}
