@@ -214,7 +214,11 @@ func (adaptor *FantomAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64
 	var resultBytes32 [32]byte
 	copy(resultBytes32[:], hash)
 
-	opt := bind.NewKeyedTransactor(adaptor.privKey)
+	opt, err := adaptor.buildTransactor()
+	if err != nil {
+		return "", err
+	}
+
 	opt.GasLimit = 150000 * 5
 	opt.Context = ctx
 	opt.GasPrice, err = adaptor.ethClient.SuggestGasPrice(ctx)
@@ -228,6 +232,18 @@ func (adaptor *FantomAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64
 		return "", err
 	}
 	return tx.Hash().String(), nil
+}
+func (adaptor *FantomAdaptor) buildTransactor() (*bind.TransactOpts, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	chainID, err := adaptor.ethClient.ChainID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	opt, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, chainID)
+	return opt, err
 }
 func (adaptor *FantomAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId uint64, value *extractor.Data, ctx context.Context) error {
 	var err error
@@ -249,7 +265,11 @@ func (adaptor *FantomAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId
 			return err
 		}
 
-		transactOpt := bind.NewKeyedTransactor(adaptor.privKey)
+		transactOpt, err := adaptor.buildTransactor()
+		if err != nil {
+			return err
+		}
+
 		transactOpt.GasLimit = 150000 * 5
 		transactOpt.Context = ctx
 		zap.L().Sugar().Debug("transactOpt is nil", transactOpt == nil)
@@ -355,7 +375,12 @@ func (adaptor *FantomAdaptor) SetOraclesToNebula(nebulaId account.NebulaId, orac
 		s[index] = bytes32S
 		v[index] = sign[64:][0] + 27
 	}
-	transactor := bind.NewKeyedTransactor(adaptor.privKey)
+
+	transactor, err := adaptor.buildTransactor()
+	if err != nil {
+		return "", err
+	}
+
 	transactor.GasLimit = 150000 * 5
 	transactor.Context = ctx
 	tx, err := nebula.UpdateOracles(transactor, oraclesAddresses, v[:], r[:], s[:], big.NewInt(round))
@@ -414,7 +439,12 @@ func (adaptor *FantomAdaptor) SendConsulsToGravityContract(newConsulsAddresses [
 		s[index] = bytes32S
 		v[index] = sign[64:][0] + 27
 	}
-	transactor := bind.NewKeyedTransactor(adaptor.privKey)
+
+	transactor, err := adaptor.buildTransactor()
+	if err != nil {
+		return "", err
+	}
+
 	transactor.GasLimit = 150000 * 5
 	transactor.Context = ctx
 	tx, err := adaptor.gravityContract.UpdateConsuls(transactor, consulsAddress, v[:], r[:], s[:], big.NewInt(round))
