@@ -52,7 +52,6 @@ func generateWavesPrivKeys(chain byte) (*Key, error) {
 func GeneratePrivKeys(wavesChainID byte) (*Keys, error) {
 	validatorPrivKey := ed25519.GenPrivKey()
 
-
 	ethPrivKeys, err := generateEthereumBasedPrivKeys()
 	if err != nil {
 		return nil, err
@@ -70,12 +69,13 @@ func GeneratePrivKeys(wavesChainID byte) (*Keys, error) {
 		},
 		TargetChains: map[string]Key{
 			account.Ethereum.String(): *ethPrivKeys,
-			account.Binance.String(): *ethPrivKeys,
-			account.Waves.String(): *wavesPrivKeys,
-			account.Avax.String(): *ethPrivKeys,
-			account.Heco.String(): *ethPrivKeys,
-			account.Fantom.String(): *ethPrivKeys,
-			account.XDai.String(): *ethPrivKeys,
+			account.Binance.String():  *ethPrivKeys,
+			account.Waves.String():    *wavesPrivKeys,
+			account.Avax.String():     *ethPrivKeys,
+			account.Heco.String():     *ethPrivKeys,
+			account.Fantom.String():   *ethPrivKeys,
+			account.XDai.String():     *ethPrivKeys,
+			account.Okex.String():     *ethPrivKeys,
 		},
 	}, nil
 }

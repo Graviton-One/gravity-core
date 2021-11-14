@@ -16,7 +16,7 @@ func StringToPrivKey(value string, chainType ChainType) ([]byte, error) {
 	var privKey []byte
 	var err error
 	switch chainType {
-	case Ethereum, Binance, Heco, Fantom, Avax, Polygon, XDai:
+	case Ethereum, Binance, Heco, Fantom, Avax, Polygon, XDai, Okex:
 		privKey, err = hexutil.Decode(value)
 		if err != nil {
 			return nil, err
@@ -39,7 +39,7 @@ func StringToPrivKey(value string, chainType ChainType) ([]byte, error) {
 func BytesToOraclePubKey(value []byte, chainType ChainType) OraclesPubKey {
 	var pubKey OraclesPubKey
 	switch chainType {
-	case Ethereum, Binance, Heco, Fantom, Avax, Polygon, XDai:
+	case Ethereum, Binance, Heco, Fantom, Avax, Polygon, XDai, Okex:
 		copy(pubKey[:], value[0:33])
 	case Waves:
 		copy(pubKey[:], append([]byte{0}, value[0:32]...))
@@ -52,7 +52,7 @@ func BytesToOraclePubKey(value []byte, chainType ChainType) OraclesPubKey {
 func (pubKey *OraclesPubKey) ToBytes(chainType ChainType) []byte {
 	var v []byte
 	switch chainType {
-	case Ethereum, Binance, Heco, Fantom, Avax, Polygon, XDai:
+	case Ethereum, Binance, Heco, Fantom, Avax, Polygon, XDai, Okex:
 		v = pubKey[:33]
 	case Waves:
 		v = pubKey[1:33]
@@ -64,7 +64,7 @@ func (pubKey *OraclesPubKey) ToBytes(chainType ChainType) []byte {
 func (pubKey *OraclesPubKey) ToString(chainType ChainType) string {
 	b := pubKey.ToBytes(chainType)
 	switch chainType {
-	case Ethereum, Binance, Heco, Fantom, Avax, Polygon, XDai:
+	case Ethereum, Binance, Heco, Fantom, Avax, Polygon, XDai, Okex:
 		return hexutil.Encode(b)
 	case Waves:
 		return base58.Encode(b)
@@ -79,7 +79,7 @@ func StringToOraclePubKey(value string, chainType ChainType) (OraclesPubKey, err
 	var pubKey []byte
 	var err error
 	switch chainType {
-	case Ethereum, Binance, Heco, Fantom, Avax, Polygon, XDai:
+	case Ethereum, Binance, Heco, Fantom, Avax, Polygon, XDai, Okex:
 		pubKey, err = hexutil.Decode(value)
 		if err != nil {
 			return [33]byte{}, err

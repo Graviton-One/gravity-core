@@ -143,6 +143,11 @@ func New(nebulaId account.NebulaId, chainType account.ChainType,
 		if err != nil {
 			return nil, err
 		}
+	case account.Okex:
+		adaptor, err = adaptors.NewOkexAdaptor(oracleSecretKey, targetChainNodeUrl, ctx, adaptors.OkexAdapterWithGhClient(ghClient))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	exType, err := adaptor.ValueType(nebulaId, ctx)

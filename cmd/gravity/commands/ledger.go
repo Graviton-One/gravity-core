@@ -551,6 +551,12 @@ func createApp(db *badger.DB, ledgerValidator *account.LedgerValidator, privKeys
 				zap.L().Error(err.Error())
 				return nil, err
 			}
+		case account.Okex:
+			adaptor, err = adaptors.NewOkexAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithOkexGravityContract(v.GravityContractAddress))
+			if err != nil {
+				zap.L().Error(err.Error())
+				return nil, err
+			}
 		case account.Ethereum:
 			adaptor, err = adaptors.NewEthereumAdaptor(privKey, v.NodeUrl, ctx, adaptors.WithEthereumGravityContract(v.GravityContractAddress))
 			if err != nil {
