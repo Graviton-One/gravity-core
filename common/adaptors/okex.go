@@ -234,15 +234,15 @@ func (adaptor *OkexAdaptor) AddPulse(nebulaId account.NebulaId, pulseId uint64, 
 	return tx.Hash().String(), nil
 }
 func (adaptor *OkexAdaptor) buildTransactor() (*bind.TransactOpts, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// ctx, cancel := context.WithCancel(context.Background())
+	// defer cancel()
 
-	chainID, err := adaptor.ethClient.ChainID(ctx)
-	if err != nil {
-		return nil, err
-	}
+	// chainID, err := adaptor.ethClient.ChainID(ctx)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	opt, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, chainID)
+	opt, err := bind.NewKeyedTransactorWithChainID(adaptor.privKey, big.NewInt(int64(66)))
 	return opt, err
 }
 func (adaptor *OkexAdaptor) SendValueToSubs(nebulaId account.NebulaId, pulseId uint64, value *extractor.Data, ctx context.Context) error {
