@@ -17,6 +17,7 @@ const (
 	Solana
 	Polygon
 	XDai
+	Okex
 )
 
 var (
@@ -44,6 +45,8 @@ func ParseChainType(chainType string) (ChainType, error) {
 		return Polygon, nil
 	case "xdai":
 		return XDai, nil
+	case "okex":
+		return Okex, nil
 	default:
 		return 0, ErrParseChainType
 	}
@@ -68,6 +71,8 @@ func (ch ChainType) String() string {
 		return "polygon"
 	case XDai:
 		return "xdai"
+	case Okex:
+		return "okex"
 	default:
 		return "ethereum"
 	}
