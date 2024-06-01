@@ -74,7 +74,7 @@ func (client *Client) Aggregate(values []Data, ctx context.Context) (*Data, erro
 
 func (client *Client) do(route string, method string, rqBody interface{}, ctx context.Context) ([]byte, error) {
 	rqUrl := fmt.Sprintf("%v/%v", client.hostUrl, route)
-	zap.L().Sugar().Debugf("Reuest URL: %s", rqUrl)
+	zap.L().Sugar().Debugf("Request URL: %s", rqUrl)
 	var buf *bytes.Buffer
 	var req *http.Request
 	var err error
